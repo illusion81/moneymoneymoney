@@ -1,0 +1,22 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Common dependencies and build output
+node_modules/
+dist/
+build/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
