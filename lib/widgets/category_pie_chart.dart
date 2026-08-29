@@ -132,10 +132,20 @@ class _LegendRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text(slice.label)),
-          Text(
-            formatMoney(slice.amount),
-            style: const TextStyle(fontWeight: FontWeight.w600),
+          Expanded(
+            child: Text(
+              prettyLabel(slice.label),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(
+            width: 74,
+            child: Text(
+              formatMoney(slice.amount),
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
           SizedBox(
             width: 46,

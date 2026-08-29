@@ -45,8 +45,10 @@ void main() {
     expect(find.byKey(const Key('category-pie-canvas')), findsOneWidget);
     // Every slice is directly labelled — the palette's contrast warning
     // requires visible labels rather than colour alone.
-    expect(find.text('groceries'), findsOneWidget);
-    expect(find.text('transport'), findsOneWidget);
+    // Slice labels arrive as backend ids ('eating-out') and are shown through
+    // prettyLabel, so the legend reads as sentence case.
+    expect(find.text('Groceries'), findsOneWidget);
+    expect(find.text('Transport'), findsOneWidget);
     expect(find.textContaining('60%'), findsOneWidget);
     expect(find.textContaining('40%'), findsOneWidget);
   });

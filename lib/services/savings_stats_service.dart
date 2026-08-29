@@ -2,7 +2,7 @@ import '../models/forest_day.dart';
 
 enum StatsPeriod { week, month, year }
 
-/// A single point on the surplus-assets line: the running total of money
+/// A single point on the "money you kept" line: the running total of money
 /// saved (budget minus spending) up to and including this period's bucket.
 class SavingsPoint {
   const SavingsPoint({required this.label, required this.cumulativeSaved});
@@ -28,7 +28,7 @@ const _monthNames = [
 
 /// Buckets checked-in [days] by [period], sums each bucket's saved amount
 /// (dailyBudget - spending), and returns the running cumulative total in
-/// chronological order — the "surplus assets" line.
+/// chronological order — the "money you kept" line.
 List<SavingsPoint> computeSavingsSeries({
   required List<ForestDay> days,
   required StatsPeriod period,
