@@ -16,6 +16,7 @@ class CalendarScreen extends StatelessWidget {
     required this.onShowReport,
     required this.onShowAchievements,
     required this.onShowShop,
+    this.onShowInvestment,
   });
 
   final ForestSummary summary;
@@ -26,6 +27,7 @@ class CalendarScreen extends StatelessWidget {
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
   final VoidCallback onShowShop;
+  final VoidCallback? onShowInvestment;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,7 @@ class CalendarScreen extends StatelessWidget {
         onShowSpending: onShowSpending,
         onShowCalendar: () {},
         onShowHomestead: onShowHomestead,
+        onShowInvestment: onShowInvestment ?? () {},
       ),
       body: SafeArea(
         child: Center(

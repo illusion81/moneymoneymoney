@@ -17,6 +17,7 @@ import 'screens/achievements_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/homestead_screen.dart';
+import 'screens/investment_screen.dart';
 import 'screens/money_style_flow.dart';
 import 'screens/money_style_result_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -48,6 +49,7 @@ enum AppView {
   spending,
   plus,
   homestead,
+  investment,
   achievements,
   shop,
 }
@@ -194,6 +196,7 @@ class _MyAppState extends State<MyApp> {
           isPlusMember: _isPlusMember,
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
+          onShowInvestment: () => setState(() => _view = AppView.investment),
           onFetchTodaySpending: _fetchTodaySpending,
           api: _apiClient,
         );
@@ -208,6 +211,7 @@ class _MyAppState extends State<MyApp> {
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
+          onShowInvestment: () => setState(() => _view = AppView.investment),
         );
       case AppView.spending:
         return SpendingScreen(
@@ -217,6 +221,7 @@ class _MyAppState extends State<MyApp> {
           onShowHomestead: () => setState(() => _view = AppView.homestead),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
+          onShowInvestment: () => setState(() => _view = AppView.investment),
         );
       case AppView.plus:
         return PlusScreen(
@@ -240,6 +245,14 @@ class _MyAppState extends State<MyApp> {
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
           onExportImage: _handleExportImage,
+          onShowInvestment: () => setState(() => _view = AppView.investment),
+        );
+      case AppView.investment:
+        return InvestmentScreen(
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowSpending: () => setState(() => _view = AppView.spending),
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
         );
       case AppView.achievements:
         if (report == null) {

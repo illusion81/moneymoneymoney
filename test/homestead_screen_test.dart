@@ -77,7 +77,7 @@ void main() {
     },
   );
 
-  testWidgets('fake social and investment icon links show demo messages', (
+  testWidgets('fake Instagram and TikTok share icon shows a demo message', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -99,17 +99,12 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byTooltip('Share to Instagram'));
+    await tester.tap(find.byTooltip('Share to Instagram or TikTok'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Instagram demo link'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Share to TikTok'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('TikTok demo link'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('CommBank investment link'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('CommBank investing demo link'), findsOneWidget);
+    expect(
+      find.textContaining('Instagram or TikTok demo share'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('an owned, unplaced decoration appears in the inventory tray', (

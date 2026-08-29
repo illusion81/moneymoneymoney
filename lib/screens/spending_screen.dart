@@ -26,6 +26,7 @@ class SpendingScreen extends StatefulWidget {
     this.onShowCalendar,
     this.onShowHomestead,
     this.onShowAchievements,
+    this.onShowInvestment,
   });
 
   final ApiClient api;
@@ -37,6 +38,7 @@ class SpendingScreen extends StatefulWidget {
   final VoidCallback? onShowCalendar;
   final VoidCallback? onShowHomestead;
   final VoidCallback? onShowAchievements;
+  final VoidCallback? onShowInvestment;
 
   @override
   State<SpendingScreen> createState() => _SpendingScreenState();
@@ -165,6 +167,7 @@ class _SpendingScreenState extends State<SpendingScreen> {
               onShowSpending: () {},
               onShowCalendar: widget.onShowCalendar!,
               onShowHomestead: widget.onShowHomestead!,
+              onShowInvestment: widget.onShowInvestment ?? () {},
             ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

@@ -28,6 +28,7 @@ class HomesteadScreen extends StatefulWidget {
     required this.onShowShop,
     required this.onExportImage,
     this.captureBoundary = captureBoundaryAsPng,
+    this.onShowInvestment,
   });
 
   final ShopState shopState;
@@ -43,6 +44,7 @@ class HomesteadScreen extends StatefulWidget {
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
   final VoidCallback onShowShop;
+  final VoidCallback? onShowInvestment;
 
   /// Called with the PNG-encoded bytes of the yard grid when the user taps
   /// "Export image".
@@ -100,21 +102,9 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
         title: const Text('Homestead'),
         actions: [
           IconButton(
-            tooltip: 'Share to Instagram',
-            onPressed: () => _showFakeLink('Instagram demo link'),
+            tooltip: 'Share to Instagram or TikTok',
+            onPressed: () => _showFakeLink('Instagram or TikTok demo share'),
             icon: const Icon(Icons.camera_alt_outlined),
-          ),
-          IconButton(
-            tooltip: 'Share to TikTok',
-            onPressed: () => _showFakeLink('TikTok demo link'),
-            icon: const Icon(Icons.music_note),
-          ),
-          IconButton(
-            tooltip: 'CommBank investment link',
-            onPressed: () => _showFakeLink(
-              'CommBank investing demo link - not financial advice.',
-            ),
-            icon: const Icon(Icons.trending_up),
           ),
           IconButton(
             key: const Key('export-image-button'),
@@ -145,6 +135,7 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
         onShowSpending: widget.onShowSpending,
         onShowCalendar: widget.onShowCalendar,
         onShowHomestead: () {},
+        onShowInvestment: widget.onShowInvestment ?? () {},
       ),
       body: SafeArea(
         child: Center(

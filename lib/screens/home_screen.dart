@@ -34,6 +34,7 @@ class HomeScreen extends StatefulWidget {
     this.lastEarnedSummary,
     this.api,
     this.onRetakeQuestionnaire,
+    this.onShowInvestment,
   });
 
   final WealthReport report;
@@ -57,6 +58,7 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback onShowHomestead;
   final Future<double> Function() onFetchTodaySpending;
   final VoidCallback? onRetakeQuestionnaire;
+  final VoidCallback? onShowInvestment;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -204,6 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onShowSpending: widget.onShowSpending,
         onShowCalendar: widget.onShowCalendar,
         onShowHomestead: widget.onShowHomestead,
+        onShowInvestment: widget.onShowInvestment ?? () {},
       ),
       body: SafeArea(
         child: Center(

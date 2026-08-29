@@ -267,6 +267,26 @@ void main() {
     expect(find.byKey(const Key('forest-calendar-grid')), findsOneWidget);
   });
 
+  testWidgets('the Investment tab opens the CommBank demo investment screen', (
+    tester,
+  ) async {
+    await startPlan(tester);
+
+    await tester.tap(find.text('Investment'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Investment'), findsWidgets);
+    expect(find.textContaining('CommBank'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('commbank-investment-link')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('CommBank investment demo link'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('the home screen can reopen the questionnaire after onboarding', (
     tester,
   ) async {
