@@ -68,10 +68,11 @@ const _geometry = IsoGridGeometry(
   tileHeight: kHomeTileHeight,
 );
 const double _dirtEdgeHeight = 24;
-const double _gridCanvasWidth = kHomeTileWidth * kHomeGridSize + kHomeTileWidth;
-const double _gridCanvasHeight =
+const double kHomeGridCanvasWidth =
+    kHomeTileWidth * kHomeGridSize + kHomeTileWidth;
+const double kHomeGridCanvasHeight =
     kHomeTileHeight * kHomeGridSize + _dirtEdgeHeight + kHomeTileHeight;
-const kHomeGridOrigin = Offset(_gridCanvasWidth / 2, kHomeTileHeight / 2);
+const kHomeGridOrigin = Offset(kHomeGridCanvasWidth / 2, kHomeTileHeight / 2);
 
 class _HomesteadScreenState extends State<HomesteadScreen> {
   final _exportBoundaryKey = GlobalKey();
@@ -169,6 +170,10 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
                     selectedItemId: _selectedItemId,
                     onSelect: _selectTrayItem,
                   ),
+                const SizedBox(height: 24),
+                _ShareRow(
+                  onShare: (network) => _showShareDemo(context, network),
+                ),
               ],
             ),
           ),
@@ -178,58 +183,78 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
   }
 
   Widget _buildGrid(Set<String> placedIds) {
-    // The board is 588pt wide and a phone is 390, so it ran off the right
-    // edge. FittedBox scales it to fit; unlike a CSS transform, Flutter maps
-    // pointer events through the scale, so taps still land on the right cell.
-    return FittedBox(
-      fit: BoxFit.contain,
-      child: SizedBox(
-      width: _gridCanvasWidth,
-      height: _gridCanvasHeight,
-      child: GestureDetector(
-        key: const Key('homestead-grid'),
-        behavior: HitTestBehavior.opaque,
-        onTapUp: (details) => _handleGridTap(details.localPosition),
-        child: Stack(
-          children: [
-            CustomPaint(
-              size: const Size(_gridCanvasWidth, _gridCanvasHeight),
-              painter: _IsoGridPainter(
-                origin: kHomeGridOrigin,
-                grassColor: groundColor(widget.shopState),
-                dirtColor: _dirtColor(widget.shopState),
-              ),
-            ),
-            for (final placement in widget.layout.placements)
-              _positionedAt(
-                row: placement.row,
-                col: placement.col,
-                child: _PlacedDecoration(
-                  key: Key('placed-item-${placement.itemId}'),
-                  item: kShopCatalog.firstWhere(
-                    (item) => item.id == placement.itemId,
+    // The board is designed at kHomeGridCanvasWidth but a phone is narrower
+    // than that, so scale the whole thing down uniformly to fit. Never scale
+    // up past the design size — it only gets blurry and gigantic on desktop.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available = constraints.maxWidth;
+        final scale = available.isFinite && available > 0
+            ? (available / kHomeGridCanvasWidth).clamp(0.0, 1.0)
+            : 1.0;
+        final geometry = IsoGridGeometry(
+          tileWidth: kHomeTileWidth * scale,
+          tileHeight: kHomeTileHeight * scale,
+        );
+        final canvasWidth = kHomeGridCanvasWidth * scale;
+        final canvasHeight = kHomeGridCanvasHeight * scale;
+        final origin = Offset(canvasWidth / 2, geometry.tileHeight / 2);
+
+        return SizedBox(
+          width: canvasWidth,
+          height: canvasHeight,
+          child: GestureDetector(
+            key: const Key('homestead-grid'),
+            behavior: HitTestBehavior.opaque,
+            onTapUp: (details) =>
+                _handleGridTap(details.localPosition, geometry, origin),
+            child: Stack(
+              children: [
+                CustomPaint(
+                  size: Size(canvasWidth, canvasHeight),
+                  painter: _IsoGridPainter(
+                    origin: origin,
+                    geometry: geometry,
+                    dirtEdgeHeight: _dirtEdgeHeight * scale,
+                    grassColor: groundColor(widget.shopState),
+                    dirtColor: _dirtColor(widget.shopState),
                   ),
-                  onRemove: () => widget.onRemove(placement.itemId),
                 ),
-              ),
-          ],
-        ),
-      ),
-      ),
+                for (final placement in widget.layout.placements)
+                  _positionedAt(
+                    row: placement.row,
+                    col: placement.col,
+                    geometry: geometry,
+                    origin: origin,
+                    child: _PlacedDecoration(
+                      key: Key('placed-item-${placement.itemId}'),
+                      item: kShopCatalog.firstWhere(
+                        (item) => item.id == placement.itemId,
+                      ),
+                      onRemove: () => widget.onRemove(placement.itemId),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _positionedAt({
     required int row,
     required int col,
+    required IsoGridGeometry geometry,
+    required Offset origin,
     required Widget child,
   }) {
-    final center = kHomeGridOrigin + _geometry.cellCenter(row: row, col: col);
+    final center = origin + geometry.cellCenter(row: row, col: col);
     return Positioned(
-      left: center.dx - _geometry.tileWidth / 2,
-      top: center.dy - _geometry.tileHeight / 2,
-      width: _geometry.tileWidth,
-      height: _geometry.tileHeight,
+      left: center.dx - geometry.tileWidth / 2,
+      top: center.dy - geometry.tileHeight / 2,
+      width: geometry.tileWidth,
+      height: geometry.tileHeight,
       child: Center(child: child),
     );
   }
@@ -244,15 +269,21 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
   /// [localPosition], then places the selected tray item there if the cell
   /// is empty. Every point maps to the nearest cell (clamped to the grid),
   /// so there are no unreachable "dead zone" taps.
-  void _handleGridTap(Offset localPosition) {
+  void _handleGridTap(
+    Offset localPosition,
+    IsoGridGeometry geometry,
+    Offset origin,
+  ) {
     final selected = _selectedItemId;
     if (selected == null) {
       return;
     }
 
-    final relative = localPosition - kHomeGridOrigin;
-    final colF = relative.dx / kHomeTileWidth + relative.dy / kHomeTileHeight;
-    final rowF = relative.dy / kHomeTileHeight - relative.dx / kHomeTileWidth;
+    final relative = localPosition - origin;
+    final colF =
+        relative.dx / geometry.tileWidth + relative.dy / geometry.tileHeight;
+    final rowF =
+        relative.dy / geometry.tileHeight - relative.dx / geometry.tileWidth;
     final row = rowF.round().clamp(0, kHomeGridSize - 1);
     final col = colF.round().clamp(0, kHomeGridSize - 1);
 
@@ -277,6 +308,33 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
     }
   }
 
+  /// Sharing is not wired to any network. Rather than fake a successful post,
+  /// this says so outright — a button that silently pretends to publish is the
+  /// kind of thing people only discover is fake after they have told friends
+  /// to go look for it.
+  void _showShareDemo(BuildContext context, String network) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('share-demo-dialog'),
+        title: Text('Share to $network'),
+        content: Text(
+          'Demo only — nothing was posted to $network. Real sharing needs an '
+          'app review and API keys from $network, which this build does not '
+          'have. Use "Export image" to save your homestead and post it '
+          'yourself.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('share-demo-close'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _exportImage() async {
     final bytes = await widget.captureBoundary(_exportBoundaryKey);
     if (bytes == null) {
@@ -289,11 +347,15 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
 class _IsoGridPainter extends CustomPainter {
   const _IsoGridPainter({
     required this.origin,
+    required this.geometry,
+    required this.dirtEdgeHeight,
     required this.grassColor,
     required this.dirtColor,
   });
 
   final Offset origin;
+  final IsoGridGeometry geometry;
+  final double dirtEdgeHeight;
   final Color grassColor;
   final Color dirtColor;
 
@@ -306,24 +368,24 @@ class _IsoGridPainter extends CustomPainter {
   void _paintDirtBase(Canvas canvas) {
     final left =
         origin +
-        _geometry.cellCenter(row: kHomeGridSize - 1, col: 0) +
-        const Offset(-kHomeTileWidth / 2, 0);
+        geometry.cellCenter(row: kHomeGridSize - 1, col: 0) +
+        Offset(-geometry.tileWidth / 2, 0);
     final bottom =
         origin +
-        _geometry.cellCenter(row: kHomeGridSize - 1, col: kHomeGridSize - 1) +
-        const Offset(0, kHomeTileHeight / 2);
+        geometry.cellCenter(row: kHomeGridSize - 1, col: kHomeGridSize - 1) +
+        Offset(0, geometry.tileHeight / 2);
     final right =
         origin +
-        _geometry.cellCenter(row: 0, col: kHomeGridSize - 1) +
-        const Offset(kHomeTileWidth / 2, 0);
+        geometry.cellCenter(row: 0, col: kHomeGridSize - 1) +
+        Offset(geometry.tileWidth / 2, 0);
 
     final path = Path()
       ..moveTo(left.dx, left.dy)
       ..lineTo(bottom.dx, bottom.dy)
       ..lineTo(right.dx, right.dy)
-      ..lineTo(right.dx, right.dy + _dirtEdgeHeight)
-      ..lineTo(bottom.dx, bottom.dy + _dirtEdgeHeight)
-      ..lineTo(left.dx, left.dy + _dirtEdgeHeight)
+      ..lineTo(right.dx, right.dy + dirtEdgeHeight)
+      ..lineTo(bottom.dx, bottom.dy + dirtEdgeHeight)
+      ..lineTo(left.dx, left.dy + dirtEdgeHeight)
       ..close();
 
     canvas.drawPath(path, Paint()..color = dirtColor);
@@ -361,7 +423,9 @@ class _IsoGridPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _IsoGridPainter oldDelegate) {
     return oldDelegate.grassColor != grassColor ||
-        oldDelegate.dirtColor != dirtColor;
+        oldDelegate.dirtColor != dirtColor ||
+        oldDelegate.origin != origin ||
+        oldDelegate.geometry.tileWidth != geometry.tileWidth;
   }
 }
 
@@ -495,6 +559,45 @@ class _SavingsStatsSection extends StatelessWidget {
       case StatsPeriod.year:
         return 'Year';
     }
+  }
+}
+
+/// Share affordances for the homestead. Both are demo-only — see
+/// _showShareDemo for why they say so rather than faking a post.
+class _ShareRow extends StatelessWidget {
+  const _ShareRow({required this.onShare});
+
+  final void Function(String network) onShare;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'Show off your homestead',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            OutlinedButton.icon(
+              key: const Key('share-facebook-button'),
+              onPressed: () => onShare('Facebook'),
+              icon: const Icon(Icons.facebook, size: 18),
+              label: const Text('Facebook'),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              key: const Key('share-instagram-button'),
+              onPressed: () => onShare('Instagram'),
+              icon: const Icon(Icons.camera_alt_outlined, size: 18),
+              label: const Text('Instagram'),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 

@@ -179,8 +179,9 @@ class _MyAppState extends State<MyApp> {
               surfaceContainerHighest: const Color(0xffe9e2d2),
             )
           : base,
-      scaffoldBackgroundColor:
-          plus ? const Color(0xfff2ede0) : const Color(0xfff5f1e8),
+      scaffoldBackgroundColor: plus
+          ? const Color(0xfff2ede0)
+          : const Color(0xfff5f1e8),
       cardTheme: CardThemeData(
         elevation: plus ? 2 : 1,
         shape: RoundedRectangleBorder(
@@ -191,8 +192,9 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor:
-            plus ? const Color(0xffe8e0cd) : const Color(0xffe8f0ea),
+        backgroundColor: plus
+            ? const Color(0xffe8e0cd)
+            : const Color(0xffe8f0ea),
         foregroundColor: const Color(0xff173b2f),
         // Material's default 22pt title plus three or four action icons does
         // not fit a 390pt phone — "Homestead" was rendering as "Homes…".
@@ -359,6 +361,7 @@ class _MyAppState extends State<MyApp> {
           isPlusMember: _isPlusMember,
           onSubscribe: _handleSubscribePlus,
           onCancelMembership: _handleCancelPlus,
+          onBuyFreezeTicket: _handleBuyFreezeTicket,
           onBack: () => setState(() => _view = AppView.forest),
         );
       case AppView.homestead:
@@ -501,11 +504,9 @@ class _MyAppState extends State<MyApp> {
     };
     final risk = switch (snap.priority) {
       PlanningPriority.breathingRoom ||
-      PlanningPriority.debtOrganisation =>
-        RiskLevel.cautious,
+      PlanningPriority.debtOrganisation => RiskLevel.cautious,
       PlanningPriority.upcomingCost ||
-      PlanningPriority.reduceSpending =>
-        RiskLevel.steady,
+      PlanningPriority.reduceSpending => RiskLevel.steady,
       PlanningPriority.explore => RiskLevel.balanced,
     };
     final pressure = switch (snap.costs) {
@@ -514,14 +515,16 @@ class _MyAppState extends State<MyApp> {
       _ => SpendingPressure.medium,
     };
 
-    _handleProfileSubmitted(FinanceProfile(
-      monthlyIncome: income,
-      fixedMonthlyExpenses: fixed,
-      monthlySavingsGoal: savings,
-      riskLevel: risk,
-      financialGoal: goal,
-      spendingPressure: pressure,
-    ));
+    _handleProfileSubmitted(
+      FinanceProfile(
+        monthlyIncome: income,
+        fixedMonthlyExpenses: fixed,
+        monthlySavingsGoal: savings,
+        riskLevel: risk,
+        financialGoal: goal,
+        spendingPressure: pressure,
+      ),
+    );
   }
 
   void _startMoneyStyleQuiz() {
@@ -706,9 +709,9 @@ class _MyAppState extends State<MyApp> {
       _showMessage(
         n == 1
             ? 'You missed a day. A streak freeze covered it — your '
-                '${_summary.currentStreak}-day streak is intact.'
+                  '${_summary.currentStreak}-day streak is intact.'
             : '$n streak freezes covered the days you missed. Your '
-                '${_summary.currentStreak}-day streak is intact.',
+                  '${_summary.currentStreak}-day streak is intact.',
       );
     }
 
@@ -925,9 +928,11 @@ class _MyAppState extends State<MyApp> {
       _recomputeProgression();
     });
 
-    _celebrateIfLevelled(beforeLevel,
-        xp: _progression.totalXp - beforeXp,
-        coins: _progression.coinBalance - beforeCoins);
+    _celebrateIfLevelled(
+      beforeLevel,
+      xp: _progression.totalXp - beforeXp,
+      coins: _progression.coinBalance - beforeCoins,
+    );
   }
 
   /// Demo only: own everything and lay it out.
@@ -1039,6 +1044,18 @@ class _MyAppState extends State<MyApp> {
       'Plus activated (demo — no payment was taken). '
       'You now hold ${_freezes.available} streak freezes.',
     );
+  }
+
+  /// A bought freeze is an extra slot, not one of the earned ones — raising
+  /// the cap too means buying still does something when you are already full.
+  void _handleBuyFreezeTicket() {
+    setState(() {
+      _freezes = _freezes.copyWith(
+        available: _freezes.available + 1,
+        capacity: _freezes.capacity + 1,
+      );
+    });
+    _showMessage('Freeze ticket added (demo — no payment was taken).');
   }
 
   void _handleCancelPlus() {
