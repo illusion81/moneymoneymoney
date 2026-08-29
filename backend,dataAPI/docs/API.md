@@ -36,6 +36,15 @@ does not create a financial profile, allocation, plan, or mission. Financial
 calculations require separate user-provided facts through `/api/survey` or
 opted-in bank data.
 
+Question bank v2 (`question_version: "money-style-v2"`) is a 24-question pool.
+A session shows 12 of them: 6 fixed openers, then 6 follow-ups the on-device
+engine routes from the running score, so two users legitimately see different
+questions. Question ids therefore run 1–24 while `answered_count` still caps at
+12, and `shown_question_ids` records which questions a given session actually
+displayed (it is additive — a pre-v2 payload that omits it still validates).
+Scoring stays on the client; the session is posted once at the end, so no
+per-page endpoint exists.
+
 ## The four buckets
 
 `invest` · `stable` · `living` · `reward` — in that order, everywhere. The

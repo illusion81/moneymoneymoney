@@ -1,129 +1,145 @@
 import '../models/money_style.dart';
 
-// All 8 Money Style Archetypes
+/// The 8 Money Style archetypes.
+///
+/// Identity is a 3-bit key built from the page-1 trio only — Revolving Debt
+/// Neglect, Convenience-Impulse Spending, Price-Anchoring — exactly as the
+/// design recommends (§F.8 / v1 §D.4). The other three dimensions surface as
+/// standalone habit insights on the result screen rather than being folded
+/// into the archetype's identity, which keeps this table at 8 entries instead
+/// of 64.
+///
+/// **Zero-score decision (design §F.8 left this open):** each bit is the
+/// *sign* of that dimension's running score, and an exact 0 is folded into
+/// the "watch" side rather than getting a 4th "balanced" state.
+///
+/// Why: a 4th per-dimension state would take the key from 8 to 64 archetypes,
+/// which is the exact content-dilution problem the 3-bit design exists to
+/// avoid. Of the two remaining options — default a 0 to "watch" or to
+/// "strength" — "watch" is the honest one: a score of 0 means the user picked
+/// the *mixed* option, i.e. they described a habit that is neither failing nor
+/// working. Calling that a confirmed strength would over-claim on the user's
+/// behalf, which is the failure mode v1 was explicitly redesigned to avoid.
+/// Erring toward "worth a look" is recoverable (the copy invites more
+/// answers); erring toward "you've got this handled" is not.
 const Map<String, ArchetypeInfo> archetypeMap = {
-  // Steady + Pause + Self
-  'steady_pause_self': ArchetypeInfo(
-    name: 'The Calm Comparator',
-    playfulDescriptor: 'The thoughtful steward',
+  // key: <debt>_<convenience>_<price>, 'watch' = score <= 0, 'hold' = score > 0
+  'watch_watch_watch': ArchetypeInfo(
+    id: 'watch_watch_watch',
+    name: 'The Improviser',
+    playfulDescriptor: 'Decides in the moment, sorts it out later',
     strengths: [
-      'Plans deliberately and sticks to goals without constant second-guessing',
-      'Evaluates options thoroughly before making big financial moves',
-      'Builds reliable, predictable money habits that compound over time',
+      'Answers honestly about habits most people talk around',
+      'Adapts fast — nothing is locked into a system that could break',
+      'Has the most room to gain from one small automation',
     ],
     interpretation:
-        'You take a measured, independent approach to money. You prefer to think things through before making decisions and trust your own judgment. Your steady rhythm gives you consistency, and your careful pace lets you make choices you feel confident about. You\'re at your best when you have time to research and space to make decisions on your own terms.',
-    pattern: 'Steady Pause Self-Directed',
+        'Right now, money mostly gets handled in the moment: the card balance, the tired-evening delivery, the pricier option. None of that makes you bad with money — it means very little is on rails yet, so every decision costs you attention at the exact moment you have least of it. The good news is that this is the pattern that changes fastest, because a single automatic payment or pre-decided rule removes a whole category of decisions at once.',
+    pattern: 'Debt: watch • Convenience: watch • Price: watch',
   ),
-
-  // Steady + Pause + Collaborative
-  'steady_pause_collaborative': ArchetypeInfo(
-    name: 'The Intentional Protector',
-    playfulDescriptor: 'The collaborative guardian',
+  'watch_watch_hold': ArchetypeInfo(
+    id: 'watch_watch_hold',
+    name: 'The Careful Chooser',
+    playfulDescriptor: 'Knows what things should cost',
     strengths: [
-      'Balances careful planning with input from people you trust',
-      'Protects family or shared interests through thoughtful decisions',
-      'Creates sustainable systems that work for everyone involved',
+      'Walks in with a price in mind instead of taking the first number offered',
+      'Willing to name the cheaper option out loud in a group',
+      'Judges value deliberately rather than by how nice something looks',
     ],
     interpretation:
-        'You\'re someone who values both stability and teamwork. You like to take time with decisions and involve people you care about in the process. You build money systems that work reliably for a household or group, and you think long-term while staying open to others\' perspectives. You\'re at your best when you can plan carefully with support around you.',
-    pattern: 'Steady Pause Collaborative',
+        'You already do the hard part of spending well: you have a sense of what things ought to cost before you are shown a price, and you will say so. Where money still slips away is upstream of that — the card balance carrying over, and the convenience spend that happens when you are too tired to plan. Those are not judgement failures; they are timing failures, and they respond to automation rather than more willpower.',
+    pattern: 'Debt: watch • Convenience: watch • Price: hold',
   ),
-
-  // Steady + Momentum + Self
-  'steady_momentum_self': ArchetypeInfo(
-    name: 'The Quiet Builder',
-    playfulDescriptor: 'The independent executor',
+  'watch_hold_watch': ArchetypeInfo(
+    id: 'watch_hold_watch',
+    name: 'The Routine Keeper',
+    playfulDescriptor: 'Has a rule and mostly sticks to it',
     strengths: [
-      'Acts decisively on plans without needing external validation',
-      'Builds wealth steadily through consistent, independent action',
-      'Stays the course even when markets or circumstances shift around you',
+      'Decided in advance when convenience spending is worth it',
+      'Keeps everyday spending from drifting on tired days',
+      'Builds habits that survive a bad week',
     ],
     interpretation:
-        'You\'re a self-reliant executor. You have a steady financial rhythm and make decisions quickly and independently. You trust yourself to move forward without endless deliberation or external input. You build wealth reliably through quiet, consistent action, and you\'re comfortable being the sole decision-maker in your financial life.',
-    pattern: 'Steady Momentum Self-Directed',
+        'Your day-to-day is steadier than most: you have a rule for the tired-evening spend and you mostly keep to it, so the small leaks stay small. The pressure sits elsewhere — on what your credit card does between statements, and on how you anchor to a price when the option in front of you looks good. Both are single-decision problems, not daily-discipline problems.',
+    pattern: 'Debt: watch • Convenience: hold • Price: watch',
   ),
-
-  // Steady + Momentum + Collaborative
-  'steady_momentum_collaborative': ArchetypeInfo(
-    name: 'The Steady Improviser',
-    playfulDescriptor: 'The collaborative pragmatist',
+  'watch_hold_hold': ArchetypeInfo(
+    id: 'watch_hold_hold',
+    name: 'The Deliberate Spender',
+    playfulDescriptor: 'Spends on purpose, borrows by accident',
     strengths: [
-      'Adapts plans quickly with input from trusted partners or advisors',
-      'Keeps money moving and decisions rolling forward as a team',
-      'Maintains steady financial habits while staying flexible in tactics',
+      'Pre-decides both what convenience is worth and what a fair price is',
+      'Keeps discretionary spending aligned with what you actually value',
+      'Resists both the tired-evening default and the upsell at the counter',
     ],
     interpretation:
-        'You\'re someone who combines steady financial habits with collaborative decision-making. You move forward quickly, but you like to check in with people you trust as you go. You maintain reliable financial structures while staying open to feedback and adaptation. You\'re at your best when you can make prompt decisions as part of a team.',
-    pattern: 'Steady Momentum Collaborative',
+        'The spending side of your money life is genuinely in hand — you decide before the moment arrives, and it shows in both convenience and price. What is left is the credit card: a balance that carries, or a rate and due date you could not name without checking. That one is worth attention precisely because everything else is working; it is the piece quietly charging you for a habit you have already outgrown.',
+    pattern: 'Debt: watch • Convenience: hold • Price: hold',
   ),
-
-  // Responsive + Pause + Self
-  'responsive_pause_self': ArchetypeInfo(
-    name: 'The Flexible Pathfinder',
-    playfulDescriptor: 'The adaptive strategist',
+  'hold_watch_watch': ArchetypeInfo(
+    id: 'hold_watch_watch',
+    name: 'The Autopay Anchor',
+    playfulDescriptor: 'Set it once, never thinks about it again',
     strengths: [
-      'Adjusts to life changes thoughtfully without rigid plans holding you back',
-      'Evaluates new opportunities carefully before pivoting direction',
-      'Trusts yourself to navigate uncertainty with intention and reflection',
+      'Removed the monthly card decision entirely by automating it',
+      'Keeps roughly aware of your rate and due date without checking',
+      'Avoids the most expensive money mistake there is: revolving interest',
     ],
     interpretation:
-        'You\'re naturally adaptable and thoughtful. You prefer to roll with changes in income or circumstances, but you take time to evaluate what each shift means for your direction. You like to think through options before committing, and you trust your own judgment to guide your path. You\'re at your best when you can be flexible and reflective at your own pace.',
-    pattern: 'Responsive Pause Self-Directed',
+        'You have already solved the costliest habit on this list — your card gets paid properly without you re-deciding it every month. That is a real, compounding advantage. The spending that still drifts is the in-the-moment kind: the delivery when you are depleted, the nicer option because it was there first. Those cost less individually but they are also the ones a pre-decided rule fixes quickest.',
+    pattern: 'Debt: hold • Convenience: watch • Price: watch',
   ),
-
-  // Responsive + Pause + Collaborative
-  'responsive_pause_collaborative': ArchetypeInfo(
-    name: 'The Community Navigator',
-    playfulDescriptor: 'The collaborative explorer',
+  'hold_watch_hold': ArchetypeInfo(
+    id: 'hold_watch_hold',
+    name: 'The Measured Payer',
+    playfulDescriptor: 'Good with the big numbers, loose with the tired ones',
     strengths: [
-      'Draws on community wisdom to navigate financial transitions smoothly',
-      'Stays adaptable while building strong support networks around money',
-      'Explores options thoughtfully with people who understand your world',
+      'Handles credit deliberately instead of by minimum payment',
+      'Sets a price expectation before being shown one',
+      'Comfortable pushing for a cheaper option when it matters',
     ],
     interpretation:
-        'You\'re someone who thrives on adaptability and connection. You adjust your money approach based on life changes, and you like to explore options and talk them through with people you trust. You navigate uncertainty better with support, and you value others\' perspectives as you chart your course. You\'re at your best when you have both flexibility and community.',
-    pattern: 'Responsive Pause Collaborative',
+        'When you are thinking clearly, you are good with money — your card is handled and you know what things should cost. The gap opens at the end of the day, when planning ahead feels like too much and convenience wins. That is not a values problem; it is what happens when a decision is left to your lowest-energy moment. Deciding the rule in advance, once, moves that decision to a time when you are actually able to make it.',
+    pattern: 'Debt: hold • Convenience: watch • Price: hold',
   ),
-
-  // Responsive + Momentum + Self
-  'responsive_momentum_self': ArchetypeInfo(
-    name: 'The Resourceful Resetter',
-    playfulDescriptor: 'The agile independent',
+  'hold_hold_watch': ArchetypeInfo(
+    id: 'hold_hold_watch',
+    name: 'The Steady Operator',
+    playfulDescriptor: 'Systems on, price radar off',
     strengths: [
-      'Bounces back quickly from financial setbacks or unexpected changes',
-      'Makes fast adjustments without needing permission or consensus',
-      'Finds creative solutions and pivots direction decisively on your own',
+      'Card payments and everyday convenience both run on rules, not willpower',
+      'Rarely spends just because you are tired',
+      'Keeps the recurring parts of money quietly working',
     ],
     interpretation:
-        'You\'re nimble and resourceful. You respond quickly to financial changes and make decisions fast without needing to consult others. You adapt your money approach as circumstances shift, and you trust yourself to find solutions. You\'re energized by new directions and comfortable taking independent action to reset when life changes.',
-    pattern: 'Responsive Momentum Self-Directed',
+        'The routine parts of your money life run themselves — the card is paid properly and the tired-evening spend has a rule around it. Where the money still goes is at the point of choosing: the pricier option, the first option, the add-on at the counter. That is the one habit here that no automation fixes; it comes from deciding what a thing is worth to you before you see what it costs.',
+    pattern: 'Debt: hold • Convenience: hold • Price: watch',
   ),
-
-  // Responsive + Momentum + Collaborative
-  'responsive_momentum_collaborative': ArchetypeInfo(
-    name: 'The Momentum Maker',
-    playfulDescriptor: 'The dynamic team player',
+  'hold_hold_hold': ArchetypeInfo(
+    id: 'hold_hold_hold',
+    name: 'The Quiet Compounder',
+    playfulDescriptor: 'Nothing dramatic, everything working',
     strengths: [
-      'Rallies teams to take action quickly on emerging opportunities',
-      'Adapts money strategies in real-time with collaborative input',
-      'Energizes others and keeps financial momentum moving forward',
+      'Credit, convenience and price are all handled by decisions made in advance',
+      'Very little money leaks out through inattention',
+      'Free to spend on what you actually care about, without second-guessing',
     ],
     interpretation:
-        'You\'re someone who thrives on energy and teamwork. You adapt quickly to changes and like to make decisions fast—often with input from people around you. You\'re energized by action and collaboration, and you can rally others to move forward. You\'re at your best when you can be flexible, decisive, and part of a team.',
-    pattern: 'Responsive Momentum Collaborative',
+        'All three of the habits this quiz weighs most heavily are already working for you: the card is paid on rails, convenience spending has a rule, and you anchor to a price before the menu does it for you. That combination compounds quietly. The useful next look is the other half of the picture — subscriptions, your savings buffer, and how regularly you actually check in — which is where a well-run money life most often has its one blind spot.',
+    pattern: 'Debt: hold • Convenience: hold • Price: hold',
   ),
 };
 
-// Helper function to get archetype by pattern
+/// Builds the archetype key from the three page-1 dimension signs.
+/// `true` means that dimension's score came out positive (a confirmed
+/// strength); an exact 0 or a negative score is `false` — see the note above.
 ArchetypeInfo getArchetypeByPattern(
-  bool isMoneyRhythmSteady,
-  bool isDecisionStylePause,
-  bool isSupportStyleSelf,
+  bool debtHolding,
+  bool convenienceHolding,
+  bool priceHolding,
 ) {
-  final rhythm = isMoneyRhythmSteady ? 'steady' : 'responsive';
-  final decision = isDecisionStylePause ? 'pause' : 'momentum';
-  final support = isSupportStyleSelf ? 'self' : 'collaborative';
-  final key = '${rhythm}_${decision}_$support';
-  return archetypeMap[key] ?? archetypeMap['steady_pause_self']!;
+  String bit(bool value) => value ? 'hold' : 'watch';
+  final key =
+      '${bit(debtHolding)}_${bit(convenienceHolding)}_${bit(priceHolding)}';
+  return archetypeMap[key] ?? archetypeMap['watch_watch_watch']!;
 }
