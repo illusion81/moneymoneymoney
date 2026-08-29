@@ -153,9 +153,7 @@ void main() {
     expect(find.text('Start Plan'), findsOneWidget);
   });
 
-  testWidgets('starting the plan shows the forest home screen', (
-    tester,
-  ) async {
+  testWidgets('starting the plan shows the forest home screen', (tester) async {
     await startPlan(tester);
 
     expect(find.text('Wealth Forest'), findsOneWidget);

@@ -26,10 +26,8 @@ class HomeScreen extends StatefulWidget {
   final ProgressionState progression;
   final ShopState shopState;
   final String? lastEarnedSummary;
-  final void Function({
-    required double spending,
-    required bool actionCompleted,
-  }) onCheckIn;
+  final void Function({required double spending, required bool actionCompleted})
+  onCheckIn;
   final void Function(String recoveryNote) onRestore;
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
@@ -54,8 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final latestDay =
-        widget.summary.days.isEmpty ? null : widget.summary.days.last;
+    final latestDay = widget.summary.days.isEmpty
+        ? null
+        : widget.summary.days.last;
     final statusText = _statusText(latestDay);
     final statusColor = _statusColor(latestDay);
 
@@ -77,6 +76,33 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Achievements',
             onPressed: widget.onShowAchievements,
             icon: const Icon(Icons.emoji_events_outlined),
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+        onDestinationSelected: (index) {
+          if (index == 1) {
+            widget.onShowReport();
+          } else if (index == 2) {
+            widget.onShowAchievements();
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.park_outlined),
+            selectedIcon: Icon(Icons.park),
+            label: 'Forest',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.description_outlined),
+            selectedIcon: Icon(Icons.description),
+            label: 'Report',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined),
+            selectedIcon: Icon(Icons.emoji_events),
+            label: 'Awards',
           ),
         ],
       ),
@@ -173,9 +199,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 18),
                 Text(
                   'Today\'s money action',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 Text(widget.report.dailyActions.first),
@@ -236,10 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() => _errorText = null);
-    widget.onCheckIn(
-      spending: spending,
-      actionCompleted: _actionCompleted,
-    );
+    widget.onCheckIn(spending: spending, actionCompleted: _actionCompleted);
   }
 
   String _statusText(ForestDay? day) {
@@ -500,21 +523,24 @@ class _MetricRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _MetricTile(label: 'Streak', value: '$streak')),
+        Expanded(
+          child: _MetricTile(label: 'Streak', value: '$streak'),
+        ),
         const SizedBox(width: 8),
-        Expanded(child: _MetricTile(label: 'Healthy', value: '$healthy')),
+        Expanded(
+          child: _MetricTile(label: 'Healthy', value: '$healthy'),
+        ),
         const SizedBox(width: 8),
-        Expanded(child: _MetricTile(label: 'Withered', value: '$withered')),
+        Expanded(
+          child: _MetricTile(label: 'Withered', value: '$withered'),
+        ),
       ],
     );
   }
 }
 
 class _MetricTile extends StatelessWidget {
-  const _MetricTile({
-    required this.label,
-    required this.value,
-  });
+  const _MetricTile({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -531,9 +557,9 @@ class _MetricTile extends StatelessWidget {
         children: [
           Text(
             value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           Text(label),
         ],

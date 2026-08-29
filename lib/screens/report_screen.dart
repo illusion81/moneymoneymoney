@@ -70,19 +70,18 @@ class ReportScreen extends StatelessWidget {
                     title: Text(action),
                   ),
                 const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: onStartPlan,
-                  icon: const Icon(Icons.park),
-                  label: const Text('Start Plan'),
-                ),
-                if (onShowForest != null) ...[
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
+                if (onShowForest == null)
+                  FilledButton.icon(
+                    onPressed: onStartPlan,
+                    icon: const Icon(Icons.park),
+                    label: const Text('Start Plan'),
+                  )
+                else
+                  FilledButton.icon(
                     onPressed: onShowForest,
                     icon: const Icon(Icons.arrow_back),
                     label: const Text('Back to Forest'),
                   ),
-                ],
               ],
             ),
           ),

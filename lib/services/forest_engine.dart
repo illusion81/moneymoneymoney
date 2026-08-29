@@ -12,9 +12,13 @@ class ForestEngine {
     required bool actionCompleted,
   }) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
-    final previousDays = existingDays
-        .where((day) => !_isSameDate(day.date, normalizedDate))
-        .toList();
+    final previousDays = _withMissedDays(
+      existingDays
+          .where((day) => !_isSameDate(day.date, normalizedDate))
+          .toList(),
+      normalizedDate,
+      report.dailyBudget,
+    );
     final overBudget = spending > report.dailyBudget;
     final healthy = actionCompleted && !overBudget;
     final provisionalDays = [
@@ -34,7 +38,9 @@ class ForestEngine {
     ]..sort((a, b) => a.date.compareTo(b.date));
 
     final streak = _currentStreak(provisionalDays);
-    final day = provisionalDays.last;
+    final day = provisionalDays.firstWhere(
+      (day) => _isSameDate(day.date, normalizedDate),
+    );
     final updatedDay = ForestDay(
       date: day.date,
       status: day.status,
@@ -46,15 +52,43 @@ class ForestEngine {
       restoredAt: day.restoredAt,
       recoveryNote: day.recoveryNote,
     );
-    final updatedDays = [
-      ...provisionalDays.take(provisionalDays.length - 1),
-      updatedDay,
-    ];
+    final updatedDays = provisionalDays
+        .map((day) => _isSameDate(day.date, normalizedDate) ? updatedDay : day)
+        .toList();
 
-    return CheckInResult(
-      day: updatedDay,
-      summary: summarize(updatedDays),
-    );
+    return CheckInResult(day: updatedDay, summary: summarize(updatedDays));
+  }
+
+  List<ForestDay> _withMissedDays(
+    List<ForestDay> existingDays,
+    DateTime checkInDate,
+    double dailyBudget,
+  ) {
+    if (existingDays.isEmpty) {
+      return existingDays;
+    }
+
+    final orderedDays = [...existingDays]
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final missedDays = <ForestDay>[];
+    var missedDate = orderedDays.last.date.add(const Duration(days: 1));
+
+    while (missedDate.isBefore(checkInDate)) {
+      missedDays.add(
+        ForestDay(
+          date: missedDate,
+          status: TreeStatus.withered,
+          treeLevel: 0,
+          spending: 0,
+          dailyBudget: dailyBudget,
+          actionCompleted: false,
+          message: 'Today withered because no check-in was completed.',
+        ),
+      );
+      missedDate = missedDate.add(const Duration(days: 1));
+    }
+
+    return [...orderedDays, ...missedDays];
   }
 
   ForestSummary summarize(
@@ -63,12 +97,15 @@ class ForestEngine {
     ShopState? shopState,
   }) {
     final orderedDays = [...days]..sort((a, b) => a.date.compareTo(b.date));
-    final healthyTreeCount =
-        orderedDays.where((day) => day.status == TreeStatus.healthy).length;
-    final witheredTreeCount =
-        orderedDays.where((day) => day.status == TreeStatus.withered).length;
-    final restoredTreeCount =
-        orderedDays.where((day) => day.status == TreeStatus.restored).length;
+    final healthyTreeCount = orderedDays
+        .where((day) => day.status == TreeStatus.healthy)
+        .length;
+    final witheredTreeCount = orderedDays
+        .where((day) => day.status == TreeStatus.withered)
+        .length;
+    final restoredTreeCount = orderedDays
+        .where((day) => day.status == TreeStatus.restored)
+        .length;
     final currentStreak = _currentStreak(orderedDays);
 
     return ForestSummary(
@@ -94,8 +131,9 @@ class ForestEngine {
   }) {
     final normalizedDayDate = _normalize(dayDate);
     final normalizedNow = _normalize(now);
-    final matches =
-        days.where((day) => _isSameDate(day.date, normalizedDayDate));
+    final matches = days.where(
+      (day) => _isSameDate(day.date, normalizedDayDate),
+    );
     if (matches.isEmpty) {
       return const RestorationQuote(
         eligible: false,
@@ -189,8 +227,9 @@ class ForestEngine {
       );
     }
 
-    final target =
-        days.firstWhere((day) => _isSameDate(day.date, normalizedDayDate));
+    final target = days.firstWhere(
+      (day) => _isSameDate(day.date, normalizedDayDate),
+    );
     final restoredDay = ForestDay(
       date: target.date,
       status: TreeStatus.restored,
@@ -273,10 +312,10 @@ class ForestEngine {
     );
     final recoveryDay = _hasRecoveryDay(days);
     final secondWind = days.any((day) => day.status == TreeStatus.restored);
-    final curator = shopState != null &&
+    final curator =
+        shopState != null &&
         shopState.ownedItemIds.any((id) => !_isDefaultShopItem(id));
-    final seedlingScholar =
-        progression != null && progression.level.level >= 5;
+    final seedlingScholar = progression != null && progression.level.level >= 5;
 
     return [
       Achievement(
@@ -341,7 +380,8 @@ class ForestEngine {
 
   bool _hasRecoveryDay(List<ForestDay> days) {
     for (var index = 1; index < days.length; index++) {
-      final previousQualifies = days[index - 1].status == TreeStatus.withered ||
+      final previousQualifies =
+          days[index - 1].status == TreeStatus.withered ||
           days[index - 1].status == TreeStatus.restored;
       if (previousQualifies && days[index].status == TreeStatus.healthy) {
         return true;

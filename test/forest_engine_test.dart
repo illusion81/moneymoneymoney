@@ -93,6 +93,56 @@ void main() {
       expect(unlocked, contains('Three Day Streak'));
       expect(unlocked, contains('Budget Guardian'));
     });
+
+    test('inserts withered missed days and resets streak across calendar gaps', () {
+      final engine = ForestEngine();
+      final first = engine.checkIn(
+        existingDays: const [],
+        report: report,
+        date: DateTime(2026, 8, 27),
+        spending: 30,
+        actionCompleted: true,
+      );
+      final third = engine.checkIn(
+        existingDays: first.summary.days,
+        report: report,
+        date: DateTime(2026, 8, 29),
+        spending: 30,
+        actionCompleted: true,
+      );
+
+      expect(third.summary.days, hasLength(3));
+      expect(third.summary.days[1].date, DateTime(2026, 8, 28));
+      expect(third.summary.days[1].status, TreeStatus.withered);
+      expect(third.summary.currentStreak, 1);
+      expect(third.summary.healthyTreeCount, 2);
+      expect(third.summary.witheredTreeCount, 1);
+    });
+
+    test('returns the checked-in day when updating an earlier date', () {
+      final engine = ForestEngine();
+      final first = engine.checkIn(
+        existingDays: const [],
+        report: report,
+        date: DateTime(2026, 8, 29),
+        spending: 30,
+        actionCompleted: true,
+      );
+      final earlier = engine.checkIn(
+        existingDays: first.summary.days,
+        report: report,
+        date: DateTime(2026, 8, 28),
+        spending: 10,
+        actionCompleted: true,
+      );
+
+      expect(earlier.day.date, DateTime(2026, 8, 28));
+      expect(earlier.day.status, TreeStatus.healthy);
+      expect(earlier.summary.days.map((day) => day.date), [
+        DateTime(2026, 8, 28),
+        DateTime(2026, 8, 29),
+      ]);
+    });
   });
 
   group('ForestEngine restoration', () {

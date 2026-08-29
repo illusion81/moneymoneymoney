@@ -49,6 +49,7 @@ class _MyAppState extends State<MyApp> {
   final List<RewardEvent> _spendEvents = [];
   AppView _view = AppView.onboarding;
   String? _lastEarnedSummary;
+  bool _planStarted = false;
 
   _MyAppState() {
     _shopState = _shopService.initialState();
@@ -66,9 +67,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xff2f7d50),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff2f7d50)),
         scaffoldBackgroundColor: const Color(0xfff5f1e8),
         useMaterial3: true,
       ),
@@ -88,7 +87,10 @@ class _MyAppState extends State<MyApp> {
       case AppView.report:
         return ReportScreen(
           report: report,
-          onStartPlan: () => setState(() => _view = AppView.home),
+          onStartPlan: _startPlan,
+          onShowForest: _planStarted
+              ? () => setState(() => _view = AppView.home)
+              : null,
         );
       case AppView.home:
         return HomeScreen(
@@ -130,6 +132,14 @@ class _MyAppState extends State<MyApp> {
         shopState: _shopState,
       );
       _view = AppView.report;
+      _planStarted = false;
+    });
+  }
+
+  void _startPlan() {
+    setState(() {
+      _planStarted = true;
+      _view = AppView.home;
     });
   }
 
@@ -228,7 +238,8 @@ class _MyAppState extends State<MyApp> {
         progression: newProgression,
         shopState: _shopState,
       );
-      final stable = newProgression.totalXp == _progression.totalXp &&
+      final stable =
+          newProgression.totalXp == _progression.totalXp &&
           _sameUnlockState(newSummary.achievements, achievements);
 
       _progression = newProgression;
