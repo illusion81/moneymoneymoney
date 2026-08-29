@@ -38,6 +38,7 @@ class HomeScreen extends StatefulWidget {
     this.api,
     this.onDebugSimulate,
     this.onShowDiamonds,
+    this.onDebugFillFarm,
     this.onRetakeQuestionnaire,
   });
 
@@ -57,6 +58,9 @@ class HomeScreen extends StatefulWidget {
 
   /// Opens the diamond store (paid currency).
   final VoidCallback? onShowDiamonds;
+
+  /// Debug: own and place everything, for the demo.
+  final VoidCallback? onDebugFillFarm;
   final void Function({required double spending}) onCheckIn;
   final void Function(String recoveryNote) onRestore;
   final VoidCallback onShowReport;
@@ -136,20 +140,44 @@ class _HomeScreenState extends State<HomeScreen> {
     final statusColor = _statusColor(latestDay);
 
     return Scaffold(
-      floatingActionButton: (kDebugMode && widget.onDebugSimulate != null)
-          ? FloatingActionButton.extended(
-              onPressed: () async {
-                // Gate it so nobody fast-forwards the farm mid-pitch.
-                if (await DevGate.ensureUnlocked(context)) {
-                  widget.onDebugSimulate!();
-                }
-              },
-              icon: Icon(DevGate.isUnlocked
-                  ? Icons.fast_forward
-                  : Icons.lock_outline),
-              label: const Text('Simulate a week'),
-            )
-          : null,
+      floatingActionButton: !kDebugMode
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (widget.onDebugFillFarm != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: FloatingActionButton.extended(
+                      heroTag: 'fill',
+                      onPressed: () async {
+                        if (await DevGate.ensureUnlocked(context)) {
+                          widget.onDebugFillFarm!();
+                        }
+                      },
+                      icon: Icon(DevGate.isUnlocked
+                          ? Icons.auto_awesome
+                          : Icons.lock_outline),
+                      label: const Text('Set up demo'),
+                    ),
+                  ),
+                if (widget.onDebugSimulate != null)
+                  FloatingActionButton.extended(
+                    heroTag: 'sim',
+                    onPressed: () async {
+                      // Gated so nobody fast-forwards the farm mid-pitch.
+                      if (await DevGate.ensureUnlocked(context)) {
+                        widget.onDebugSimulate!();
+                      }
+                    },
+                    icon: Icon(DevGate.isUnlocked
+                        ? Icons.fast_forward
+                        : Icons.lock_outline),
+                    label: const Text('Simulate a week'),
+                  ),
+              ],
+            ),
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
