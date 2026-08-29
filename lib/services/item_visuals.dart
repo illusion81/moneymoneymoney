@@ -85,6 +85,33 @@ const Map<String, ShopItemVisual> _decorationVisuals = {
     icon: Icons.cabin,
     color: Color(0xff2f7d50),
   ),
+  // These six were added later and never given visuals, so they all fell
+  // through to the category default — six different items showing the same
+  // icon, which makes the shop look broken.
+  'deco-pond': ShopItemVisual(
+    icon: Icons.waves,
+    color: Color(0xff4a7fa8),
+  ),
+  'deco-fence': ShopItemVisual(
+    icon: Icons.fence,
+    color: Color(0xff8a6a4f),
+  ),
+  'deco-vegetable-patch': ShopItemVisual(
+    icon: Icons.grass,
+    color: Color(0xff2f7d50),
+  ),
+  'deco-signpost': ShopItemVisual(
+    icon: Icons.signpost,
+    color: Color(0xff8a6a4f),
+  ),
+  'deco-lamp-post': ShopItemVisual(
+    icon: Icons.light,
+    color: Color(0xffc79a33),
+  ),
+  'deco-windmill': ShopItemVisual(
+    icon: Icons.wind_power,
+    color: Color(0xff5f6f68),
+  ),
 };
 
 /// Resolves the icon and accent color used to represent [item] in the shop

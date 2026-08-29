@@ -195,7 +195,14 @@ class _ShopItemCard extends StatelessWidget {
       // Not a ListTile: it hands the trailing control its full intrinsic
       // width first and gives the title whatever is left, which on a phone
       // was about 60pt — "Classic Oak" wrapped mid-word.
-      child: Padding(
+      //
+      // The whole card is tappable. A phone-width row can show about two
+      // lines of description, so the rest lives in a sheet rather than being
+      // silently cut off — you can read what you are buying before you buy it.
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _showDetail(context, levelLocked, canAfford),
+        child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
@@ -227,6 +234,112 @@ class _ShopItemCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  /// The full item: a large icon, the whole description, what it costs or
+  /// what unlocks it, and the same action the row offers.
+  void _showDetail(BuildContext context, bool levelLocked, bool canAfford) {
+    final visual = shopItemVisual(item);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: CircleAvatar(
+                  radius: 44,
+                  backgroundColor: visual.color.withValues(alpha: 0.15),
+                  foregroundColor: visual.color,
+                  child: Icon(visual.icon, size: 44),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                item.name,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(item.description),
+              const SizedBox(height: 18),
+              Row(children: [
+                if (item.plusOnly) ...[
+                  const Icon(Icons.workspace_premium,
+                      size: 18, color: Color(0xffc79a33)),
+                  const SizedBox(width: 6),
+                  const Text('Plus members only'),
+                ] else if (levelLocked) ...[
+                  const Icon(Icons.lock_outline, size: 18),
+                  const SizedBox(width: 6),
+                  Text('Unlocks at level ${item.requiredLevel}'),
+                ] else if (owned) ...[
+                  const Icon(Icons.check_circle_outline, size: 18),
+                  const SizedBox(width: 6),
+                  Text(equipped ? 'Equipped' : 'Owned'),
+                ] else ...[
+                  const Icon(Icons.monetization_on,
+                      size: 18, color: Color(0xffc79a33)),
+                  const SizedBox(width: 6),
+                  Text('${item.price} coins'),
+                ],
+              ]),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: _sheetAction(sheetContext, levelLocked, canAfford),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The sheet's own button. Closes the sheet first so the result of the tap
+  /// is visible on the list behind it.
+  Widget _sheetAction(
+      BuildContext sheetContext, bool levelLocked, bool canAfford) {
+    void run(VoidCallback action) {
+      Navigator.of(sheetContext).pop();
+      action();
+    }
+
+    if (equipped) {
+      return const FilledButton(onPressed: null, child: Text('Equipped'));
+    }
+    if (owned) {
+      return item.category == ShopItemCategory.decoration
+          ? const FilledButton(onPressed: null, child: Text('Owned'))
+          : FilledButton(
+              onPressed: () => run(onEquip), child: const Text('Equip'));
+    }
+    if (item.plusOnly && !isPlusMember) {
+      return FilledButton.icon(
+        onPressed: () => run(onShowPlus),
+        icon: const Icon(Icons.workspace_premium),
+        label: const Text('Get Plus'),
+      );
+    }
+    if (levelLocked) {
+      return FilledButton(
+        onPressed: null,
+        child: Text('Level ${item.requiredLevel} required'),
+      );
+    }
+    return FilledButton(
+      onPressed: canAfford ? () => run(onPurchase) : null,
+      child: Text(canAfford
+          ? 'Buy for ${item.price}'
+          : 'Not enough coins'),
     );
   }
 
