@@ -371,7 +371,12 @@ class _CheckoutSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    // A bottom sheet gets the height it asks for, and on a 390x844 phone this
+    // content asked for 62pt more than there was. Scroll rather than clip, and
+    // keep clear of the home indicator.
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
       key: const Key('plus-checkout-sheet'),
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -412,6 +417,8 @@ class _CheckoutSheet extends StatelessWidget {
             child: const Text('Not now'),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

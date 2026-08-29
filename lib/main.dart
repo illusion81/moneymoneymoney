@@ -196,6 +196,15 @@ class _MyAppState extends State<MyApp> {
             ? const Color(0xffe8e0cd)
             : const Color(0xffe8f0ea),
         foregroundColor: const Color(0xff173b2f),
+        // Material's default 22pt title plus three or four action icons does
+        // not fit a 390pt phone — "Homestead" was rendering as "Homes…".
+        // 18pt with tighter spacing fits every screen's title in full.
+        titleSpacing: 12,
+        titleTextStyle: const TextStyle(
+          color: Color(0xff173b2f),
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -939,15 +948,16 @@ class _MyAppState extends State<MyApp> {
       for (final item in kShopCatalog) item.id,
     };
 
-    // Equip one of each category so skins and ground actually change.
-    final equipped = <ShopItemCategory, String>{..._shopState.equippedItemIds};
-    for (final category in ShopItemCategory.values) {
-      if (category == ShopItemCategory.animal) continue;
-      final pick = kShopCatalog.where((i) => i.category == category).toList();
-      if (pick.isNotEmpty) {
-        equipped[category] = pick.last.id; // the fanciest one
-      }
-    }
+    // Equip a chosen showcase set, not "whatever is last in the catalog".
+    // Picking the last item landed on Crystal Pine, whose canopy paints as
+    // bare branches over Autumn's sand-coloured ground — the demo opened on
+    // what looks like a dead forest. These three are picked to look alive.
+    final equipped = <ShopItemCategory, String>{
+      ..._shopState.equippedItemIds,
+      ShopItemCategory.treeSkin: 'tree-cherry-blossom',
+      ShopItemCategory.ground: 'ground-meadow',
+      ShopItemCategory.sky: 'sky-sunset',
+    };
 
     // Spread the decorations over the grid rather than stacking them.
     var layout = _homeLayoutService.initialState();
@@ -967,7 +977,31 @@ class _MyAppState extends State<MyApp> {
       slot += 2; // leave a gap so it does not look like a wall
     }
 
+    // The forest paints from the MOST RECENT day, so if today is withered (or
+    // was never checked in after an over-budget day) the demo opens on bare
+    // branches no matter how high the level is. Record a healthy today.
+    final report = _report;
+    var days = _summary.days;
+    if (report != null) {
+      days = _forestEngine
+          .checkIn(
+            existingDays: days,
+            report: report,
+            date: DateTime.now(),
+            spending: report.dailyBudget * 0.5,
+          )
+          .summary
+          .days;
+    }
+
     setState(() {
+      if (report != null) {
+        _summary = _forestEngine.summarize(
+          days,
+          progression: _progression,
+          shopState: _shopState,
+        );
+      }
       _shopState = ShopState(ownedItemIds: owned, equippedItemIds: equipped);
       _homeLayout = layout;
       _isPlusMember = true;

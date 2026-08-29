@@ -2,8 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../data/money_style_questions.dart';
+import '../demo_flags.dart';
 import '../models/money_style.dart';
 import '../services/money_style_engine.dart';
+import '../widgets/dev_gate.dart';
 
 /// The quiz, page-sequential.
 ///
@@ -148,14 +150,29 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: _buildBackButton(),
-        title: const Text('Discover your Money Style'),
+        // "Discover your Money Style" does not fit a 390pt app bar next to a
+        // back button — it truncated to "Discover your Money S…". The full
+        // phrase already appears on the screen that launches the quiz.
+        title: const Text('Money Style'),
         elevation: 0,
         actions: [
+          // Both survive the merge and they do different things: "Skip for
+          // now" abandons the quiz with no answers, the demo bolt answers it
+          // so the result screen has a real archetype to show.
           if (widget.onSkipAll != null)
             TextButton(
               key: const Key('skip-questionnaire-button'),
               onPressed: widget.onSkipAll,
               child: const Text('Skip for now'),
+            ),
+          if (kDemoTools)
+            IconButton(
+              key: const Key('demo-skip-quiz'),
+              tooltip: 'Demo: answer every question',
+              icon: Icon(DevGate.isUnlocked ? Icons.bolt : Icons.lock_outline),
+              onPressed: () async {
+                if (await DevGate.ensureUnlocked(context)) _demoCompleteQuiz();
+              },
             ),
         ],
       ),
@@ -302,6 +319,38 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       _session.skippedQuestions.remove(questionId);
       widget.onProgress?.call(_session.snapshot());
     });
+  }
+
+  /// Demo shortcut: answer the whole session and jump to the result.
+  ///
+  /// Rewritten for the adaptive quiz. The follow-up pages are chosen from the
+  /// running score, so they do not exist until the page before them is
+  /// answered — answering "all questions" once would only cover page one.
+  /// Answer what exists, extend, repeat until no new page appears.
+  ///
+  /// It answers rather than skips so the result screen shows a real archetype
+  /// instead of an empty session with no confidence.
+  void _demoCompleteQuiz() {
+    setState(() {
+      var guard = 0;
+      while (guard++ < kPagesPerSession + 2) {
+        for (final q in _questions) {
+          // putIfAbsent: a real answer already given stays.
+          _session.selectedAnswers.putIfAbsent(q.id, () => 0);
+          _session.skippedQuestions.remove(q.id);
+        }
+        final before = _questions.length;
+        _extendPages();
+        if (_questions.length == before) break;
+      }
+      _syncShownQuestions();
+      _currentIndex = _questions.length - 1;
+      widget.onProgress?.call(_session.snapshot());
+    });
+
+    final session = _session.snapshot();
+    final result = _engine.generateResult(session, moneyStyleQuestionPool);
+    widget.onComplete(MoneyStyleCompletion(session: session, result: result));
   }
 
   void _skipQuestion() {
