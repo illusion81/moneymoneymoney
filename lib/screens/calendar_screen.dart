@@ -111,7 +111,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 }
 
-class ForestCalendar extends StatelessWidget {
+class ForestCalendar extends StatefulWidget {
   const ForestCalendar({
     this.selectedDate,
     this.onSelectDate,
@@ -128,10 +128,48 @@ class ForestCalendar extends StatelessWidget {
   final ValueChanged<DateTime>? onSelectDate;
 
   @override
+  State<ForestCalendar> createState() => _ForestCalendarState();
+}
+
+class _ForestCalendarState extends State<ForestCalendar> {
+  /// Which month the grid is showing. Starts on today's, but a streak worth
+  /// showing off is usually longer than the current month — a calendar you
+  /// cannot page back through hides most of the story.
+  DateTime? _viewMonth;
+
+  DateTime get _month =>
+      _viewMonth ?? DateTime(DateTime.now().year, DateTime.now().month);
+
+  /// Earliest month with any recorded day; you cannot page back past it.
+  DateTime get _earliestMonth {
+    final days = widget.summary.days;
+    if (days.isEmpty) return _month;
+    final first = days
+        .map((d) => _normalize(d.date))
+        .reduce((a, b) => b.isBefore(a) ? b : a);
+    return DateTime(first.year, first.month);
+  }
+
+  bool get _canGoBack => _month.isAfter(_earliestMonth);
+
+  bool get _canGoForward {
+    final now = DateTime.now();
+    return _month.isBefore(DateTime(now.year, now.month));
+  }
+
+  void _shiftMonth(int delta) =>
+      setState(() => _viewMonth = DateTime(_month.year, _month.month + delta));
+
+  @override
   Widget build(BuildContext context) {
+    final summary = widget.summary;
+    final shopState = widget.shopState;
+    final selectedDate = widget.selectedDate;
+    final onSelectDate = widget.onSelectDate;
+
     final today = _normalize(DateTime.now());
-    final monthStart = DateTime(today.year, today.month);
-    final nextMonth = DateTime(today.year, today.month + 1);
+    final monthStart = _month;
+    final nextMonth = DateTime(monthStart.year, monthStart.month + 1);
     final daysInMonth = nextMonth.difference(monthStart).inDays;
     final leadingEmptyCells = monthStart.weekday - DateTime.monday;
     final recordedDays = {
@@ -154,15 +192,29 @@ class ForestCalendar extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                _monthLabel(monthStart),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: const Color(0xff173b2f),
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  _monthLabel(monthStart),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: const Color(0xff173b2f),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              const Spacer(),
-              const Icon(Icons.calendar_month, color: Color(0xff2f7d50)),
+              // Disabled rather than hidden at the ends of the range, so the
+              // controls do not jump around as you page.
+              IconButton(
+                key: const Key('calendar-prev-month'),
+                tooltip: 'Previous month',
+                icon: const Icon(Icons.chevron_left),
+                onPressed: _canGoBack ? () => _shiftMonth(-1) : null,
+              ),
+              IconButton(
+                key: const Key('calendar-next-month'),
+                tooltip: 'Next month',
+                icon: const Icon(Icons.chevron_right),
+                onPressed: _canGoForward ? () => _shiftMonth(1) : null,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -197,8 +249,8 @@ class ForestCalendar extends StatelessWidget {
               }
 
               final date = DateTime(
-                today.year,
-                today.month,
+                monthStart.year,
+                monthStart.month,
                 index - leadingEmptyCells + 1,
               );
               final dateKey = _dateKey(date);
@@ -218,8 +270,8 @@ class ForestCalendar extends StatelessWidget {
                 shopState: shopState,
                 isToday: _isSameDate(date, today),
                 isSelected:
-                    selectedDate != null && _isSameDate(date, selectedDate!),
-                onTap: onSelectDate == null ? null : () => onSelectDate!(date),
+                    selectedDate != null && _isSameDate(date, selectedDate),
+                onTap: onSelectDate == null ? null : () => onSelectDate(date),
               );
             },
           ),

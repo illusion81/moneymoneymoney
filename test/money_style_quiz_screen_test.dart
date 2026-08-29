@@ -56,7 +56,10 @@ void main() {
     testWidgets('opens on the first fixed opener', (tester) async {
       await pumpQuiz(tester);
 
-      expect(find.text('Discover your Money Style'), findsOneWidget);
+      // The app bar says 'Money Style': the full phrase truncated to
+      // "Discover your Money S…" on a 390pt phone, and it already appears in
+      // full on the screen that launches the quiz.
+      expect(find.text('Money Style'), findsOneWidget);
       expect(find.text('1 of 12'), findsOneWidget);
       expect(find.text(moneyStyleQuestionsById[1]!.prompt), findsOneWidget);
       expect(find.text(moneyStyleQuestionsById[1]!.scenario), findsOneWidget);

@@ -50,12 +50,13 @@ services:
       export PATH="$HOME/flutter/bin:$PATH"
       flutter --version
       flutter pub get
-      # DEMO_TOOLS keeps the PIN-gated demo shortcuts in the release build so
-      # they exist on stage. They are useless without the PIN, but drop this
-      # flag the moment this stops being a hackathon demo.
+      # NO DEMO_TOOLS here, deliberately. This build is what strangers get
+      # when they scan the QR code, and a "fill everything in" button on a
+      # finance app reads as unfinished even though it is PIN-gated. Run the
+      # stage demo from a local `flutter run`, where debug mode enables the
+      # shortcuts automatically.
       flutter build web --release \
-        --dart-define=API_BASE_URL=https://wealth-tower-api.onrender.com \
-        --dart-define=DEMO_TOOLS=true
+        --dart-define=API_BASE_URL=https://wealth-tower-api.onrender.com
     staticPublishPath: ./build/web
     routes:
       # Single-page app: every path has to fall back to index.html or a

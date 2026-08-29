@@ -94,6 +94,11 @@ class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   WealthReport? _report;
+
+  /// The answers the report was built from. Kept so a later import can offer
+  /// to replace the money figures while leaving the person's own choices —
+  /// savings goal, risk, priority — alone.
+  FinanceProfile? _profile;
   MoneyStyleCompletion? _moneyStyleCompletion;
   ForestSummary _summary = const ForestSummary(
     days: [],
@@ -312,6 +317,7 @@ class _MyAppState extends State<MyApp> {
           lastEarnedSummary: _lastEarnedSummary,
           onCheckIn: _handleCheckIn,
           freezes: _freezes,
+          onStatementImported: _offerPlanRebuildFromStatement,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
           onRetakeQuestionnaire: () => setState(
@@ -450,6 +456,7 @@ class _MyAppState extends State<MyApp> {
   void _handleProfileSubmitted(FinanceProfile profile) {
     _pushProfileToBackend(profile);
     setState(() {
+      _profile = profile;
       // The Money Style quiz, when taken, adds a daily action tailored to
       // how this person actually decides — so it changes something they
       // see every day, not just a one-off result screen.
@@ -856,6 +863,100 @@ class _MyAppState extends State<MyApp> {
     final transactions = await _apiClient.transactions(days: days);
     return suggestProfileFromTransactions(transactions, days: days);
   }
+
+  /// After a statement import, offer to rebuild the plan from what the
+  /// statement actually says.
+  ///
+  /// Until now the loop was half open: we read your transactions, but the plan
+  /// they were judged against was still the numbers you typed in. That made
+  /// "we check your transactions" true of the spending screen and not much
+  /// else. This closes it — the income and fixed costs come from the bank
+  /// feed, and the daily budget follows.
+  ///
+  /// It asks rather than just doing it: silently rewriting someone's stated
+  /// income from an inferred figure is not a thing a money app should do.
+  Future<void> _offerPlanRebuildFromStatement() async {
+    final existing = _report;
+    if (existing == null) return;
+
+    ProfileSuggestion? fetched;
+    try {
+      fetched = await _fetchProfileSuggestion();
+    } catch (error) {
+      debugPrint('Could not read the imported statement: $error');
+      return;
+    }
+    // Copied into a non-nullable local: type promotion does not survive into
+    // the dialog builder closure below.
+    final suggestion = fetched;
+    final profile = _profile;
+    if (suggestion == null || profile == null) return;
+    if (!mounted) return;
+
+    final ctx = _navigatorKey.currentContext;
+    // Two different lifetimes to check: this State survived the await
+    // (checked above), and so did the navigator's own context.
+    if (ctx == null || !ctx.mounted) return;
+
+    final accepted = await showDialog<bool>(
+      context: ctx,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Rebuild your plan from this statement?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Your statement suggests:'),
+            const SizedBox(height: 12),
+            _suggestionLine('Monthly income', profile.monthlyIncome,
+                suggestion.monthlyIncome),
+            _suggestionLine('Fixed costs', profile.fixedMonthlyExpenses,
+                suggestion.fixedMonthlyExpenses),
+            const SizedBox(height: 12),
+            const Text(
+              'Your savings goal and preferences stay as they are.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep my numbers'),
+          ),
+          FilledButton(
+            key: const Key('accept-statement-plan'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Use the statement'),
+          ),
+        ],
+      ),
+    );
+
+    if (accepted != true || !mounted) return;
+
+    _handleProfileSubmitted(FinanceProfile(
+      monthlyIncome: suggestion.monthlyIncome,
+      fixedMonthlyExpenses: suggestion.fixedMonthlyExpenses,
+      monthlySavingsGoal: profile.monthlySavingsGoal,
+      riskLevel: profile.riskLevel,
+      financialGoal: profile.financialGoal,
+      spendingPressure: profile.spendingPressure,
+    ));
+    _showMessage('Plan rebuilt from your statement.');
+  }
+
+  /// "Monthly income   $3,200 -> $3,412"
+  Widget _suggestionLine(String label, double before, double after) => Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(children: [
+          Expanded(child: Text(label)),
+          Text('\$${before.round()} → ',
+              style: const TextStyle(color: Color(0xff8a8a8a))),
+          Text('\$${after.round()}',
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+        ]),
+      );
 
   Future<double> _fetchTodaySpending() async {
     final transactions = await _apiClient.transactions(days: 7);
