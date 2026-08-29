@@ -209,19 +209,34 @@ class _CircleScreenState extends State<CircleScreen> {
               ),
           ]),
         ),
-        Column(children: [
-          Text('${(e.adherence * 100).round()}%',
-              style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-          Text('plan kept', style: t.bodySmall),
-        ]),
-        const SizedBox(width: 8),
-        Icon(_trendIcon(e.trend), size: 18, color: _trendColour(e.trend)),
-        if (!e.isYou)
-          IconButton(
-            tooltip: 'Send encouragement',
-            icon: const Icon(Icons.favorite_border, size: 18),
-            onPressed: () => _cheer(e),
+        // Fixed width, right-aligned. Without it each row sized its own
+        // percentage column, so "100%" and "72%" started at different x
+        // positions and the list looked ragged.
+        SizedBox(
+          width: 62,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('${(e.adherence * 100).round()}%',
+                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text('plan kept', style: t.bodySmall),
+            ],
           ),
+        ),
+        const SizedBox(width: 6),
+        Icon(_trendIcon(e.trend), size: 18, color: _trendColour(e.trend)),
+        // A fixed slot whether or not the heart is there, so every row's
+        // trend arrow lands in the same place — including your own.
+        SizedBox(
+          width: 40,
+          child: e.isYou
+              ? null
+              : IconButton(
+                  tooltip: 'Send encouragement',
+                  icon: const Icon(Icons.favorite_border, size: 18),
+                  onPressed: () => _cheer(e),
+                ),
+        ),
       ]),
     );
   }

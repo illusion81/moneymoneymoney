@@ -200,14 +200,18 @@ class _ShopItemCard extends StatelessWidget {
         child: Row(
           children: [
             _ItemIconChip(item: item),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(item.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     item.description,
@@ -272,9 +276,12 @@ class _ItemIconChip extends StatelessWidget {
     final visual = shopItemVisual(item);
 
     return CircleAvatar(
+      // Smaller than the default 40pt: on a phone every point taken here is a
+      // point the item name does not get.
+      radius: 18,
       backgroundColor: visual.color.withValues(alpha: 0.15),
       foregroundColor: visual.color,
-      child: Icon(visual.icon),
+      child: Icon(visual.icon, size: 20),
     );
   }
 }

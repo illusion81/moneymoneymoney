@@ -357,7 +357,8 @@ class _SpendingScreenState extends State<SpendingScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '${b.bucket}  ·  ${(b.targetPct * 100).round()}% target',
+                  '${prettyLabel(b.bucket)}  ·  '
+                  '${(b.targetPct * 100).round()}% target',
                 ),
               ),
               Text(
@@ -396,7 +397,13 @@ class _SpendingScreenState extends State<SpendingScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: Text(cat)),
+              Expanded(
+                child: Text(
+                  prettyLabel(cat),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               Text('$n', style: Theme.of(c).textTheme.bodySmall),
               const SizedBox(width: 12),
               SizedBox(

@@ -35,7 +35,7 @@ class HomesteadScreen extends StatefulWidget {
   final ShopState shopState;
   final HomeLayoutState layout;
 
-  /// Recorded forest days, used to compute the surplus-assets chart.
+  /// Recorded forest days, used to compute the "money you kept" chart.
   final List<ForestDay> days;
   final void Function(String itemId, int row, int col) onPlace;
   final void Function(String itemId) onRemove;
@@ -523,11 +523,22 @@ class _SavingsStatsSection extends StatelessWidget {
             runSpacing: 8,
             spacing: 12,
             children: [
-              Text(
-                'Surplus assets',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Money you kept',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    'Running total under budget',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
               ),
               Wrap(
                 spacing: 6,
@@ -578,8 +589,13 @@ class _ShareRow extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Wrap, not Row: the two labelled buttons together are wider than a
+        // phone, so on a narrow screen the second one drops to its own line
+        // instead of running off the edge.
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 8,
           children: [
             OutlinedButton.icon(
               key: const Key('share-facebook-button'),
@@ -587,7 +603,6 @@ class _ShareRow extends StatelessWidget {
               icon: const Icon(Icons.facebook, size: 18),
               label: const Text('Facebook'),
             ),
-            const SizedBox(width: 12),
             OutlinedButton.icon(
               key: const Key('share-instagram-button'),
               onPressed: () => onShare('Instagram'),

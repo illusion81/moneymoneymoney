@@ -882,7 +882,7 @@ class _MetricRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _MetricTile(label: 'Withered', value: '$withered'),
+          child: _MetricTile(label: 'Over budget', value: '$withered'),
         ),
       ],
     );
@@ -911,7 +911,12 @@ class _MetricTile extends StatelessWidget {
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
-          Text(label),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
