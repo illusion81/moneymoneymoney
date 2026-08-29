@@ -15,6 +15,7 @@ class FinanceTreeView extends StatefulWidget {
     required this.pillars,
     this.seed = 1,
     this.growDuration = const Duration(seconds: 4),
+    this.withered,
   });
 
   final FinancePillars pillars;
@@ -23,6 +24,11 @@ class FinanceTreeView extends StatefulWidget {
   final int seed;
 
   final Duration growDuration;
+
+  /// Overrides the withered state derived from [pillars]. When set, it decides
+  /// both the palette and whether leaves are suppressed, so a check-in-driven
+  /// wither can render on top of an otherwise-healthy finance profile.
+  final bool? withered;
 
   @override
   State<FinanceTreeView> createState() => _FinanceTreeViewState();
@@ -43,6 +49,7 @@ class _FinanceTreeViewState extends State<FinanceTreeView>
     pillars: widget.pillars,
     random: Random(widget.seed),
     canvasSize: _design,
+    witheredOverride: widget.withered,
   );
 
   @override
@@ -50,7 +57,8 @@ class _FinanceTreeViewState extends State<FinanceTreeView>
     super.didUpdateWidget(oldWidget);
     // Regrow only when the tree would actually differ.
     if (oldWidget.seed != widget.seed ||
-        oldWidget.pillars.health != widget.pillars.health) {
+        oldWidget.pillars.health != widget.pillars.health ||
+        oldWidget.withered != widget.withered) {
       _segments = _build();
       _controller.forward(from: 0);
     }
@@ -64,7 +72,8 @@ class _FinanceTreeViewState extends State<FinanceTreeView>
 
   @override
   Widget build(BuildContext context) {
-    final palette = widget.pillars.isWithered
+    final withered = widget.withered ?? widget.pillars.isWithered;
+    final palette = withered
         ? const TreePalette.withered()
         : const TreePalette.healthy();
 

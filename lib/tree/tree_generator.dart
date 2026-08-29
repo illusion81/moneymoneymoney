@@ -23,8 +23,12 @@ class TreeGenerator {
     required FinancePillars pillars,
     required Random random,
     Size canvasSize = const Size(200, 240),
+    bool? witheredOverride,
   }) {
-    final withered = pillars.isWithered;
+    // [witheredOverride] lets a caller force the withered state (for example
+    // when a missed check-in withered the tree even though the finance profile
+    // is healthy). When null, the pillars decide on their own.
+    final withered = witheredOverride ?? pillars.isWithered;
 
     // Pillar -> shape mapping.
     final trunkLength = 60 + 90 * pillars.profitability;

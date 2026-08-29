@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/finance_profile.dart';
 import '../models/forest_day.dart';
 import '../models/progression.dart';
 import '../models/shop_item.dart';
@@ -7,6 +8,7 @@ import '../models/wealth_report.dart';
 import '../services/forest_engine.dart';
 import '../data/api_client.dart';
 import '../services/item_visuals.dart';
+import '../tree/finance_tree.dart';
 import '../widgets/app_nav_bar.dart';
 import 'connect_bank_screen.dart';
 import 'circle_screen.dart';
@@ -34,6 +36,7 @@ class HomeScreen extends StatefulWidget {
     this.lastEarnedSummary,
     this.api,
     this.onRetakeQuestionnaire,
+    this.financeProfile,
   });
 
   final WealthReport report;
@@ -57,6 +60,11 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback onShowHomestead;
   final Future<double> Function() onFetchTodaySpending;
   final VoidCallback? onRetakeQuestionnaire;
+
+  /// When set, the finance tree renders from the real profile (via
+  /// [FinanceTree]) instead of the legacy status icon. Wired by the
+  /// orchestrator in `main.dart`; null keeps the icon fallback.
+  final FinanceProfile? financeProfile;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -226,11 +234,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: groundColor(widget.shopState),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(
-                          _treeIcon(latestDay, widget.shopState),
-                          size: 112,
-                          color: statusColor,
-                        ),
+                        child: widget.financeProfile == null
+                            ? Icon(
+                                _treeIcon(latestDay, widget.shopState),
+                                size: 112,
+                                color: statusColor,
+                              )
+                            : FinanceTree(
+                                profile: widget.financeProfile!,
+                                summary: widget.summary,
+                              ),
                       ),
                       const SizedBox(height: 12),
                       Text(
