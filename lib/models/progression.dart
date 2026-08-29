@@ -6,6 +6,7 @@ enum RewardEventType {
   levelUp,
   restorationSpend,
   purchaseSpend,
+  debugGrant,
 }
 
 class RewardEvent {

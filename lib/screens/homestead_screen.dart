@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../models/home_layout.dart';
 import '../models/shop_item.dart';
+import '../services/image_export_service.dart';
 import '../services/item_visuals.dart';
 import '../widgets/app_nav_bar.dart';
 
@@ -17,6 +20,8 @@ class HomesteadScreen extends StatefulWidget {
     required this.onShowReport,
     required this.onShowAchievements,
     required this.onShowShop,
+    required this.onExportImage,
+    this.captureBoundary = captureBoundaryAsPng,
   });
 
   final ShopState shopState;
@@ -29,6 +34,15 @@ class HomesteadScreen extends StatefulWidget {
   final VoidCallback onShowAchievements;
   final VoidCallback onShowShop;
 
+  /// Called with the PNG-encoded bytes of the yard canvas when the user taps
+  /// "Export image".
+  final Future<void> Function(Uint8List pngBytes) onExportImage;
+
+  /// Captures [GlobalKey]'s render boundary as PNG bytes. Overridable for
+  /// testing — the real implementation exercises Flutter's rendering
+  /// pipeline, which widget tests can't reliably await.
+  final Future<Uint8List?> Function(GlobalKey key) captureBoundary;
+
   @override
   State<HomesteadScreen> createState() => _HomesteadScreenState();
 }
@@ -37,6 +51,7 @@ const double _canvasHeight = 280;
 
 class _HomesteadScreenState extends State<HomesteadScreen> {
   BuildContext? _canvasContext;
+  final _exportBoundaryKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +76,12 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
       appBar: AppBar(
         title: const Text('Homestead'),
         actions: [
+          IconButton(
+            key: const Key('export-image-button'),
+            tooltip: 'Export image',
+            onPressed: _exportImage,
+            icon: const Icon(Icons.image_outlined),
+          ),
           IconButton(
             tooltip: 'Shop',
             onPressed: widget.onShowShop,
@@ -92,7 +113,7 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                _buildCanvas(),
+                RepaintBoundary(key: _exportBoundaryKey, child: _buildCanvas()),
                 const SizedBox(height: 18),
                 if (ownedDecorationIds.isEmpty)
                   _EmptyDecorationState(onShowShop: widget.onShowShop)
@@ -170,6 +191,14 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
         );
       },
     );
+  }
+
+  Future<void> _exportImage() async {
+    final bytes = await widget.captureBoundary(_exportBoundaryKey);
+    if (bytes == null) {
+      return;
+    }
+    await widget.onExportImage(bytes);
   }
 }
 

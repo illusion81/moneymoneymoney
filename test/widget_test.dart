@@ -104,6 +104,7 @@ class _RestoreHarnessState extends State<_RestoreHarness> {
         onShowShop: () {},
         onShowCalendar: () {},
         onShowHomestead: () {},
+        onFetchTodaySpending: () async => 0,
       ),
     );
   }
@@ -260,12 +261,10 @@ void main() {
       await startPlan(tester);
 
       expect(find.text('Level 1'), findsOneWidget);
-      final coinBalanceFinder = find.byKey(const Key('coin-balance'));
-      expect(coinBalanceFinder, findsOneWidget);
-      expect(
-        find.descendant(of: coinBalanceFinder, matching: find.text('0')),
-        findsOneWidget,
-      );
+      // Debug builds auto-grant a large coin balance on startup (see
+      // _MyAppState._MyAppState) so the shop/homestead can be tested freely.
+      expect(find.byKey(const Key('coin-balance')), findsOneWidget);
+      expect(find.text('999999'), findsOneWidget);
     },
   );
 

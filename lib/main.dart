@@ -1,5 +1,10 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
+import 'data/api_client.dart';
 import 'models/finance_profile.dart';
 import 'models/forest_day.dart';
 import 'models/home_layout.dart';
@@ -13,6 +18,7 @@ import 'screens/homestead_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/shop_screen.dart';
+import 'services/bank_spending_service.dart';
 import 'services/forest_engine.dart';
 import 'services/home_layout_service.dart';
 import 'services/progression_engine.dart';
@@ -37,6 +43,7 @@ class _MyAppState extends State<MyApp> {
   final ProgressionEngine _progressionEngine = ProgressionEngine();
   final ShopService _shopService = ShopService();
   final HomeLayoutService _homeLayoutService = HomeLayoutService();
+  final ApiClient _apiClient = ApiClient();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -60,10 +67,23 @@ class _MyAppState extends State<MyApp> {
   _MyAppState() {
     _shopState = _shopService.initialState();
     _homeLayout = _homeLayoutService.initialState();
+    if (kDebugMode) {
+      // Debug builds start with an effectively unlimited coin balance so
+      // the shop/homestead can be tested without grinding for coins.
+      _spendEvents.add(
+        RewardEvent(
+          date: DateTime.now(),
+          type: RewardEventType.debugGrant,
+          xp: 0,
+          coins: 999999,
+          description: 'Debug: max coins',
+        ),
+      );
+    }
     _progression = _progressionEngine.compute(
       days: const [],
       achievements: const [],
-      spendEvents: const [],
+      spendEvents: _spendEvents,
     );
   }
 
@@ -80,6 +100,12 @@ class _MyAppState extends State<MyApp> {
       ),
       home: _buildCurrentView(),
     );
+  }
+
+  @override
+  void dispose() {
+    _apiClient.close();
+    super.dispose();
   }
 
   Widget _buildCurrentView() {
@@ -116,6 +142,7 @@ class _MyAppState extends State<MyApp> {
           onShowShop: () => setState(() => _view = AppView.shop),
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
+          onFetchTodaySpending: _fetchTodaySpending,
         );
       case AppView.calendar:
         return CalendarScreen(
@@ -140,6 +167,7 @@ class _MyAppState extends State<MyApp> {
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
+          onExportImage: _handleExportImage,
         );
       case AppView.achievements:
         return AchievementsScreen(
@@ -156,6 +184,8 @@ class _MyAppState extends State<MyApp> {
           onPurchase: _handlePurchase,
           onEquip: _handleEquip,
           onBack: () => setState(() => _view = AppView.forest),
+          onDebugMaxCoins: _handleDebugMaxCoins,
+          onDebugUnlockAll: _handleDebugUnlockAll,
         );
     }
   }
@@ -273,6 +303,52 @@ class _MyAppState extends State<MyApp> {
   void _handleRemoveDecoration(String itemId) {
     setState(() {
       _homeLayout = _homeLayoutService.remove(state: _homeLayout, itemId: itemId);
+    });
+  }
+
+  Future<void> _handleExportImage(Uint8List pngBytes) async {
+    final home =
+        Platform.environment['USERPROFILE'] ??
+        Platform.environment['HOME'] ??
+        '.';
+    final picturesDir = Directory('$home${Platform.pathSeparator}Pictures');
+    if (!await picturesDir.exists()) {
+      await picturesDir.create(recursive: true);
+    }
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File(
+      '${picturesDir.path}${Platform.pathSeparator}homestead_$timestamp.png',
+    );
+    await file.writeAsBytes(pngBytes);
+    _showMessage('Saved to ${file.path}');
+  }
+
+  Future<double> _fetchTodaySpending() async {
+    final transactions = await _apiClient.transactions(days: 7);
+    return sumTodaySpending(transactions);
+  }
+
+  void _handleDebugMaxCoins() {
+    setState(() {
+      _spendEvents.add(
+        RewardEvent(
+          date: DateTime.now(),
+          type: RewardEventType.debugGrant,
+          xp: 0,
+          coins: 999999,
+          description: 'Debug: max coins',
+        ),
+      );
+      _recomputeProgression();
+    });
+  }
+
+  void _handleDebugUnlockAll() {
+    setState(() {
+      _shopState = ShopState(
+        ownedItemIds: {for (final item in kShopCatalog) item.id},
+        equippedItemIds: _shopState.equippedItemIds,
+      );
     });
   }
 

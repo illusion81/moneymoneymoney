@@ -22,6 +22,7 @@ class HomeScreen extends StatefulWidget {
     required this.onShowShop,
     required this.onShowCalendar,
     required this.onShowHomestead,
+    required this.onFetchTodaySpending,
     this.lastEarnedSummary,
     this.onRetakeQuestionnaire,
   });
@@ -39,17 +40,22 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback onShowShop;
   final VoidCallback onShowCalendar;
   final VoidCallback onShowHomestead;
+  final Future<double> Function() onFetchTodaySpending;
   final VoidCallback? onRetakeQuestionnaire;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+enum _SpendingMode { manual, bank }
+
 class _HomeScreenState extends State<HomeScreen> {
   final _spendingController = TextEditingController();
   final _recoveryNoteController = TextEditingController();
   bool _actionCompleted = false;
   String? _errorText;
+  _SpendingMode _spendingMode = _SpendingMode.manual;
+  bool _bankLoading = false;
 
   @override
   void dispose() {
@@ -206,9 +212,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 14),
+                Row(
+                  children: [
+                    ChoiceChip(
+                      key: const Key('spending-mode-manual'),
+                      label: const Text('Manual'),
+                      selected: _spendingMode == _SpendingMode.manual,
+                      onSelected: (_) => _selectManualMode(),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      key: const Key('spending-mode-bank'),
+                      label: const Text('From bank'),
+                      selected: _spendingMode == _SpendingMode.bank,
+                      onSelected: (_) => _selectBankMode(),
+                    ),
+                    if (_bankLoading) ...[
+                      const SizedBox(width: 10),
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   key: const Key('spending-field'),
                   controller: _spendingController,
+                  readOnly: _spendingMode == _SpendingMode.bank,
                   decoration: InputDecoration(
                     labelText: 'Today\'s spending',
                     prefixIcon: const Icon(Icons.payments_outlined),
@@ -258,6 +291,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() => _errorText = null);
     widget.onCheckIn(spending: spending, actionCompleted: _actionCompleted);
+  }
+
+  void _selectManualMode() {
+    setState(() {
+      _spendingMode = _SpendingMode.manual;
+      _errorText = null;
+    });
+  }
+
+  Future<void> _selectBankMode() async {
+    setState(() {
+      _spendingMode = _SpendingMode.bank;
+      _bankLoading = true;
+      _errorText = null;
+    });
+
+    try {
+      final spending = await widget.onFetchTodaySpending();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _spendingController.text = spending.toStringAsFixed(2);
+        _bankLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _spendingMode = _SpendingMode.manual;
+        _bankLoading = false;
+        _errorText = 'Could not load bank data. Enter spending manually.';
+      });
+    }
   }
 
   String _statusText(ForestDay? day) {
