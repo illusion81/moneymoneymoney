@@ -18,6 +18,8 @@ class ShopScreen extends StatefulWidget {
     required this.onBack,
     required this.isPlusMember,
     required this.onShowPlus,
+    this.diamonds = 0,
+    this.onShowDiamonds,
     this.onDebugMaxCoins,
     this.onDebugUnlockAll,
     this.onDebugGrantXp,
@@ -33,6 +35,12 @@ class ShopScreen extends StatefulWidget {
   /// true; the lock opens the Plus screen rather than attempting a buy.
   final bool isPlusMember;
   final VoidCallback onShowPlus;
+
+  /// Diamonds live here rather than in the app bar. They are a shop currency —
+  /// splitting them into their own top-level icon meant the two places you
+  /// spend money were two taps apart and looked unrelated.
+  final int diamonds;
+  final VoidCallback? onShowDiamonds;
 
   /// Testing aids, only ever shown in debug builds (gated by [kDebugMode])
   /// and only while the user switches debug mode on — never real
@@ -143,9 +151,28 @@ class _ShopScreenState extends State<ShopScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${progression.coinBalance} coins',
+                        '${progression.coinBalance}',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
+                      if (widget.onShowDiamonds != null) ...[
+                        const SizedBox(width: 16),
+                        const Icon(
+                          Icons.diamond,
+                          color: Color(0xff4aa3df),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${widget.diamonds}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          key: const Key('shop-get-diamonds'),
+                          onPressed: widget.onShowDiamonds,
+                          child: const Text('Get more'),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -270,6 +297,7 @@ class _ShopItemCard extends StatelessWidget {
     }
 
     return FilledButton(
+      key: Key('buy-${item.id}'),
       onPressed: canAfford ? onPurchase : null,
       child: Text('Buy for ${item.price}'),
     );

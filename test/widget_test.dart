@@ -117,6 +117,7 @@ class _RestoreHarnessState extends State<_RestoreHarness> {
         progression: _progression,
         shopState: ShopService().initialState(),
         onCheckIn: ({required spending}) {},
+        freezes: const FreezeState(available: 1, capacity: 1),
         onRestore: (note) {
           final result = _engine.restoreDay(
             days: _summary.days,
@@ -360,7 +361,10 @@ void main() {
   ) async {
     await startPlan(tester);
 
-    await tester.tap(find.byTooltip('Report'));
+    // The report moved off the app bar into the grouped "More" menu.
+    await tester.tap(find.byKey(const Key('home-more-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Your report'));
     await tester.pumpAndSettle();
 
     expect(find.text('AI Wealth Report'), findsOneWidget);
@@ -432,7 +436,9 @@ void main() {
     expect(find.text('Wealth Forest'), findsOneWidget);
     expect(find.text('Money Profile'), findsNothing);
 
-    await tester.tap(find.byKey(const Key('retake-questionnaire-button')));
+    await tester.tap(find.byKey(const Key('home-more-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retake questionnaire'));
     await tester.pumpAndSettle();
 
     expect(find.text('Build an exact-number plan'), findsOneWidget);
@@ -453,7 +459,9 @@ void main() {
     await tester.tap(find.byKey(const Key('celebration-continue-button')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('retake-questionnaire-button')));
+    await tester.tap(find.byKey(const Key('home-more-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retake questionnaire'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('income-field')), '7000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2700');
@@ -603,10 +611,9 @@ void main() {
       expect(find.text('Forest Shop'), findsOneWidget);
       expect(find.text('Golden Ginkgo'), findsOneWidget);
 
-      final buyButtonFinder = find.ancestor(
-        of: find.text('Buy for 120'),
-        matching: find.byType(FilledButton),
-      );
+      // Three catalog items now cost 120 coins, so the price text no longer
+      // identifies a button. Each buy button carries its item id.
+      final buyButtonFinder = find.byKey(const Key('buy-tree-golden-ginkgo'));
       expect(buyButtonFinder, findsOneWidget);
       final buyButton = tester.widget<FilledButton>(buyButtonFinder);
       expect(buyButton.onPressed, isNull);

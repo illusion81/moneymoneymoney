@@ -24,3 +24,45 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.6"
+      # BASIQ_API_KEY and BASIQ_USER_ID live in the "MMM" environment group so
+      # the secrets are never in this file. Creating a group does NOT apply it
+      # to anything — the service has to reference it, which is what this does.
+      # If the group is renamed or deleted, blueprint sync fails loudly rather
+      # than silently falling back to mock data.
+      - fromGroup: MMM
+
+  # ------------------------------------------------------------------ web app
+  # The Flutter build. Render has no Flutter SDK, so the build clones the
+  # stable channel first — that makes the first deploy slow (5-8 min) but needs
+  # no Docker image and no extra account.
+  #
+  # API_BASE_URL is baked in at build time. If the API service is renamed or
+  # redeployed under a different hostname, change it here and redeploy, or the
+  # web app will keep calling the old one.
+  - type: web
+    name: wealth-forest-web
+    runtime: static
+    buildCommand: |
+      set -e
+      if [ ! -d "$HOME/flutter" ]; then
+        git clone --depth 1 -b stable https://github.com/flutter/flutter.git "$HOME/flutter"
+      fi
+      export PATH="$HOME/flutter/bin:$PATH"
+      flutter --version
+      flutter pub get
+      flutter build web --release \
+        --dart-define=API_BASE_URL=https://wealth-tower-api.onrender.com
+    staticPublishPath: ./build/web
+    routes:
+      # Single-page app: every path has to fall back to index.html or a
+      # refresh on any route 404s.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cross-Origin-Embedder-Policy
+        value: credentialless
+      - path: /*
+        name: Cross-Origin-Opener-Policy
+        value: same-origin

@@ -27,6 +27,10 @@ class PlusScreen extends StatelessWidget {
   final VoidCallback onBack;
 
   static const List<String> _benefits = [
+    // The freeze goes first on purpose. It is the only perk that changes what
+    // happens on a bad day, which is the day that decides whether someone
+    // keeps using this.
+    'Hold 3 streak freezes instead of 1, and earn them twice as fast',
     'Unlock every Plus-exclusive item in the shop',
     'Earn double coins on each healthy day',
     'Level up 1.5x faster',

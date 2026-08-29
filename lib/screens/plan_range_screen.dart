@@ -36,10 +36,26 @@ String priorityLabel(PlanningPriority v) => switch (v) {
       PlanningPriority.explore => 'Just looking around',
     };
 
+/// What the three dropdowns add up to. The screen hands this back rather than
+/// a bare callback, so the caller can turn it into a real profile and open the
+/// app — "keep this snapshot" has to go somewhere, or the button looks broken.
+class RangeSnapshot {
+  const RangeSnapshot({
+    required this.income,
+    required this.costs,
+    required this.priority,
+  });
+
+  final IncomeRange income;
+  final FixedCostShareRange costs;
+  final PlanningPriority priority;
+}
+
 class PlanRangeScreen extends StatefulWidget {
   const PlanRangeScreen({super.key, required this.onKeep, required this.onExact});
 
-  final VoidCallback onKeep, onExact;
+  final ValueChanged<RangeSnapshot> onKeep;
+  final VoidCallback onExact;
 
   @override
   State<PlanRangeScreen> createState() => _PlanRangeScreenState();
@@ -137,7 +153,13 @@ class _PlanRangeScreenState extends State<PlanRangeScreen> {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: _complete ? widget.onKeep : null,
+                  onPressed: _complete
+                      ? () => widget.onKeep(RangeSnapshot(
+                            income: income!,
+                            costs: costs!,
+                            priority: priority!,
+                          ))
+                      : null,
                   child: const Text('Keep this range-based snapshot'),
                 ),
               ),

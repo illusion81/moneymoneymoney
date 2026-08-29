@@ -35,6 +35,7 @@ import 'services/home_layout_service.dart';
 import 'services/profile_suggestions.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
+import 'services/risk_assessment.dart' show RiskLevel;
 import 'services/ad_service.dart';
 import 'services/payment_service.dart';
 import 'services/shop_service.dart';
@@ -113,6 +114,24 @@ class _MyAppState extends State<MyApp> {
   /// Demo-only membership flag — see PlusScreen; no real payment exists.
   bool _isPlusMember = false;
   int _diamonds = 0;
+
+  /// Streak freezes. Free players hold one; Plus members hold three and earn
+  /// them twice as fast. This is the perk that matters — everything else Plus
+  /// sells is decoration, and this is the one that protects the thing people
+  /// actually care about losing.
+  static const int _freeFreezeCap = 1;
+  static const int _plusFreezeCap = 3;
+  FreezeState _freezes = const FreezeState(available: 1, capacity: 1);
+
+  /// Healthy days banked toward the next freeze.
+  int _daysTowardFreeze = 0;
+
+  int get _freezeEarnEvery => _isPlusMember ? 3 : 7;
+
+  /// The diamond store is reachable from more than one place (the shop, and
+  /// the Plus screen). Back should return where you came from rather than
+  /// always dumping you on the forest.
+  AppView _diamondsReturnTo = AppView.forest;
   final PaymentGateway _payments = MockPaymentGateway();
   final AdGateway _ads = MockAdGateway();
 
@@ -241,7 +260,7 @@ class _MyAppState extends State<MyApp> {
               );
       case AppView.rangePlan:
         return PlanRangeScreen(
-          onKeep: () => setState(() => _view = AppView.moneyStyleResult),
+          onKeep: _handleRangeSnapshot,
           onExact: () => setState(() => _view = AppView.onboarding),
         );
       case AppView.report:
@@ -274,6 +293,7 @@ class _MyAppState extends State<MyApp> {
           shopState: _shopState,
           lastEarnedSummary: _lastEarnedSummary,
           onCheckIn: _handleCheckIn,
+          freezes: _freezes,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
           onRetakeQuestionnaire: () => setState(
@@ -293,7 +313,6 @@ class _MyAppState extends State<MyApp> {
           api: _apiClient,
           onDebugSimulate: _handleDebugSimulateStreak,
           onDebugFillFarm: _handleDebugFillFarm,
-          onShowDiamonds: () => setState(() => _view = AppView.diamonds),
         );
       case AppView.calendar:
         return CalendarScreen(
@@ -362,7 +381,7 @@ class _MyAppState extends State<MyApp> {
           isPlusMember: _isPlusMember,
           onPurchased: (delta) => setState(() => _diamonds += delta),
           onSubscribe: _handleSubscribePlus,
-          onBack: () => setState(() => _view = AppView.forest),
+          onBack: () => setState(() => _view = _diamondsReturnTo),
           onWatchAd: () async {
             final result = await _ads.showRewarded();
             return result.rewarded ? result.amount : 0;
@@ -384,6 +403,11 @@ class _MyAppState extends State<MyApp> {
           isPlusMember: _isPlusMember,
           onShowPlus: () => setState(() => _view = AppView.plus),
           onBack: () => setState(() => _view = AppView.forest),
+          diamonds: _diamonds,
+          onShowDiamonds: () => setState(() {
+            _diamondsReturnTo = AppView.shop;
+            _view = AppView.diamonds;
+          }),
           onDebugMaxCoins: _handleDebugMaxCoins,
           onDebugUnlockAll: _handleDebugUnlockAll,
           onDebugGrantXp: _handleDebugSimulateStreak,
@@ -422,6 +446,63 @@ class _MyAppState extends State<MyApp> {
       _view = AppView.forest;
       _planStarted = true;
     });
+  }
+
+  /// "Keep this range-based snapshot" used to bounce straight back to the
+  /// result screen, which looked like a dead button. A range answer is still an
+  /// answer: turn it into a profile using the midpoint of each band and open
+  /// the app, exactly like the exact-numbers path does. The user can always
+  /// redo it precisely from the questionnaire later.
+  void _handleRangeSnapshot(RangeSnapshot snap) {
+    final income = switch (snap.income) {
+      IncomeRange.under2500 => 2000.0,
+      IncomeRange.from2500To5000 => 3750.0,
+      IncomeRange.from5000To8000 => 6500.0,
+      IncomeRange.over8000 => 9500.0,
+      IncomeRange.preferNotToSay => 4000.0,
+    };
+    final fixedShare = switch (snap.costs) {
+      FixedCostShareRange.underHalf => 0.35,
+      FixedCostShareRange.aboutHalf => 0.50,
+      FixedCostShareRange.overHalf => 0.65,
+      FixedCostShareRange.unsure => 0.50,
+      FixedCostShareRange.preferNotToSay => 0.50,
+    };
+    final fixed = (income * fixedShare).roundToDouble();
+    // A quarter of what is left, rounded to $50 so the target reads like a
+    // number a person would choose rather than a calculation.
+    final savings = (((income - fixed) * 0.25) / 50).round() * 50.0;
+
+    final goal = switch (snap.priority) {
+      PlanningPriority.breathingRoom => FinancialGoal.emergencyFund,
+      PlanningPriority.upcomingCost => FinancialGoal.saveForPurchase,
+      PlanningPriority.reduceSpending => FinancialGoal.reduceSpending,
+      PlanningPriority.debtOrganisation => FinancialGoal.debtControl,
+      PlanningPriority.explore => FinancialGoal.emergencyFund,
+    };
+    final risk = switch (snap.priority) {
+      PlanningPriority.breathingRoom ||
+      PlanningPriority.debtOrganisation =>
+        RiskLevel.cautious,
+      PlanningPriority.upcomingCost ||
+      PlanningPriority.reduceSpending =>
+        RiskLevel.steady,
+      PlanningPriority.explore => RiskLevel.balanced,
+    };
+    final pressure = switch (snap.costs) {
+      FixedCostShareRange.underHalf => SpendingPressure.low,
+      FixedCostShareRange.overHalf => SpendingPressure.high,
+      _ => SpendingPressure.medium,
+    };
+
+    _handleProfileSubmitted(FinanceProfile(
+      monthlyIncome: income,
+      fixedMonthlyExpenses: fixed,
+      monthlySavingsGoal: savings,
+      riskLevel: risk,
+      financialGoal: goal,
+      spendingPressure: pressure,
+    ));
   }
 
   void _startMoneyStyleQuiz() {
@@ -530,6 +611,7 @@ class _MyAppState extends State<MyApp> {
       report: report,
       date: DateTime.now(),
       spending: spending,
+      freezesAvailable: _freezes.available,
     );
 
     final beforeXp = _progression.totalXp;
@@ -540,11 +622,28 @@ class _MyAppState extends State<MyApp> {
 
     setState(() {
       _summary = result.summary;
+      if (result.freezesUsed > 0) {
+        _freezes = _freezes.copyWith(
+          available: _freezes.available - result.freezesUsed,
+        );
+      }
+      if (result.day.status == TreeStatus.healthy) _bankFreezeProgress();
       _recomputeProgression();
       earnedXp = _progression.totalXp - beforeXp;
       earnedCoins = _progression.coinBalance - beforeCoins;
       _lastEarnedSummary = '+$earnedXp XP, +$earnedCoins coins';
     });
+
+    if (result.freezesUsed > 0) {
+      final n = result.freezesUsed;
+      _showMessage(
+        n == 1
+            ? 'You missed a day. A streak freeze covered it — your '
+                '${_summary.currentStreak}-day streak is intact.'
+            : '$n streak freezes covered the days you missed. Your '
+                '${_summary.currentStreak}-day streak is intact.',
+      );
+    }
 
     // Two celebrations exist and they must not stack. Levelling up is the
     // bigger moment, so it wins; otherwise a within-budget day gets the
@@ -563,6 +662,34 @@ class _MyAppState extends State<MyApp> {
         );
       }
     }
+  }
+
+  /// Freezes are earned, not given: every [_freezeEarnEvery] healthy days
+  /// tops one back up. Must be called inside setState.
+  void _bankFreezeProgress() {
+    if (_freezes.isFull) {
+      _daysTowardFreeze = 0;
+      return;
+    }
+    _daysTowardFreeze++;
+    if (_daysTowardFreeze >= _freezeEarnEvery) {
+      _daysTowardFreeze = 0;
+      _freezes = _freezes.copyWith(available: _freezes.available + 1);
+    }
+  }
+
+  /// Keeps the freeze capacity in step with membership. Subscribing raises the
+  /// cap and hands over the extra freezes immediately — the perk should be
+  /// visible the moment it is paid for. Lapsing lowers the cap but never takes
+  /// back a freeze already held.
+  void _syncFreezeCapacity() {
+    final cap = _isPlusMember ? _plusFreezeCap : _freeFreezeCap;
+    if (cap == _freezes.capacity) return;
+    final gained = cap > _freezes.capacity ? cap - _freezes.capacity : 0;
+    _freezes = FreezeState(
+      available: (_freezes.available + gained).clamp(0, cap),
+      capacity: cap,
+    );
   }
 
   void _handleRestore(String recoveryNote) {
@@ -812,12 +939,21 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleSubscribePlus() {
-    setState(() => _isPlusMember = true);
-    _showMessage('Plus activated (demo — no payment was taken).');
+    setState(() {
+      _isPlusMember = true;
+      _syncFreezeCapacity();
+    });
+    _showMessage(
+      'Plus activated (demo — no payment was taken). '
+      'You now hold ${_freezes.available} streak freezes.',
+    );
   }
 
   void _handleCancelPlus() {
-    setState(() => _isPlusMember = false);
+    setState(() {
+      _isPlusMember = false;
+      _syncFreezeCapacity();
+    });
     _showMessage('Plus membership cancelled.');
   }
 

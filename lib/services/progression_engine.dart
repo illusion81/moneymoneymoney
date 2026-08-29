@@ -38,8 +38,11 @@ class ProgressionEngine {
     }
 
     for (final day in orderedDays) {
-      final continuesStreak =
-          day.status == TreeStatus.healthy || day.status == TreeStatus.restored;
+      // A frozen day holds the chain but earns nothing — the freeze protects
+      // your streak, it does not pay you for a day you did not show up.
+      final continuesStreak = day.status == TreeStatus.healthy ||
+          day.status == TreeStatus.restored ||
+          day.status == TreeStatus.frozen;
       final streakBeforeToday = runningStreak;
       final streakAfterToday = continuesStreak ? runningStreak + 1 : 0;
 

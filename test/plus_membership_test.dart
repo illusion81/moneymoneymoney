@@ -37,14 +37,33 @@ void main() {
       }
     });
 
-    test('no other item in a category is Plus-only', () {
+    test('Plus-only items are grouped at the end of their category', () {
+      // A category may hold several Plus items — the point is that they form
+      // an unbroken tail, so the free run is never interrupted by a lock.
       for (final category in ShopItemCategory.values) {
         final items = service.itemsFor(category);
-        final allButLast = items.sublist(0, items.length - 1);
+        var seenPlus = false;
+        for (final item in items) {
+          if (item.plusOnly) {
+            seenPlus = true;
+          } else {
+            expect(
+              seenPlus,
+              isFalse,
+              reason: '${category.name}: ${item.id} is free but sits after a '
+                  'Plus-only item',
+            );
+          }
+        }
+      }
+    });
+
+    test('every category offers something for Plus members', () {
+      for (final category in ShopItemCategory.values) {
         expect(
-          allButLast.every((item) => !item.plusOnly),
+          service.itemsFor(category).any((i) => i.plusOnly),
           isTrue,
-          reason: '${category.name} non-last items',
+          reason: '${category.name} has no Plus-only item',
         );
       }
     });
