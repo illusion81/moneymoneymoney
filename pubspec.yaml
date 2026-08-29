@@ -59,6 +59,7 @@ flutter:
 
   assets:
     - assets/animals/
+    - assets/eggs/
     - assets/icons/
 
   # To add assets to your application, add an assets section, like this:

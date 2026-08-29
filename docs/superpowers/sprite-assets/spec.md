@@ -111,3 +111,21 @@ Empirically verified against Flutter 3.41.1 before this spec was written:
 - Animating the sprites (no frames exist).
 - Recolouring animals per skin (deferred to the skins task).
 - The unused `twentyprice_96dpi.svg`, which is a marketing preview card.
+
+## Egg pack addendum
+
+The egg pack landed after this spec was written; see `egg-pack.md` for the full
+details. Two things here are now stale:
+
+- **`MarketIcon.egg` was removed.** It was a stand-in pointing at
+  `seal_capsule` — the closest rounded silhouette the market sheet had — because
+  there was no egg art. Eggs now have their own animated pack (`EggSprites`),
+  so the stand-in is gone and `MarketIcon` holds only real market-sheet icons.
+- **`SpriteStrip` now unifies still and animated sprites.** Previously every
+  subject pointed at a single asset path (`PlaceholderActor.spriteAsset`,
+  `String?`). A `SpriteStrip` is a horizontal run of equal-sized frames; a still
+  sprite is just a one-frame strip (`SpriteStrip.single`), so the field needs
+  only one painter (`SpriteActorPainter`, which now takes `strip` + `frame`).
+  The animal and icon sprites are single-frame strips, the egg clips are
+  multi-frame, and `EggClip.hatch` plays once while `idle`/`rock`/`bounce`
+  loop.

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moneymoneymoney/placeholder/actor_catalog.dart';
 import 'package:moneymoneymoney/placeholder/placeholder_actor.dart';
 import 'package:moneymoneymoney/sprites/asset_paths.dart';
+import 'package:moneymoneymoney/sprites/egg_sprites.dart';
 
 void main() {
   test('every actor has a unique id', () {
@@ -37,22 +38,31 @@ void main() {
       expect(actor.label, isNotEmpty, reason: actor.id);
       expect(actor.size.width, greaterThan(0), reason: actor.id);
       expect(actor.size.height, greaterThan(0), reason: actor.id);
-      expect(actor.spriteAsset, isNotNull, reason: actor.id);
+      expect(actor.sprite, isNotNull, reason: actor.id);
     }
   });
 
   test('animals are animal-kind and point at the animal pack', () {
     for (final actor in ActorCatalog.animals) {
       expect(actor.kind, ActorKind.animal);
-      expect(actor.spriteAsset, SpriteAssets.animal(actor.id));
+      expect(actor.sprite!.assetPath, SpriteAssets.animal(actor.id));
+      expect(actor.sprite!.isAnimated, isFalse);
     }
   });
 
   test('spritePaths lists one registered path per actor', () {
     expect(ActorCatalog.spritePaths, hasLength(28));
+    final known = <String>{...SpriteAssets.allPaths, ...EggSprites.allPaths};
     for (final path in ActorCatalog.spritePaths) {
-      expect(SpriteAssets.allPaths, contains(path));
+      expect(known, contains(path));
     }
+  });
+
+  test('the egg uses its own animated pack, not a market icon', () {
+    final egg = ActorCatalog.byId('egg');
+    expect(egg.sprite!.assetPath, EggSprites.path(EggVariant.cream, EggClip.rock));
+    expect(egg.sprite!.isAnimated, isTrue);
+    expect(egg.sprite!.frameCount, 4);
   });
 
   test('byId throws for an unknown actor', () {

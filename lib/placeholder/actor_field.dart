@@ -42,7 +42,7 @@ class _ActorFieldState extends State<ActorField>
   Future<void> _preloadSprites() async {
     final paths = <String>[
       for (final actor in widget.actors)
-        if (actor.spriteAsset != null) actor.spriteAsset!,
+        if (actor.sprite != null) actor.sprite!.assetPath,
     ];
     if (paths.isEmpty) return;
     await SpriteCache.instance.loadAll(paths);
@@ -100,20 +100,24 @@ class _ActorFieldState extends State<ActorField>
     // Stagger phases so a row of actors does not pulse in lockstep.
     final phase = (seconds / 2.2 + index * 0.37) % 1.0;
     final scale = squashStretch(phase, amplitude: isAnimal ? 0.10 : 0.05);
-    final sprite = actor.spriteAsset == null
+    final strip = actor.sprite;
+    final image = strip == null
         ? null
-        : SpriteCache.instance.peek(actor.spriteAsset!);
+        : SpriteCache.instance.peek(strip.assetPath);
 
     return Positioned.fill(
       child: CustomPaint(
-        painter: sprite == null
+        painter: image == null || strip == null
             ? PlaceholderBoxPainter(
                 actor: actor,
                 position: position,
                 scale: scale,
               )
             : SpriteActorPainter(
-                image: sprite,
+                image: image,
+                strip: strip,
+                // Offset each actor so identical clips do not march in step.
+                frame: strip.frameAt(seconds + index * 0.19),
                 position: position,
                 designSize: actor.size,
                 scale: scale,

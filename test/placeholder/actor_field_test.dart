@@ -77,7 +77,7 @@ void main() {
     final image = await stubImage();
     final actors = ActorCatalog.animals.take(3).toList();
     for (final actor in actors) {
-      SpriteCache.instance.put(actor.spriteAsset!, image);
+      SpriteCache.instance.put(actor.sprite!.assetPath, image);
     }
 
     await tester.pumpWidget(host(ActorField(actors: actors)));

@@ -4,6 +4,8 @@ import '../sprites/asset_paths.dart';
 
 /// The market-sheet icons the app uses, named by role rather than by the
 /// shape they happen to be, so swapping the art is a one-line change here.
+///
+/// Eggs are not in here: they have their own animated pack, see `EggSprites`.
 enum MarketIcon {
   coin('coin'),
   xp('sparkle_eight'),
@@ -11,9 +13,6 @@ enum MarketIcon {
   achievement('badge_rosette'),
   wallet('bank'),
   receipt('note_cash'),
-
-  /// The sheet has no egg; the capsule seal is the closest silhouette.
-  egg('seal_capsule'),
   lockedSkin('padlock'),
   lootbox('ticket'),
   vault('vault');

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 
 import '../placeholder/motion/squash_stretch.dart';
+import 'sprite_strip.dart';
 
 /// The paint every sprite draw uses.
 ///
@@ -32,16 +33,23 @@ Rect spriteDestRect({
   );
 }
 
-/// Draws one sprite under squash and stretch.
+/// Draws one frame of a sprite strip under squash and stretch.
+///
+/// A still sprite is a one-frame strip, so this is the only sprite painter the
+/// field needs.
 class SpriteActorPainter extends CustomPainter {
   SpriteActorPainter({
     required this.image,
+    required this.strip,
     required this.position,
     required this.designSize,
     required this.scale,
+    this.frame = 0,
   });
 
   final ui.Image image;
+
+  final SpriteStrip strip;
 
   /// Top-left of the unscaled design box.
   final Offset position;
@@ -51,11 +59,14 @@ class SpriteActorPainter extends CustomPainter {
 
   final ScalePair scale;
 
+  /// Index into [strip]. Out-of-range values are clamped.
+  final int frame;
+
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawImageRect(
       image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      strip.sourceRect(frame, image),
       spriteDestRect(position: position, designSize: designSize, scale: scale),
       spritePaint(),
     );
@@ -64,6 +75,8 @@ class SpriteActorPainter extends CustomPainter {
   @override
   bool shouldRepaint(SpriteActorPainter oldDelegate) =>
       oldDelegate.image != image ||
+      oldDelegate.frame != frame ||
+      oldDelegate.strip.assetPath != strip.assetPath ||
       oldDelegate.position != position ||
       oldDelegate.designSize != designSize ||
       oldDelegate.scale.x != scale.x ||

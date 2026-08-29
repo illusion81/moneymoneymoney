@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../sprites/asset_paths.dart';
+import '../sprites/egg_sprites.dart';
+import '../sprites/sprite_strip.dart';
 import 'placeholder_actor.dart';
 
 /// Every drawable subject in the app.
@@ -32,7 +34,9 @@ class ActorCatalog {
             color: _fallbackColors[i % _fallbackColors.length],
             size: _animalSize,
             kind: ActorKind.animal,
-            spriteAsset: SpriteAssets.animal(SpriteAssets.animalIds[i]),
+            sprite: SpriteStrip.single(
+              SpriteAssets.animal(SpriteAssets.animalIds[i]),
+            ),
           ),
       ]);
 
@@ -44,16 +48,16 @@ class ActorCatalog {
           color: const Color(0xffe0b33c),
           size: const Size(48, 48),
           kind: ActorKind.item,
-          spriteAsset: SpriteAssets.icon('coin'),
+          sprite: SpriteStrip.single(SpriteAssets.icon('coin')),
         ),
         PlaceholderActor(
           id: 'egg',
           label: 'EGG',
           color: const Color(0xffefe3cd),
-          size: const Size(46, 56),
+          size: const Size(56, 56),
           kind: ActorKind.item,
-          // The sheet has no egg; the capsule seal is the closest silhouette.
-          spriteAsset: SpriteAssets.icon('seal_capsule'),
+          // Rocks on the field; the hatch clip is played by the egg screens.
+          sprite: EggSprites.strip(EggVariant.cream, EggClip.rock),
         ),
         PlaceholderActor(
           id: 'xp_orb',
@@ -61,7 +65,7 @@ class ActorCatalog {
           color: const Color(0xff4fb8ff),
           size: const Size(44, 44),
           kind: ActorKind.item,
-          spriteAsset: SpriteAssets.icon('sparkle_eight'),
+          sprite: SpriteStrip.single(SpriteAssets.icon('sparkle_eight')),
         ),
       ]);
 
@@ -72,7 +76,7 @@ class ActorCatalog {
   /// Every sprite the field needs, for preloading in one pass.
   static List<String> get spritePaths => <String>[
     for (final actor in all)
-      if (actor.spriteAsset != null) actor.spriteAsset!,
+      if (actor.sprite != null) actor.sprite!.assetPath,
   ];
 
   static PlaceholderActor byId(String id) => all.firstWhere((a) => a.id == id);

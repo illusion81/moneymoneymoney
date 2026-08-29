@@ -1,12 +1,14 @@
 import 'dart:ui';
 
+import '../sprites/sprite_strip.dart';
+
 /// Animals wander their field; items hold station and only pulse.
 enum ActorKind { animal, item }
 
 /// One drawable subject on the field.
 ///
-/// [spriteAsset] is the real art. [color] and [label] stay as the fallback the
-/// box painter uses while the sprite is still decoding.
+/// [sprite] is the real art. [color] and [label] stay as the fallback the box
+/// painter uses while the sprite is still decoding.
 class PlaceholderActor {
   const PlaceholderActor({
     required this.id,
@@ -14,7 +16,7 @@ class PlaceholderActor {
     required this.color,
     required this.size,
     required this.kind,
-    this.spriteAsset,
+    this.sprite,
   });
 
   final String id;
@@ -29,6 +31,7 @@ class PlaceholderActor {
 
   final ActorKind kind;
 
-  /// Asset path of this subject's sprite, or null if it has no art yet.
-  final String? spriteAsset;
+  /// This subject's art, or null if it has none yet. A still sprite is a
+  /// one-frame strip.
+  final SpriteStrip? sprite;
 }

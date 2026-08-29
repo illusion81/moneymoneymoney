@@ -39,6 +39,10 @@ void main() {
     expect(image.isAntiAlias, isFalse);
   });
 
+  test('the egg stand-in is gone now that eggs have their own pack', () {
+    expect(MarketIcon.values.map((i) => i.name), isNot(contains('egg')));
+  });
+
   testWidgets('a tint is applied as a colour blend', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

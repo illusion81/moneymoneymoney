@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneymoneymoney/placeholder/motion/squash_stretch.dart';
 import 'package:moneymoneymoney/sprites/sprite_painter.dart';
+import 'package:moneymoneymoney/sprites/sprite_strip.dart';
 
 Future<ui.Image> stubImage(int w, int h) {
   final recorder = ui.PictureRecorder();
@@ -65,6 +66,7 @@ void main() {
       CustomPaint(
         painter: SpriteActorPainter(
           image: image,
+          strip: const SpriteStrip.single('a.png'),
           position: const Offset(4, 6),
           designSize: const Size(64, 64),
           scale: const ScalePair(1, 1),
@@ -87,8 +89,15 @@ void main() {
     tester,
   ) async {
     final image = await stubImage(32, 32);
-    SpriteActorPainter at(Offset position) => SpriteActorPainter(
+    SpriteActorPainter at(Offset position, {int frame = 0}) =>
+        SpriteActorPainter(
       image: image,
+      strip: const SpriteStrip(
+        assetPath: 'a.png',
+        frameCount: 2,
+        frameSize: Size(16, 32),
+      ),
+      frame: frame,
       position: position,
       designSize: const Size(64, 64),
       scale: const ScalePair(1, 1),
@@ -98,5 +107,43 @@ void main() {
       isFalse,
     );
     expect(at(const Offset(1, 0)).shouldRepaint(at(const Offset(0, 0))), isTrue);
+    // A new frame must repaint even though nothing else moved.
+    expect(
+      at(const Offset(0, 0), frame: 1).shouldRepaint(at(const Offset(0, 0))),
+      isTrue,
+    );
+  });
+
+  testWidgets('draws the requested frame out of an animated strip', (
+    tester,
+  ) async {
+    final image = await stubImage(64, 32);
+    const strip = SpriteStrip(
+      assetPath: 'a.png',
+      frameCount: 2,
+      frameSize: Size(32, 32),
+    );
+    await tester.pumpWidget(
+      CustomPaint(
+        painter: SpriteActorPainter(
+          image: image,
+          strip: strip,
+          frame: 1,
+          position: Offset.zero,
+          designSize: const Size(32, 32),
+          scale: const ScalePair(1, 1),
+        ),
+        size: const Size(100, 100),
+      ),
+    );
+    expect(
+      find.byType(CustomPaint).first,
+      paints
+        ..drawImageRect(
+          image: image,
+          source: const Rect.fromLTWH(32, 0, 32, 32),
+          destination: const Rect.fromLTWH(0, 0, 32, 32),
+        ),
+    );
   });
 }
