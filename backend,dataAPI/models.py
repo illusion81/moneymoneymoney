@@ -2,11 +2,34 @@
 from __future__ import annotations
 
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 Bucket = Literal["invest", "stable", "living", "reward"]
 
 BUCKETS: list[Bucket] = ["invest", "stable", "living", "reward"]
+
+ConfidenceTierName = Literal["early_snapshot", "standard", "full_clarity"]
+
+
+class MoneyStyleSubmission(BaseModel):
+    """Behavioural reflection, deliberately separate from financial facts."""
+    session_id: str = Field(..., min_length=1)
+    question_version: str = Field(..., min_length=1)
+    selected_answers: dict[int, str]
+    skipped_question_ids: list[int]
+    answered_count: int = Field(..., ge=0, le=12)
+    confidence_tier: Optional[ConfidenceTierName] = None
+    archetype_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> "MoneyStyleSubmission":
+        if self.answered_count != len(self.selected_answers):
+            raise ValueError("answered_count must match selected_answers")
+        if set(self.selected_answers).intersection(self.skipped_question_ids):
+            raise ValueError("a question cannot be answered and skipped")
+        if any(question_id < 1 or question_id > 12 for question_id in self.selected_answers):
+            raise ValueError("question ids must be between 1 and 12")
+        return self
 
 
 # ---------- Survey / profile ----------

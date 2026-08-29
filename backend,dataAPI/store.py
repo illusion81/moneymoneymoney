@@ -16,6 +16,7 @@ def user(uid: str = DEFAULT_USER) -> dict[str, Any]:
     if uid not in _STATE:
         _STATE[uid] = {
             "profile": None,
+            "money_style": None,
             "connection": None,
             "xp": 0,
             "coins": 120,
