@@ -6,9 +6,11 @@ class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
     super.key,
     required this.onProfileSubmitted,
+    this.onStartMoneyStyleQuiz,
   });
 
   final ValueChanged<FinanceProfile> onProfileSubmitted;
+  final VoidCallback? onStartMoneyStyleQuiz;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -110,6 +112,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       onPressed: _submit,
                       icon: const Icon(Icons.auto_awesome),
                       label: const Text('Generate Report'),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: widget.onStartMoneyStyleQuiz,
+                      icon: const Icon(Icons.psychology),
+                      label: const Text('Discover Your Money Style'),
                     ),
                     const SizedBox(height: 8),
                     TextButton(
