@@ -11,11 +11,13 @@ class MoneyStyleQuizScreen extends StatefulWidget {
     required this.userId,
     required this.onComplete,
     this.answerOrderSeed,
+    this.initialSession,
   });
 
   final String userId;
   final ValueChanged<MoneyStyleCompletion> onComplete;
   final int? answerOrderSeed;
+  final AnswerSession? initialSession;
 
   @override
   State<MoneyStyleQuizScreen> createState() => _MoneyStyleQuizScreenState();
@@ -30,7 +32,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
   @override
   void initState() {
     super.initState();
-    _session = AnswerSession(
+    _session = widget.initialSession ?? AnswerSession(
       userId: widget.userId,
       sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
     );

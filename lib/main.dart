@@ -117,6 +117,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _apiClient = widget.apiClient ?? ApiClient();
     _moneyStyleStore = widget.moneyStyleStore ?? SharedPreferencesMoneyStyleRepository();
+    _loadMoneyStyle();
     _view = widget.showOnboardingInitially ? AppView.onboarding : AppView.moneyStyleFlow;
   }
 
@@ -154,6 +155,7 @@ class _MyAppState extends State<MyApp> {
         return MoneyStyleFlow(
           userId: 'user-1', // TODO: Replace with actual user ID
           onComplete: _handleMoneyStyleComplete,
+          existingCompletion: _moneyStyleCompletion,
         );
       case AppView.moneyStyleResult:
         return MoneyStyleResultScreen(result: _moneyStyleCompletion!.result, onExploreIdeas: () => setState(() => _view = AppView.moneyStyleIdeas), onBuildRangePlan: () => setState(() => _view = AppView.rangePlan));
@@ -292,8 +294,9 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _handleMoneyStyleComplete(MoneyStyleCompletion completion) {
-    _moneyStyleStore.save(completion);
+  Future<void> _loadMoneyStyle() async { final completion = await _moneyStyleStore.load(); if (mounted && completion != null) setState(() => _moneyStyleCompletion = completion); }
+  Future<void> _handleMoneyStyleComplete(MoneyStyleCompletion completion) async {
+    await _moneyStyleStore.save(completion);
     _syncMoneyStyle(completion);
     setState(() {
       _moneyStyleCompletion = completion;

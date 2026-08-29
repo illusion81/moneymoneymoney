@@ -8,10 +8,12 @@ class MoneyStyleFlow extends StatefulWidget {
     super.key,
     required this.userId,
     required this.onComplete,
+    this.existingCompletion,
   });
 
   final String userId;
   final ValueChanged<MoneyStyleCompletion> onComplete;
+  final MoneyStyleCompletion? existingCompletion;
 
   @override
   State<MoneyStyleFlow> createState() => _MoneyStyleFlowState();
@@ -19,12 +21,14 @@ class MoneyStyleFlow extends StatefulWidget {
 
 class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
   bool _quizStarted = false;
+  bool _startOver = false;
 
   @override
   Widget build(BuildContext context) {
     if (_quizStarted) {
       return MoneyStyleQuizScreen(
         userId: widget.userId,
+        initialSession: _startOver ? null : widget.existingCompletion?.session,
         onComplete: widget.onComplete,
       );
     }
@@ -72,8 +76,10 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                   FilledButton.icon(
                     onPressed: _startQuiz,
                     icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Find My Style'),
+                    label: Text(widget.existingCompletion == null ? 'Find My Style' : 'Resume'),
                   ),
+                  if (widget.existingCompletion != null)
+                    OutlinedButton(onPressed: () => setState(() { _startOver = true; _quizStarted = true; }), child: const Text('Start over')),
                   const SizedBox(height: 40),
                 ],
               ),
