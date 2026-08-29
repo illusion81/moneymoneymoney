@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../data/money_style_questions.dart';
@@ -9,10 +10,16 @@ class MoneyStyleQuizScreen extends StatefulWidget {
     super.key,
     required this.userId,
     required this.onComplete,
+    this.answerOrderSeed,
+    this.initialSession,
+    this.onProgress,
   });
 
   final String userId;
-  final ValueChanged<MoneyStyleResult> onComplete;
+  final ValueChanged<MoneyStyleCompletion> onComplete;
+  final int? answerOrderSeed;
+  final AnswerSession? initialSession;
+  final ValueChanged<AnswerSession>? onProgress;
 
   @override
   State<MoneyStyleQuizScreen> createState() => _MoneyStyleQuizScreenState();
@@ -20,16 +27,33 @@ class MoneyStyleQuizScreen extends StatefulWidget {
 
 class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
   late AnswerSession _session;
+  late Map<int, List<int>> _answerOrder;
   int _currentQuestionIndex = 0;
   final MoneyStyleEngine _engine = MoneyStyleEngine();
 
   @override
   void initState() {
     super.initState();
-    _session = AnswerSession(
-      userId: widget.userId,
-      sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+    _session =
+        widget.initialSession ??
+        AnswerSession(
+          userId: widget.userId,
+          sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+        );
+    final resumedIndex = moneyStyleQuestions.indexWhere(
+      (q) =>
+          !_session.selectedAnswers.containsKey(q.id) &&
+          !_session.skippedQuestions.contains(q.id),
     );
+    if (resumedIndex >= 0) _currentQuestionIndex = resumedIndex;
+    final random = Random(
+      widget.answerOrderSeed ?? _session.sessionId.hashCode,
+    );
+    _answerOrder = {
+      for (final question in moneyStyleQuestions)
+        question.id: (List<int>.generate(question.answers.length, (i) => i)
+          ..shuffle(random)),
+    };
   }
 
   @override
@@ -104,8 +128,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
                       ),
 
                       // Answer buttons
-                      ...List.generate(
-                        currentQuestion.answers.length,
+                      ..._answerOrder[currentQuestion.id]!.map(
                         (index) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: _AnswerButton(
@@ -172,6 +195,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       final questionId = moneyStyleQuestions[_currentQuestionIndex].id;
       _session.selectedAnswers[questionId] = answerIndex;
       _session.skippedQuestions.remove(questionId);
+      widget.onProgress?.call(_session.snapshot());
     });
   }
 
@@ -180,6 +204,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       final questionId = moneyStyleQuestions[_currentQuestionIndex].id;
       _session.skippedQuestions.add(questionId);
       _session.selectedAnswers.remove(questionId);
+      widget.onProgress?.call(_session.snapshot());
       _moveToNextQuestion();
     });
   }
@@ -196,15 +221,11 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
         _currentQuestionIndex++;
       });
     } else {
-      // Quiz complete. onComplete tells main.dart to switch to
-      // AppView.moneyStyleResult, which renders the result screen WITH its two
-      // buttons wired up. Pushing our own copy here shadowed that one with a
-      // callback-less version, which is why both buttons did nothing.
-      final result = _engine.generateResult(_session, moneyStyleQuestions);
-      // Navigation is owned by the app shell: onComplete switches the view.
-      // Pushing a route here as well stacked a second result screen on top,
-      // so its "continue" button changed the view invisibly underneath.
-      widget.onComplete(result);
+      // Quiz complete. Navigation is owned by the app shell: onComplete
+      // switches the view to AppView.moneyStyleResult.
+      final session = _session.snapshot();
+      final result = _engine.generateResult(session, moneyStyleQuestions);
+      widget.onComplete(MoneyStyleCompletion(session: session, result: result));
     }
   }
 

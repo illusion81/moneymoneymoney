@@ -11,6 +11,8 @@ the frontend only ever writes `/api/...`.
 |---|---|---|---|---|
 | `POST` | `/api/survey` | `SurveyAnswers` | `Profile` | Engine |
 | `GET` | `/api/profile` | — | `Profile` (409 if no survey yet) | Engine |
+| `POST` | `/api/money-style` | `MoneyStyleSubmission` | `MoneyStyleSubmission` | Onboarding |
+| `GET` | `/api/money-style` | — | `MoneyStyleSubmission` (404 if absent) | Onboarding |
 | `POST` | `/api/bank/connect` | `{persona}` | `ConnectionStatus` | Data |
 | `GET` | `/api/bank/accounts` | — | `Account[]` | Data |
 | `GET` | `/api/bank/transactions?days=30` | — | `Transaction[]` | Data |
@@ -26,6 +28,13 @@ the frontend only ever writes `/api/...`.
 
 Live schema for every type: <http://localhost:8000/docs> (FastAPI generates it
 from `models.py` — that file is the single source of truth).
+
+## Money Style boundary
+
+Money Style is behavioural reflection only. It stores answer IDs and skips, and
+does not create a financial profile, allocation, plan, or mission. Financial
+calculations require separate user-provided facts through `/api/survey` or
+opted-in bank data.
 
 ## The four buckets
 

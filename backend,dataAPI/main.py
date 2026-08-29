@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import store
-from models import (SurveyAnswers, Profile, ConnectionStatus, Account, Transaction,
+from models import (SurveyAnswers, Profile, MoneyStyleSubmission, ConnectionStatus, Account, Transaction,
                     Goal, GoalCreate, JoinCircle, Circle, Cheer,
                     Plan, Mission, ClaimResult, Progression, TowerState, ShopItem,
                     ConsentStatus)
@@ -225,6 +225,21 @@ def submit_survey(answers: SurveyAnswers) -> Profile:
 @app.get("/api/profile", response_model=Profile)
 def get_profile() -> Profile:
     return _require_profile()
+
+
+@app.post("/api/money-style", response_model=MoneyStyleSubmission)
+def submit_money_style(submission: MoneyStyleSubmission) -> MoneyStyleSubmission:
+    """Save behavioural answers without creating a financial profile."""
+    store.user(UID)["money_style"] = submission
+    return submission
+
+
+@app.get("/api/money-style", response_model=MoneyStyleSubmission)
+def get_money_style() -> MoneyStyleSubmission:
+    submission = store.user(UID)["money_style"]
+    if submission is None:
+        raise HTTPException(404, "No Money Style submission yet.")
+    return submission
 
 
 # ------------------------------------------------------------------ bank

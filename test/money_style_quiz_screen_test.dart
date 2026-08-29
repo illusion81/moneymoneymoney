@@ -6,10 +6,18 @@ import 'package:moneymoneymoney/screens/money_style_quiz_screen.dart';
 
 void main() {
   group('MoneyStyleQuizScreen', () {
-    late MoneyStyleResult? completedResult;
+    late MoneyStyleCompletion? completedResult;
 
     setUp(() {
       completedResult = null;
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      binding.platformDispatcher.views.first.physicalSize = const Size(
+        1000,
+        2200,
+      );
+      binding.platformDispatcher.views.first.devicePixelRatio = 1;
+      addTearDown(binding.platformDispatcher.views.first.resetPhysicalSize);
+      addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
     });
 
     testWidgets('displays first question', (WidgetTester tester) async {
@@ -35,6 +43,7 @@ void main() {
         MaterialApp(
           home: MoneyStyleQuizScreen(
             userId: 'test-user',
+            answerOrderSeed: 1,
             onComplete: (result) {},
           ),
         ),
@@ -92,7 +101,9 @@ void main() {
       );
 
       final q1 = moneyStyleQuestions[0];
-      await tester.tap(find.text(q1.answers[0].text));
+      final answer = find.text(q1.answers[0].text);
+      await tester.ensureVisible(answer);
+      await tester.tap(answer);
       await tester.pump();
 
       expect(
@@ -116,7 +127,9 @@ void main() {
       );
 
       final q1 = moneyStyleQuestions[0];
-      await tester.tap(find.text(q1.answers[0].text));
+      final answer = find.text(q1.answers[0].text);
+      await tester.ensureVisible(answer);
+      await tester.tap(answer);
       await tester.pump();
 
       // Verify the selected button has styling applied
@@ -154,6 +167,7 @@ void main() {
         MaterialApp(
           home: MoneyStyleQuizScreen(
             userId: 'test-user',
+            answerOrderSeed: 1,
             onComplete: (result) {},
           ),
         ),
@@ -204,6 +218,35 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('3 of 12'), findsOneWidget);
+    });
+
+    testWidgets('progress callbacks receive immutable session snapshots', (
+      WidgetTester tester,
+    ) async {
+      final progress = <AnswerSession>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MoneyStyleQuizScreen(
+            userId: 'test-user',
+            answerOrderSeed: 1,
+            onProgress: progress.add,
+            onComplete: (_) {},
+          ),
+        ),
+      );
+
+      await tester.tap(find.text(moneyStyleQuestions[0].answers[0].text));
+      await tester.pump();
+      final firstSnapshot = progress.single;
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(moneyStyleQuestions[1].answers[0].text));
+      await tester.pump();
+
+      expect(firstSnapshot.selectedAnswers, {1: 0});
+      expect(progress.last.selectedAnswers, {1: 0, 2: 0});
+      expect(identical(firstSnapshot, progress.last), isFalse);
     });
 
     testWidgets('back button appears after first question', (
@@ -263,7 +306,7 @@ void main() {
       }
 
       expect(completedResult, isNotNull);
-      expect(completedResult!.archetype, isNotNull);
+      expect(completedResult!.result!.archetype, isNotNull);
     });
   });
 }

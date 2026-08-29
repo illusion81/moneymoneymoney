@@ -8,10 +8,16 @@ class MoneyStyleFlow extends StatefulWidget {
     super.key,
     required this.userId,
     required this.onComplete,
+    this.existingCompletion,
+    this.onProgress,
+    this.onStartOver,
   });
 
   final String userId;
-  final ValueChanged<MoneyStyleResult> onComplete;
+  final ValueChanged<MoneyStyleCompletion> onComplete;
+  final MoneyStyleCompletion? existingCompletion;
+  final ValueChanged<AnswerSession>? onProgress;
+  final Future<void> Function()? onStartOver;
 
   @override
   State<MoneyStyleFlow> createState() => _MoneyStyleFlowState();
@@ -19,12 +25,15 @@ class MoneyStyleFlow extends StatefulWidget {
 
 class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
   bool _quizStarted = false;
+  bool _startOver = false;
 
   @override
   Widget build(BuildContext context) {
     if (_quizStarted) {
       return MoneyStyleQuizScreen(
         userId: widget.userId,
+        initialSession: _startOver ? null : widget.existingCompletion?.session,
+        onProgress: widget.onProgress,
         onComplete: widget.onComplete,
       );
     }
@@ -50,15 +59,22 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '12 everyday choices. No dollar amounts. No judgment.',
+                    'Twelve everyday choices. No dollar amounts. No judgement.',
                     style: Theme.of(
                       context,
                     ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 16),
+                  const Text('About 2–3 minutes', textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'A light reflection on your current habits — not financial, mental-health, or clinical advice.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
                   Text(
-                    'Your answers will reveal how you approach money in your own unique way.\n\nThere are no "right" answers—just insights about what works for you.',
+                    'Notice the patterns that feel closest today. Your result can change as life changes.',
                     style: Theme.of(
                       context,
                     ).textTheme.bodyLarge?.copyWith(height: 1.6),
@@ -68,8 +84,17 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                   FilledButton.icon(
                     onPressed: _startQuiz,
                     icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Find My Style'),
+                    label: Text(
+                      widget.existingCompletion == null
+                          ? 'Find My Style'
+                          : 'Resume',
+                    ),
                   ),
+                  if (widget.existingCompletion != null)
+                    OutlinedButton(
+                      onPressed: _startOverQuiz,
+                      child: const Text('Start over'),
+                    ),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -82,6 +107,17 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
 
   void _startQuiz() {
     setState(() {
+      _quizStarted = true;
+    });
+  }
+
+  Future<void> _startOverQuiz() async {
+    await widget.onStartOver?.call();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _startOver = true;
       _quizStarted = true;
     });
   }

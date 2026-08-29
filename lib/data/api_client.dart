@@ -128,6 +128,8 @@ class ApiClient {
   Future<Profile> profile() async =>
       Profile.fromJson(await _getObj('/api/profile'));
 
+  Future<MoneyStyleSubmission> submitMoneyStyle(MoneyStyleSubmission value) async => MoneyStyleSubmission.fromJson((await _send('POST', '/api/money-style', body: value.toJson())) as Map<String, dynamic>);
+
   // ---------------------------------------------------------------- bank
 
   Future<ConnectionStatus> connectBank({String persona = 'Whistler'}) async =>
