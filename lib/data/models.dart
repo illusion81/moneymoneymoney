@@ -75,14 +75,24 @@ class SurveyAnswers {
 }
 
 class MoneyStyleSubmission {
-  const MoneyStyleSubmission({required this.sessionId, required this.questionVersion, required this.selectedAnswers, required this.skippedQuestionIds, required this.answeredCount, this.confidenceTier, this.archetypeId});
+  /// Bumped for the v2 content pass (24-question adaptive pool). Old sessions
+  /// and analytics keyed to `money-style-v1` question IDs must not be read
+  /// against this bank.
+  static const currentQuestionVersion = 'money-style-v2';
+
+  const MoneyStyleSubmission({required this.sessionId, required this.questionVersion, required this.selectedAnswers, required this.skippedQuestionIds, required this.answeredCount, this.shownQuestionIds = const [], this.confidenceTier, this.archetypeId});
   final String sessionId, questionVersion;
   final Map<String, String> selectedAnswers;
   final List<int> skippedQuestionIds;
+
+  /// Which of the 24 pool questions this session actually showed. Two users
+  /// legitimately see different follow-up sets, so this cannot be inferred
+  /// from a fixed list any more.
+  final List<int> shownQuestionIds;
   final int answeredCount;
   final String? confidenceTier, archetypeId;
-  Map<String, dynamic> toJson() => {'session_id': sessionId, 'question_version': questionVersion, 'selected_answers': selectedAnswers, 'skipped_question_ids': skippedQuestionIds, 'answered_count': answeredCount, 'confidence_tier': confidenceTier, 'archetype_id': archetypeId};
-  factory MoneyStyleSubmission.fromJson(Map<String, dynamic> j) => MoneyStyleSubmission(sessionId: j['session_id'] as String, questionVersion: j['question_version'] as String, selectedAnswers: (j['selected_answers'] as Map).map((k,v) => MapEntry('$k','$v')), skippedQuestionIds: (j['skipped_question_ids'] as List).cast<int>(), answeredCount: j['answered_count'] as int, confidenceTier: j['confidence_tier'] as String?, archetypeId: j['archetype_id'] as String?);
+  Map<String, dynamic> toJson() => {'session_id': sessionId, 'question_version': questionVersion, 'selected_answers': selectedAnswers, 'skipped_question_ids': skippedQuestionIds, 'shown_question_ids': shownQuestionIds, 'answered_count': answeredCount, 'confidence_tier': confidenceTier, 'archetype_id': archetypeId};
+  factory MoneyStyleSubmission.fromJson(Map<String, dynamic> j) => MoneyStyleSubmission(sessionId: j['session_id'] as String, questionVersion: j['question_version'] as String, selectedAnswers: (j['selected_answers'] as Map).map((k,v) => MapEntry('$k','$v')), skippedQuestionIds: (j['skipped_question_ids'] as List).cast<int>(), shownQuestionIds: ((j['shown_question_ids'] as List?) ?? const []).cast<int>(), answeredCount: j['answered_count'] as int, confidenceTier: j['confidence_tier'] as String?, archetypeId: j['archetype_id'] as String?);
 
   factory MoneyStyleSubmission.fromCompletion(MoneyStyleCompletion completion) {
     final result = completion.result;
@@ -92,18 +102,7 @@ class MoneyStyleSubmission {
       ConfidenceTier.fullClarity => 'full_clarity',
       null => null,
     };
-    final archetype = switch (result?.archetype.pattern) {
-      'Steady Pause Self-Directed' => 'steady_pause_self',
-      'Steady Pause Collaborative' => 'steady_pause_collaborative',
-      'Steady Momentum Self-Directed' => 'steady_momentum_self',
-      'Steady Momentum Collaborative' => 'steady_momentum_collaborative',
-      'Responsive Pause Self-Directed' => 'responsive_pause_self',
-      'Responsive Pause Collaborative' => 'responsive_pause_collaborative',
-      'Responsive Momentum Self-Directed' => 'responsive_momentum_self',
-      'Responsive Momentum Collaborative' => 'responsive_momentum_collaborative',
-      _ => null,
-    };
-    return MoneyStyleSubmission(sessionId: completion.session.sessionId, questionVersion: 'money-style-v1', selectedAnswers: completion.session.answerIdsFor(moneyStyleQuestions), skippedQuestionIds: completion.session.skippedQuestions.toList(), answeredCount: completion.session.totalAnswered, confidenceTier: tier, archetypeId: archetype);
+    return MoneyStyleSubmission(sessionId: completion.session.sessionId, questionVersion: currentQuestionVersion, selectedAnswers: completion.session.answerIdsFor(moneyStyleQuestionPool), skippedQuestionIds: completion.session.skippedQuestions.toList(), shownQuestionIds: List<int>.from(completion.session.shownQuestionIds), answeredCount: completion.session.totalAnswered, confidenceTier: tier, archetypeId: result?.archetype.id);
   }
 }
 

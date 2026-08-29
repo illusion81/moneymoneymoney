@@ -10,6 +10,12 @@ BUCKETS: list[Bucket] = ["invest", "stable", "living", "reward"]
 
 ConfidenceTierName = Literal["early_snapshot", "standard", "full_clarity"]
 
+# The v2 question bank is a 24-question pool of which any one session shows 12
+# (6 fixed openers + 6 adaptively-routed follow-ups), so question ids run to 24
+# while a session's answered_count still cannot exceed 12.
+MONEY_STYLE_POOL_SIZE = 24
+MONEY_STYLE_QUESTIONS_PER_SESSION = 12
+
 
 class MoneyStyleSubmission(BaseModel):
     """Behavioural reflection, deliberately separate from financial facts."""
@@ -17,7 +23,12 @@ class MoneyStyleSubmission(BaseModel):
     question_version: str = Field(..., min_length=1)
     selected_answers: dict[int, str]
     skipped_question_ids: list[int]
-    answered_count: int = Field(..., ge=0, le=12)
+    # Which pool questions this session actually put in front of the user. Two
+    # users legitimately see different follow-ups, so the shown set can no
+    # longer be inferred from a fixed list. Defaults to empty so a pre-v2
+    # client's payload still validates.
+    shown_question_ids: list[int] = Field(default_factory=list)
+    answered_count: int = Field(..., ge=0, le=MONEY_STYLE_QUESTIONS_PER_SESSION)
     confidence_tier: Optional[ConfidenceTierName] = None
     archetype_id: Optional[str] = None
 
@@ -27,8 +38,18 @@ class MoneyStyleSubmission(BaseModel):
             raise ValueError("answered_count must match selected_answers")
         if set(self.selected_answers).intersection(self.skipped_question_ids):
             raise ValueError("a question cannot be answered and skipped")
-        if any(question_id < 1 or question_id > 12 for question_id in self.selected_answers):
-            raise ValueError("question ids must be between 1 and 12")
+        ids = set(self.selected_answers) | set(self.skipped_question_ids) | set(self.shown_question_ids)
+        if any(question_id < 1 or question_id > MONEY_STYLE_POOL_SIZE for question_id in ids):
+            raise ValueError(f"question ids must be between 1 and {MONEY_STYLE_POOL_SIZE}")
+        if len(self.shown_question_ids) > MONEY_STYLE_QUESTIONS_PER_SESSION:
+            raise ValueError(
+                f"a session shows at most {MONEY_STYLE_QUESTIONS_PER_SESSION} questions"
+            )
+        if self.shown_question_ids:
+            shown = set(self.shown_question_ids)
+            answered_or_skipped = set(self.selected_answers) | set(self.skipped_question_ids)
+            if not answered_or_skipped.issubset(shown):
+                raise ValueError("answered and skipped questions must have been shown")
         return self
 
 

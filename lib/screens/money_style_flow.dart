@@ -11,6 +11,7 @@ class MoneyStyleFlow extends StatefulWidget {
     this.existingCompletion,
     this.onProgress,
     this.onStartOver,
+    this.onSkipAll,
   });
 
   final String userId;
@@ -18,6 +19,10 @@ class MoneyStyleFlow extends StatefulWidget {
   final MoneyStyleCompletion? existingCompletion;
   final ValueChanged<AnswerSession>? onProgress;
   final Future<void> Function()? onStartOver;
+
+  /// Leaves the questionnaire entirely and hands the user to the manual
+  /// exact-number form instead. Offered before starting and on every page.
+  final VoidCallback? onSkipAll;
 
   @override
   State<MoneyStyleFlow> createState() => _MoneyStyleFlowState();
@@ -35,6 +40,7 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
         initialSession: _startOver ? null : widget.existingCompletion?.session,
         onProgress: widget.onProgress,
         onComplete: widget.onComplete,
+        onSkipAll: widget.onSkipAll,
       );
     }
 
@@ -95,6 +101,23 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                       onPressed: _startOverQuiz,
                       child: const Text('Start over'),
                     ),
+                  // An obvious way out before a single question is asked.
+                  if (widget.onSkipAll != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton(
+                      key: const Key('skip-questionnaire-button'),
+                      onPressed: widget.onSkipAll,
+                      child: const Text('Skip for now'),
+                    ),
+                    Text(
+                      'You can come back to this any time — nothing is lost by '
+                      'skipping it.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                   const SizedBox(height: 40),
                 ],
               ),
