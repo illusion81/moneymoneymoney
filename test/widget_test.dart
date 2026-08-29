@@ -19,6 +19,10 @@ const _testReport = WealthReport(
   dailyActions: ['Record every expense today.'],
 );
 
+String _dateKey(DateTime date) {
+  return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+}
+
 /// A small harness that hosts [HomeScreen] with an already-withered "today"
 /// record and enough coins to restore it, so the restoration flow can be
 /// driven without depending on wall-clock day boundaries.
@@ -98,6 +102,8 @@ class _RestoreHarnessState extends State<_RestoreHarness> {
         onShowReport: () {},
         onShowAchievements: () {},
         onShowShop: () {},
+        onShowCalendar: () {},
+        onShowHomestead: () {},
       ),
     );
   }
@@ -159,6 +165,71 @@ void main() {
     expect(find.text('Wealth Forest'), findsOneWidget);
     expect(find.text('Today\'s money action'), findsOneWidget);
     expect(find.text('Check In'), findsOneWidget);
+  });
+
+  testWidgets('the Calendar tab navigates to the calendar screen', (
+    tester,
+  ) async {
+    await startPlan(tester);
+
+    await tester.tap(find.text('Calendar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Calendar'), findsWidgets);
+    expect(find.byKey(const Key('forest-calendar-grid')), findsOneWidget);
+  });
+
+  testWidgets('the home screen can reopen the questionnaire after onboarding', (
+    tester,
+  ) async {
+    await startPlan(tester);
+
+    expect(find.text('Wealth Forest'), findsOneWidget);
+    expect(find.text('Money Profile'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('retake-questionnaire-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Money Profile'), findsOneWidget);
+    expect(find.text('Generate Report'), findsOneWidget);
+  });
+
+  testWidgets('retaking the questionnaire keeps existing forest days', (
+    tester,
+  ) async {
+    final today = DateTime.now();
+
+    await startPlan(tester);
+    await tester.enterText(find.byKey(const Key('spending-field')), '40');
+    await tester.tap(find.byKey(const Key('action-complete-checkbox')));
+    await tester.tap(find.text('Check In'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('retake-questionnaire-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('income-field')), '7000');
+    await tester.enterText(find.byKey(const Key('expenses-field')), '2700');
+    await tester.enterText(find.byKey(const Key('savings-field')), '1200');
+    await tester.tap(find.text('Generate Report'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Back to Forest'), findsOneWidget);
+
+    await tester.tap(find.text('Back to Forest'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Calendar'));
+    await tester.pumpAndSettle();
+
+    final todayCell = find.byKey(Key('forest-day-${_dateKey(today)}'));
+    expect(todayCell, findsOneWidget);
+    expect(
+      find.descendant(
+        of: todayCell,
+        matching: find.byKey(Key('forest-tree-healthy-${_dateKey(today)}')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('successful check-in changes tree status to healthy', (

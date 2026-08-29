@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'models/finance_profile.dart';
 import 'models/forest_day.dart';
+import 'models/home_layout.dart';
 import 'models/progression.dart';
 import 'models/shop_item.dart';
 import 'models/wealth_report.dart';
 import 'screens/achievements_screen.dart';
+import 'screens/calendar_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/homestead_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/shop_screen.dart';
 import 'services/forest_engine.dart';
+import 'services/home_layout_service.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
@@ -19,7 +23,7 @@ void main() {
   runApp(const MyApp());
 }
 
-enum AppView { onboarding, report, home, achievements, shop }
+enum AppView { onboarding, report, forest, calendar, homestead, achievements, shop }
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -32,6 +36,7 @@ class _MyAppState extends State<MyApp> {
   final ForestEngine _forestEngine = ForestEngine();
   final ProgressionEngine _progressionEngine = ProgressionEngine();
   final ShopService _shopService = ShopService();
+  final HomeLayoutService _homeLayoutService = HomeLayoutService();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -46,6 +51,7 @@ class _MyAppState extends State<MyApp> {
   );
   late ProgressionState _progression;
   late ShopState _shopState;
+  late HomeLayoutState _homeLayout;
   final List<RewardEvent> _spendEvents = [];
   AppView _view = AppView.onboarding;
   String? _lastEarnedSummary;
@@ -53,6 +59,7 @@ class _MyAppState extends State<MyApp> {
 
   _MyAppState() {
     _shopState = _shopService.initialState();
+    _homeLayout = _homeLayoutService.initialState();
     _progression = _progressionEngine.compute(
       days: const [],
       achievements: const [],
@@ -89,10 +96,10 @@ class _MyAppState extends State<MyApp> {
           report: report,
           onStartPlan: _startPlan,
           onShowForest: _planStarted
-              ? () => setState(() => _view = AppView.home)
+              ? () => setState(() => _view = AppView.forest)
               : null,
         );
-      case AppView.home:
+      case AppView.forest:
         return HomeScreen(
           report: report,
           summary: _summary,
@@ -102,6 +109,34 @@ class _MyAppState extends State<MyApp> {
           onCheckIn: _handleCheckIn,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
+          onRetakeQuestionnaire: () =>
+              setState(() => _view = AppView.onboarding),
+          onShowAchievements: () =>
+              setState(() => _view = AppView.achievements),
+          onShowShop: () => setState(() => _view = AppView.shop),
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
+        );
+      case AppView.calendar:
+        return CalendarScreen(
+          summary: _summary,
+          shopState: _shopState,
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
+          onShowReport: () => setState(() => _view = AppView.report),
+          onShowAchievements: () =>
+              setState(() => _view = AppView.achievements),
+          onShowShop: () => setState(() => _view = AppView.shop),
+        );
+      case AppView.homestead:
+        return HomesteadScreen(
+          shopState: _shopState,
+          layout: _homeLayout,
+          onPlace: _handlePlaceDecoration,
+          onRemove: _handleRemoveDecoration,
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowReport: () => setState(() => _view = AppView.report),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
@@ -110,7 +145,9 @@ class _MyAppState extends State<MyApp> {
         return AchievementsScreen(
           summary: _summary,
           progression: _progression,
-          onBack: () => setState(() => _view = AppView.home),
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
         );
       case AppView.shop:
         return ShopScreen(
@@ -118,28 +155,29 @@ class _MyAppState extends State<MyApp> {
           shopState: _shopState,
           onPurchase: _handlePurchase,
           onEquip: _handleEquip,
-          onBack: () => setState(() => _view = AppView.home),
+          onBack: () => setState(() => _view = AppView.forest),
         );
     }
   }
 
   void _handleProfileSubmitted(FinanceProfile profile) {
+    final alreadyStarted = _planStarted;
     setState(() {
       _report = ReportGenerator().generate(profile);
       _summary = _forestEngine.summarize(
-        const [],
+        _summary.days,
         progression: _progression,
         shopState: _shopState,
       );
       _view = AppView.report;
-      _planStarted = false;
+      _planStarted = alreadyStarted;
     });
   }
 
   void _startPlan() {
     setState(() {
       _planStarted = true;
-      _view = AppView.home;
+      _view = AppView.forest;
     });
   }
 
@@ -218,6 +256,23 @@ class _MyAppState extends State<MyApp> {
   void _handleEquip(String itemId) {
     setState(() {
       _shopState = _shopService.equip(itemId: itemId, state: _shopState);
+    });
+  }
+
+  void _handlePlaceDecoration(String itemId, double dx, double dy) {
+    setState(() {
+      _homeLayout = _homeLayoutService.place(
+        state: _homeLayout,
+        itemId: itemId,
+        dx: dx,
+        dy: dy,
+      );
+    });
+  }
+
+  void _handleRemoveDecoration(String itemId) {
+    setState(() {
+      _homeLayout = _homeLayoutService.remove(state: _homeLayout, itemId: itemId);
     });
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/progression.dart';
 import '../models/shop_item.dart';
+import '../services/item_visuals.dart';
 import '../services/shop_service.dart';
 
 class ShopScreen extends StatelessWidget {
@@ -109,6 +110,8 @@ class ShopScreen extends StatelessWidget {
         return 'Ground';
       case ShopItemCategory.sky:
         return 'Sky';
+      case ShopItemCategory.decoration:
+        return 'Decorations';
     }
   }
 }
@@ -141,6 +144,7 @@ class _ShopItemCard extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: ListTile(
+        leading: _ItemIconChip(item: item),
         title: Text(item.name),
         subtitle: Text(item.description),
         trailing: _trailingControl(levelLocked, canAfford),
@@ -149,10 +153,15 @@ class _ShopItemCard extends StatelessWidget {
   }
 
   Widget _trailingControl(bool levelLocked, bool canAfford) {
+    final isDecoration = item.category == ShopItemCategory.decoration;
+
     if (equipped) {
       return const Chip(label: Text('Equipped'));
     }
     if (owned) {
+      if (isDecoration) {
+        return const Chip(label: Text('Owned'));
+      }
       return OutlinedButton(
         onPressed: onEquip,
         child: const Text('Equip'),
@@ -165,6 +174,23 @@ class _ShopItemCard extends StatelessWidget {
     return FilledButton(
       onPressed: canAfford ? onPurchase : null,
       child: Text('Buy for ${item.price}'),
+    );
+  }
+}
+
+class _ItemIconChip extends StatelessWidget {
+  const _ItemIconChip({required this.item});
+
+  final ShopItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = shopItemVisual(item);
+
+    return CircleAvatar(
+      backgroundColor: visual.color.withValues(alpha: 0.15),
+      foregroundColor: visual.color,
+      child: Icon(visual.icon),
     );
   }
 }
