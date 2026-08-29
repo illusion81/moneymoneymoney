@@ -48,16 +48,31 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wealth Forest'),
-        actions: [
-          IconButton(
-            tooltip: 'Report',
-            onPressed: widget.onShowReport,
-            icon: const Icon(Icons.description_outlined),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+        onDestinationSelected: (index) {
+          if (index == 1) {
+            widget.onShowReport();
+          } else if (index == 2) {
+            widget.onShowAchievements();
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.park_outlined),
+            selectedIcon: Icon(Icons.park),
+            label: 'Forest',
           ),
-          IconButton(
-            tooltip: 'Achievements',
-            onPressed: widget.onShowAchievements,
-            icon: const Icon(Icons.emoji_events_outlined),
+          NavigationDestination(
+            icon: Icon(Icons.description_outlined),
+            selectedIcon: Icon(Icons.description),
+            label: 'Report',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined),
+            selectedIcon: Icon(Icons.emoji_events),
+            label: 'Awards',
           ),
         ],
       ),

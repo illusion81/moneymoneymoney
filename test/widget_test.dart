@@ -57,6 +57,36 @@ void main() {
 
     expect(find.text('Withered tree'), findsOneWidget);
   });
+
+  testWidgets('report opened from forest returns with back to forest action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await _completeQuestionnaire(tester);
+    await _startPlan(tester);
+    await tester.tap(find.text('Report'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('AI Wealth Report'), findsOneWidget);
+    await _scrollToBackToForest(tester);
+    expect(find.text('Back to Forest'), findsOneWidget);
+    expect(find.text('Start Plan'), findsNothing);
+  });
+
+  testWidgets('forest home uses bottom navigation for report and achievements', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await _completeQuestionnaire(tester);
+    await _startPlan(tester);
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Forest'), findsOneWidget);
+    expect(find.text('Report'), findsOneWidget);
+    expect(find.text('Awards'), findsOneWidget);
+  });
 }
 
 Future<void> _startPlan(WidgetTester tester) async {
@@ -94,6 +124,14 @@ Future<void> _scrollToStartPlan(WidgetTester tester) async {
 Future<void> _scrollToCheckIn(WidgetTester tester) async {
   await tester.scrollUntilVisible(
     find.text('Check In'),
+    120,
+    scrollable: find.byType(Scrollable).last,
+  );
+}
+
+Future<void> _scrollToBackToForest(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.text('Back to Forest'),
     120,
     scrollable: find.byType(Scrollable).last,
   );

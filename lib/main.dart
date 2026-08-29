@@ -34,6 +34,7 @@ class _MyAppState extends State<MyApp> {
     achievements: [],
   );
   AppView _view = AppView.onboarding;
+  bool _planStarted = false;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +64,10 @@ class _MyAppState extends State<MyApp> {
       case AppView.report:
         return ReportScreen(
           report: report,
-          onStartPlan: () => setState(() => _view = AppView.home),
+          onStartPlan: _startPlan,
+          onShowForest: _planStarted
+              ? () => setState(() => _view = AppView.home)
+              : null,
         );
       case AppView.home:
         return HomeScreen(
@@ -87,6 +91,14 @@ class _MyAppState extends State<MyApp> {
       _report = ReportGenerator().generate(profile);
       _summary = _forestEngine.summarize(const []);
       _view = AppView.report;
+      _planStarted = false;
+    });
+  }
+
+  void _startPlan() {
+    setState(() {
+      _planStarted = true;
+      _view = AppView.home;
     });
   }
 
