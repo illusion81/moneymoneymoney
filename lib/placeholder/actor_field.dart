@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'motion/squash_stretch.dart';
 import 'motion/wander_motion.dart';
+import '../sprites/sprite_cache.dart';
+import '../sprites/sprite_painter.dart';
 import 'placeholder_actor.dart';
 import 'placeholder_box_painter.dart';
 
@@ -29,6 +31,23 @@ class _ActorFieldState extends State<ActorField>
     vsync: this,
     duration: _cycle,
   )..repeat();
+
+  @override
+  void initState() {
+    super.initState();
+    _preloadSprites();
+  }
+
+  /// Sprites arrive asynchronously; repaint once they do so the boxes give way.
+  Future<void> _preloadSprites() async {
+    final paths = <String>[
+      for (final actor in widget.actors)
+        if (actor.spriteAsset != null) actor.spriteAsset!,
+    ];
+    if (paths.isEmpty) return;
+    await SpriteCache.instance.loadAll(paths);
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -80,13 +99,25 @@ class _ActorFieldState extends State<ActorField>
           );
     // Stagger phases so a row of actors does not pulse in lockstep.
     final phase = (seconds / 2.2 + index * 0.37) % 1.0;
+    final scale = squashStretch(phase, amplitude: isAnimal ? 0.10 : 0.05);
+    final sprite = actor.spriteAsset == null
+        ? null
+        : SpriteCache.instance.peek(actor.spriteAsset!);
+
     return Positioned.fill(
       child: CustomPaint(
-        painter: PlaceholderBoxPainter(
-          actor: actor,
-          position: position,
-          scale: squashStretch(phase, amplitude: isAnimal ? 0.10 : 0.05),
-        ),
+        painter: sprite == null
+            ? PlaceholderBoxPainter(
+                actor: actor,
+                position: position,
+                scale: scale,
+              )
+            : SpriteActorPainter(
+                image: sprite,
+                position: position,
+                designSize: actor.size,
+                scale: scale,
+              ),
       ),
     );
   }

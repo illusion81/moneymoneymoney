@@ -1,69 +1,79 @@
 import 'package:flutter/material.dart';
 
+import '../sprites/asset_paths.dart';
 import 'placeholder_actor.dart';
 
-/// Every placeholder subject in the app.
+/// Every drawable subject in the app.
 ///
-/// These stand in for art that does not exist yet; real assets replace the
-/// painter, not this table.
+/// Animals come straight from the 25-sprite pixel pack, so the table is
+/// generated from [SpriteAssets.animalIds] rather than hand-written. Items
+/// borrow the closest icon from the market sheet.
 class ActorCatalog {
   const ActorCatalog._();
 
-  static final List<PlaceholderActor> all =
+  /// Sprites are 32x32; drawn at 2x so they read on a phone without blurring.
+  static const Size _animalSize = Size(64, 64);
+
+  /// Fallback box colours, cycled so a still-decoding field is legible.
+  static const List<Color> _fallbackColors = <Color>[
+    Color(0xffd96a2e),
+    Color(0xffb8814f),
+    Color(0xff2f9e7a),
+    Color(0xff8d8f96),
+    Color(0xff7d6bb0),
+  ];
+
+  static final List<PlaceholderActor> animals =
       List<PlaceholderActor>.unmodifiable(<PlaceholderActor>[
-        const PlaceholderActor(
-          id: 'fox',
-          label: 'FOX',
-          color: Color(0xffd96a2e),
-          size: Size(78, 52),
-          kind: ActorKind.animal,
-        ),
-        const PlaceholderActor(
-          id: 'deer',
-          label: 'DEER',
-          color: Color(0xffb8814f),
-          size: Size(80, 62),
-          kind: ActorKind.animal,
-        ),
-        const PlaceholderActor(
-          id: 'hummingbird',
-          label: 'HUMMER',
-          color: Color(0xff2f9e7a),
-          size: Size(64, 40),
-          kind: ActorKind.animal,
-        ),
-        const PlaceholderActor(
-          id: 'raccoon',
-          label: 'RACOON',
-          color: Color(0xff8d8f96),
-          size: Size(76, 50),
-          kind: ActorKind.animal,
-        ),
-        const PlaceholderActor(
+        for (var i = 0; i < SpriteAssets.animalIds.length; i++)
+          PlaceholderActor(
+            id: SpriteAssets.animalIds[i],
+            label: SpriteAssets.animalIds[i].toUpperCase(),
+            color: _fallbackColors[i % _fallbackColors.length],
+            size: _animalSize,
+            kind: ActorKind.animal,
+            spriteAsset: SpriteAssets.animal(SpriteAssets.animalIds[i]),
+          ),
+      ]);
+
+  static final List<PlaceholderActor> items =
+      List<PlaceholderActor>.unmodifiable(<PlaceholderActor>[
+        PlaceholderActor(
           id: 'coin',
           label: 'COIN',
-          color: Color(0xffe0b33c),
-          size: Size(48, 48),
+          color: const Color(0xffe0b33c),
+          size: const Size(48, 48),
           kind: ActorKind.item,
+          spriteAsset: SpriteAssets.icon('coin'),
         ),
-        const PlaceholderActor(
+        PlaceholderActor(
           id: 'egg',
           label: 'EGG',
-          color: Color(0xffefe3cd),
-          size: Size(46, 56),
+          color: const Color(0xffefe3cd),
+          size: const Size(46, 56),
           kind: ActorKind.item,
+          // The sheet has no egg; the capsule seal is the closest silhouette.
+          spriteAsset: SpriteAssets.icon('seal_capsule'),
         ),
-        const PlaceholderActor(
+        PlaceholderActor(
           id: 'xp_orb',
           label: 'XP',
-          color: Color(0xff4fb8ff),
-          size: Size(44, 44),
+          color: const Color(0xff4fb8ff),
+          size: const Size(44, 44),
           kind: ActorKind.item,
+          spriteAsset: SpriteAssets.icon('sparkle_eight'),
         ),
       ]);
 
-  static List<PlaceholderActor> get animals =>
-      all.where((a) => a.kind == ActorKind.animal).toList();
+  static final List<PlaceholderActor> all = List<PlaceholderActor>.unmodifiable(
+    <PlaceholderActor>[...animals, ...items],
+  );
+
+  /// Every sprite the field needs, for preloading in one pass.
+  static List<String> get spritePaths => <String>[
+    for (final actor in all)
+      if (actor.spriteAsset != null) actor.spriteAsset!,
+  ];
 
   static PlaceholderActor byId(String id) => all.firstWhere((a) => a.id == id);
 }

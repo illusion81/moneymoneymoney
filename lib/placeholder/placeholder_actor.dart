@@ -3,9 +3,10 @@ import 'dart:ui';
 /// Animals wander their field; items hold station and only pulse.
 enum ActorKind { animal, item }
 
-/// A stand-in for real art: a coloured box with a text label.
+/// One drawable subject on the field.
 ///
-/// Swapping in real assets later means changing the painter, not this type.
+/// [spriteAsset] is the real art. [color] and [label] stay as the fallback the
+/// box painter uses while the sprite is still decoding.
 class PlaceholderActor {
   const PlaceholderActor({
     required this.id,
@@ -13,6 +14,7 @@ class PlaceholderActor {
     required this.color,
     required this.size,
     required this.kind,
+    this.spriteAsset,
   });
 
   final String id;
@@ -26,4 +28,7 @@ class PlaceholderActor {
   final Size size;
 
   final ActorKind kind;
+
+  /// Asset path of this subject's sprite, or null if it has no art yet.
+  final String? spriteAsset;
 }
