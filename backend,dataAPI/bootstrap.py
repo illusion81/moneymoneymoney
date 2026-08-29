@@ -143,9 +143,33 @@ def main() -> None:
     ap.add_argument("--audit-only", action="store_true")
     ap.add_argument("--mock", action="store_true")
     ap.add_argument("--csv", metavar="PATH", help="audit a bank CSV export instead")
+    ap.add_argument("--pdf", metavar="PATH", help="audit a bank statement PDF instead")
+    ap.add_argument("--inspect", action="store_true",
+                    help="with --pdf: dump raw text lines so we can tune the parser")
     ap.add_argument("--refresh", action="store_true")
     ap.add_argument("--days", type=int, default=30)
     args = ap.parse_args()
+
+    if args.pdf:
+        from pdf_statement import PdfStatementProvider, raw_lines
+        if args.inspect:
+            print(f"{B}Raw lines from {args.pdf}{RESET}\n")
+            try:
+                for i, l in enumerate(raw_lines(args.pdf)[:60], 1):
+                    print(f"{i:>3} | {l}")
+            except Exception as e:
+                die(str(e))
+            print(f"\n{Y}Send these to Claude (redact anything you want) "
+                  f"so the parser can be tuned to this layout.{RESET}")
+            return
+        print(f"{B}Wealth Tower — PDF statement audit{RESET}  ({args.pdf})")
+        try:
+            pr = PdfStatementProvider(args.pdf)
+        except Exception as e:
+            die(str(e))
+        ok(pr.connect().message)
+        audit(pr.transactions(args.days), pr.accounts(), args.days)
+        return
 
     if args.csv or os.getenv("WEALTH_CSV"):
         path = args.csv or os.getenv("WEALTH_CSV")

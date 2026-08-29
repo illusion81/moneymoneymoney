@@ -64,7 +64,8 @@ CATEGORY_RULES: list[tuple[tuple[str, ...], str, Bucket]] = [
     (("energy", "electricity", "water corp", "internet", "telstra", "optus",
       "vodafone", "agl", "origin energy", "belong"), "utilities", "living"),
     (("translink", "go card", "uber trip", "didi", "ola ", "fuel", "ampol",
-      "bp ", "7-eleven", "caltex", "parking"), "transport", "living"),
+      "bp ", "7-eleven", "caltex", "parking", "paystay", "cellopark", "easypark",
+      "wilson parking", "secure parking", "carpark"), "transport", "living"),
     (("coles", "woolworths", "aldi", "iga", "grocer", "foodworks", "costco"),
      "groceries", "living"),
     (("medicare", "chemist", "pharmacy", "doctor", "dental", "optical",
@@ -76,17 +77,21 @@ CATEGORY_RULES: list[tuple[tuple[str, ...], str, Bucket]] = [
     (("netflix", "spotify", "disney", "youtube premium", "apple.com/bill",
       "google storage", "adobe", "chatgpt", "openai", "microsoft 365",
       "amazon prime", "binge", "stan ", "kayo", "subscription", "audible",
-      "patreon", "notion", "canva"), "subscriptions", "reward"),
+      "patreon", "notion", "canva", "anthropic", "claude.ai", "cursor",
+      "github", "midjourney", "perplexity", "icloud"), "subscriptions", "reward"),
     (("uber eats", "ubereats", "menulog", "doordash", "deliveroo", "cafe",
       "coffee", "restaurant", "guzman", "mcdonald", "kfc", "hungry jack",
       "domino", "subway", "sushi", "noodle", "bakery", "boost juice",
-      "gong cha", "chatime"), "eating-out", "reward"),
+      "gong cha", "chatime", "uqu ", "unibar", "red room",
+      "wordsmiths"), "eating-out", "reward"),
     (("steam", "playstation", "xbox", "nintendo", "cinema", "event cinemas",
       "ticketek", "ticketmaster", "bar ", "hotel", "bottle", "liquor", "bws",
       "dan murphy", "kmart", "big w", "target", "cotton on", "uniqlo", "h&m",
-      "sephora", "mecca", "jb hi-fi", "gym", "fitness"), "lifestyle", "reward"),
+      "sephora", "mecca", "jb hi-fi", "gym", "fitness", "salon", "barber",
+      "hair", "visage", "beauty", "spa ", "nails", "tattoo"), "lifestyle", "reward"),
     (("vanguard", "betashares", "stake", "commsec", "selfwealth", "pearler",
-      "etf", "swyftx", "coinspot", "binance", "raiz", "spaceship", "superhero"),
+      "etf", "swyftx", "coinspot", "binance", "raiz", "spaceship", "superhero",
+      "interactive brokers", "ibkr", "hostplus", "australiansuper", "unisuper"),
      "investment", "invest"),
     (("savings", "term deposit", "high interest", "offset", "goal saver"),
      "savings", "stable"),
@@ -473,9 +478,15 @@ class BasiqProvider:
                 provider="basiq", connected=True, institution=f"Hooli ({inst})",
                 persona=persona, message=f"Connection {conn.get('id')} active for user {uid}.",
             )
+        url = None
+        try:
+            url = self.consent_url()
+        except BasiqError:
+            pass
         return ConnectionStatus(
             provider="basiq", connected=False, institution=None, persona=persona,
-            message=f"Consent required. Open: {self.consent_url()}",
+            consent_url=url,
+            message="Consent required — open the link to connect a bank.",
         )
 
     def accounts(self) -> list[Account]:

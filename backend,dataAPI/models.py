@@ -101,6 +101,7 @@ class ConnectionStatus(BaseModel):
     connected: bool
     institution: Optional[str] = None
     persona: Optional[str] = None
+    consent_url: Optional[str] = None   # open this in a browser to link a bank
     message: str = ""
 
 

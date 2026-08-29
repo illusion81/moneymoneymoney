@@ -121,6 +121,8 @@ class ConnectionStatus {
   final String provider; // basiq | mock
   final bool connected;
   final String? institution, persona;
+  /// Open this in a browser to link a bank. Null when already connected.
+  final String? consentUrl;
   final String message;
 
   const ConnectionStatus({
@@ -128,6 +130,7 @@ class ConnectionStatus {
     required this.connected,
     this.institution,
     this.persona,
+    this.consentUrl,
     required this.message,
   });
 
@@ -140,6 +143,7 @@ class ConnectionStatus {
         connected: j['connected'] as bool,
         institution: j['institution'] as String?,
         persona: j['persona'] as String?,
+        consentUrl: j['consent_url'] as String?,
         message: (j['message'] ?? '') as String,
       );
 }
@@ -169,12 +173,16 @@ class BucketPlan {
 }
 
 class Plan {
+  /// True = last known good data; the bank feed is down or consent ended.
+  /// Show it, do not blank it out.
+  final bool stale;
   final int periodDays;
   final double incomeObserved, adherence;
   final List<BucketPlan> buckets;
   final String headline;
 
   const Plan({
+    this.stale = false,
     required this.periodDays,
     required this.incomeObserved,
     required this.buckets,
@@ -183,6 +191,7 @@ class Plan {
   });
 
   factory Plan.fromJson(Map<String, dynamic> j) => Plan(
+        stale: j['stale'] as bool? ?? false,
         periodDays: j['period_days'] as int,
         incomeObserved: (j['income_observed'] as num).toDouble(),
         buckets: (j['buckets'] as List)
@@ -310,6 +319,9 @@ class TowerFloor {
 }
 
 class TowerState {
+  /// True = frozen at the last sync because bank access ended.
+  /// The tower is never erased — show it with a "reconnect" prompt.
+  final bool stale;
   final int stage;
   final List<TowerFloor> floors;
   final double health;
@@ -317,6 +329,7 @@ class TowerState {
   final String caption;
 
   const TowerState({
+    this.stale = false,
     required this.stage,
     required this.floors,
     required this.health,
@@ -325,6 +338,7 @@ class TowerState {
   });
 
   factory TowerState.fromJson(Map<String, dynamic> j) => TowerState(
+        stale: j['stale'] as bool? ?? false,
         stage: j['stage'] as int,
         floors: (j['floors'] as List)
             .map((f) => TowerFloor.fromJson(f as Map<String, dynamic>))

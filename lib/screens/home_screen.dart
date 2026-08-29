@@ -5,6 +5,9 @@ import '../models/progression.dart';
 import '../models/shop_item.dart';
 import '../models/wealth_report.dart';
 import '../services/forest_engine.dart';
+import '../data/api_client.dart';
+import 'connect_bank_screen.dart';
+import 'spending_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -19,6 +22,7 @@ class HomeScreen extends StatefulWidget {
     required this.onShowAchievements,
     required this.onShowShop,
     this.lastEarnedSummary,
+    this.api,
   });
 
   final WealthReport report;
@@ -26,6 +30,9 @@ class HomeScreen extends StatefulWidget {
   final ProgressionState progression;
   final ShopState shopState;
   final String? lastEarnedSummary;
+  /// When supplied, the screen can link a bank and pull real spending
+  /// instead of asking the user to type it.
+  final ApiClient? api;
   final void Function({required double spending, required bool actionCompleted})
   onCheckIn;
   final void Function(String recoveryNote) onRestore;
@@ -42,6 +49,67 @@ class _HomeScreenState extends State<HomeScreen> {
   final _recoveryNoteController = TextEditingController();
   bool _actionCompleted = false;
   String? _errorText;
+  bool _bankConnected = false;
+  bool _syncing = false;
+  String? _syncNote;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBank();
+  }
+
+  Future<void> _checkBank() async {
+    final api = widget.api;
+    if (api == null) return;
+    try {
+      final trusted = await api.dataTrusted();
+      if (mounted) setState(() => _bankConnected = trusted);
+    } catch (_) {}
+  }
+
+  Future<void> _openConnectBank() async {
+    final api = widget.api;
+    if (api == null) return;
+    final linked = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ConnectBankScreen(api: api)),
+    );
+    if (linked == true) {
+      await _checkBank();
+      await _syncFromBank();
+    }
+  }
+
+  /// Pull today's real spending and check in with it. This is the whole
+  /// differentiator: the number comes from the bank, not from a text field.
+  Future<void> _syncFromBank() async {
+    final api = widget.api;
+    if (api == null) return;
+    setState(() {
+      _syncing = true;
+      _syncNote = null;
+    });
+    try {
+      final plan = await api.plan(days: 1);
+      final spent = plan.buckets
+          .where((b) => b.bucket == 'living' || b.bucket == 'reward')
+          .fold<double>(0, (sum, b) => sum + b.actualAmount);
+      final missions = await api.missions();
+      final done = missions.any((m) => m.complete && !m.claimed);
+
+      _spendingController.text = spent.toStringAsFixed(2);
+      setState(() {
+        _actionCompleted = done;
+        _syncNote = 'Pulled \$${spent.toStringAsFixed(2)} from your bank';
+        _errorText = null;
+      });
+      widget.onCheckIn(spending: spent, actionCompleted: done);
+    } catch (e) {
+      setState(() => _syncNote = 'Could not reach the bank feed: $e');
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -62,6 +130,22 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
+          if (widget.api != null)
+            IconButton(
+              icon: const Icon(Icons.receipt_long_outlined),
+              tooltip: 'Where your money went',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => SpendingScreen(api: widget.api!),
+              )),
+            ),
+          if (widget.api != null)
+            IconButton(
+              icon: Icon(_bankConnected
+                  ? Icons.account_balance
+                  : Icons.account_balance_outlined),
+              tooltip: _bankConnected ? 'Bank connected' : 'Connect your bank',
+              onPressed: _openConnectBank,
+            ),
           IconButton(
             tooltip: 'Shop',
             onPressed: widget.onShowShop,
@@ -211,6 +295,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 14),
+                if (widget.api != null) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed: _syncing ? null : _syncFromBank,
+                      icon: _syncing
+                          ? const SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.sync),
+                      label: Text(_syncing
+                          ? 'Syncing…'
+                          : _bankConnected
+                              ? 'Sync from my bank'
+                              : 'Connect a bank to sync automatically'),
+                    ),
+                  ),
+                  if (_syncNote != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(_syncNote!,
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ),
+                  const SizedBox(height: 14),
+                  Text('or enter it yourself',
+                      style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: 6),
+                ],
                 TextField(
                   key: const Key('spending-field'),
                   controller: _spendingController,

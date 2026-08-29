@@ -157,6 +157,24 @@ class ApiClient {
   Future<bool> dataTrusted() async =>
       (await _getObj('/api/health'))['data_trusted'] as bool? ?? false;
 
+  /// Upload a .csv or .pdf statement. Bytes go to our own backend only.
+  Future<ConnectionStatus> uploadStatement(
+      {required String filename, required List<int> bytes}) async {
+    final req = http.MultipartRequest('POST', _uri('/api/bank/upload'))
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    final streamed = await req.send().timeout(const Duration(seconds: 60));
+    final body = await streamed.stream.bytesToString();
+    if (streamed.statusCode >= 400) {
+      String msg = 'Upload failed';
+      try {
+        final d = jsonDecode(body);
+        if (d is Map && d['detail'] != null) msg = '${d['detail']}';
+      } catch (_) {}
+      throw ApiException(msg, statusCode: streamed.statusCode);
+    }
+    return ConnectionStatus.fromJson(jsonDecode(body) as Map<String, dynamic>);
+  }
+
   /// Self-report a mission the transaction feed cannot see (cancelling a
   /// subscription, a daily streak). Claim stays locked until this is called.
   Future<Mission> markDone(String missionId) async => Mission.fromJson(

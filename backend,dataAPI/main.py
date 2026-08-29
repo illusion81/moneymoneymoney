@@ -10,8 +10,10 @@ mock provider returns real-shaped data with no bank connection at all.
 from __future__ import annotations
 
 import os
+import shutil
+import tempfile
 import datetime as dt
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -20,6 +22,7 @@ from models import (SurveyAnswers, Profile, ConnectionStatus, Account, Transacti
                     Plan, Mission, ClaimResult, Progression, TowerState, ShopItem,
                     ConsentStatus)
 from bank import MockProvider, BasiqProvider, BasiqError, CsvProvider
+from pdf_statement import PdfStatementProvider
 from engine.allocation import build_profile
 from engine.plan import build_plan
 from engine.missions import generate as generate_missions
@@ -42,6 +45,22 @@ _forced_provider: str | None = None
 
 
 _csv = None
+_pdf = None
+
+
+def _pdf_provider():
+    global _pdf
+    if _pdf is None and os.getenv("WEALTH_PDF"):
+        try:
+            _pdf = PdfStatementProvider()
+            print(f"[data] PDF statement loaded: {os.getenv('WEALTH_PDF')}")
+        except Exception as e:
+            # Silence here used to look identical to "it ignored my file" —
+            # the server fell through to Basiq and nobody knew why.
+            print(f"[data] WEALTH_PDF is set but could not be read: {e}")
+            print("[data] falling back to the next provider")
+            return None
+    return _pdf
 
 
 def _csv_provider():
@@ -50,16 +69,24 @@ def _csv_provider():
     if _csv is None and os.getenv("WEALTH_CSV"):
         try:
             _csv = CsvProvider()
-        except Exception:
+            print(f"[data] CSV loaded: {os.getenv('WEALTH_CSV')}")
+        except Exception as e:
+            print(f"[data] WEALTH_CSV is set but could not be read: {e}")
             return None
     return _csv
 
 
 def provider():
-    """CSV > Basiq > mock, unless overridden. Never raises."""
+    """PDF > CSV > Basiq > mock, unless overridden. Never raises."""
     global _basiq
     if _forced_provider == "mock":
         return _mock
+    if _forced_provider == "upload" and _uploaded is not None:
+        return _uploaded
+    if _forced_provider == "pdf" or (_forced_provider is None and os.getenv("WEALTH_PDF")):
+        d = _pdf_provider()
+        if d is not None:
+            return d
     if _forced_provider == "csv" or (_forced_provider is None and os.getenv("WEALTH_CSV")):
         c = _csv_provider()
         if c is not None:
@@ -222,6 +249,55 @@ def get_transactions(days: int = 30) -> list[Transaction]:
 
 # ------------------------------------------------------------------ plan
 
+UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "wealth-tower-uploads")
+_uploaded = None      # provider built from whatever the user uploaded
+
+
+@app.post("/api/bank/upload", response_model=ConnectionStatus)
+async def upload_statement(file: UploadFile = File(...)) -> ConnectionStatus:
+    """Let the user hand us a statement instead of connecting a bank.
+
+    Accepts .csv or .pdf. The file is written to a temp dir on the server that
+    runs this API — it is never forwarded to Basiq or anywhere else. This is the
+    path for the majority of people who will never finish a CDR consent flow.
+    """
+    global _uploaded, _forced_provider
+
+    name = (file.filename or "statement").strip()
+    ext = os.path.splitext(name)[1].lower()
+    if ext not in (".csv", ".pdf"):
+        raise HTTPException(400, "Upload a .csv or .pdf statement.")
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    dest = os.path.join(UPLOAD_DIR, f"upload{ext}")
+    with open(dest, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+
+    try:
+        provider_obj = (CsvProvider(dest) if ext == ".csv"
+                        else PdfStatementProvider(dest))
+        txns = provider_obj.transactions(400)
+    except Exception as e:
+        raise HTTPException(422, f"Could not read that statement: {e}")
+
+    if not txns:
+        raise HTTPException(
+            422, "No transactions found in that file. If it is a scanned image "
+                 "rather than a text PDF, we cannot read it yet.")
+
+    _uploaded = provider_obj
+    _forced_provider = "upload"
+    store.user(UID).pop("last_plan", None)
+    store.user(UID).pop("last_tower", None)
+
+    return ConnectionStatus(
+        provider="mock", connected=True,
+        institution=f"Uploaded statement ({name})",
+        persona="upload",
+        message=f"{len(txns)} transactions read. Nothing left this machine.",
+    )
+
+
 @app.get("/api/bank/consent", response_model=ConsentStatus)
 def get_consent() -> ConsentStatus:
     return consent_status()
@@ -377,8 +453,8 @@ class ProviderBody(BaseModel):
 def set_provider(body: ProviderBody) -> dict:
     """Flip the data source at runtime. 'auto' restores normal behaviour."""
     global _forced_provider
-    if body.provider not in ("basiq", "mock", "csv", "auto"):
-        raise HTTPException(400, "provider must be basiq, mock, csv or auto")
+    if body.provider not in ("basiq", "mock", "csv", "pdf", "auto"):
+        raise HTTPException(400, "provider must be basiq, mock, csv, pdf or auto")
     _forced_provider = None if body.provider in ("auto", "basiq") else body.provider
     return health()
 
@@ -387,13 +463,18 @@ def set_provider(body: ProviderBody) -> dict:
 def health() -> dict:
     p = provider()
     name = ("basiq" if isinstance(p, BasiqProvider)
-            else "csv" if isinstance(p, CsvProvider) else "mock")
+            else "csv" if isinstance(p, CsvProvider)
+            else "pdf" if isinstance(p, PdfStatementProvider) else "mock")
+    if _forced_provider == "upload":
+        name = "upload"
     return {
         "ok": True,
         "provider": name,
         # UI contract: when false, show a "demo data" banner and do NOT render
         # any per-mission "verified by your bank" badge.
         "data_trusted": name == "basiq",
+        "pdf_configured": bool(os.getenv("WEALTH_PDF")),
+        "pdf_path": os.getenv("WEALTH_PDF") or None,
         "csv_configured": bool(os.getenv("WEALTH_CSV")),
         "basiq_configured": bool(os.getenv("BASIQ_API_KEY")),
         "forced": _forced_provider,

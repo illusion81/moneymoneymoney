@@ -14,6 +14,7 @@ import 'services/forest_engine.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
+import 'data/api_client.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,6 +33,7 @@ class _MyAppState extends State<MyApp> {
   final ForestEngine _forestEngine = ForestEngine();
   final ProgressionEngine _progressionEngine = ProgressionEngine();
   final ShopService _shopService = ShopService();
+  final ApiClient _api = ApiClient();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -105,6 +107,7 @@ class _MyAppState extends State<MyApp> {
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
+          api: _api,
         );
       case AppView.achievements:
         return AchievementsScreen(
