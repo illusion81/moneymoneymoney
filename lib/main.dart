@@ -296,7 +296,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  Future<void> _loadMoneyStyle() async { final completion = await _moneyStyleStore.load(); if (mounted && completion != null) setState(() => _moneyStyleCompletion = completion); }
+  Future<void> _loadMoneyStyle() async { final completion = await _moneyStyleStore.load(); if (mounted && completion != null) setState(() { _moneyStyleCompletion = completion; _view = AppView.moneyStyleResult; }); }
   Future<void> _handleMoneyStyleComplete(MoneyStyleCompletion completion) async {
     await _moneyStyleStore.save(completion);
     _syncMoneyStyle(completion);
