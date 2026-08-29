@@ -28,6 +28,7 @@ class HomeScreen extends StatefulWidget {
     required this.onCheckIn,
     required this.onRestore,
     required this.freezes,
+    this.onStatementImported,
     required this.onShowReport,
     required this.onShowAchievements,
     required this.onShowShop,
@@ -56,6 +57,10 @@ class HomeScreen extends StatefulWidget {
   /// When supplied, the screen can link a bank and pull real spending
   /// instead of asking the user to type it.
   final ApiClient? api;
+
+  /// Fired after a statement import so the app shell can offer to rebuild the
+  /// plan from it. The shell owns the profile, not this screen.
+  final Future<void> Function()? onStatementImported;
 
   /// Debug: add another week of on-budget days. Wired to a FAB so the demo
   /// can be driven from this screen instead of via the shop.
@@ -132,6 +137,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (linked == true) {
       await _checkBank();
       _selectBankMode();
+      // The numbers the plan is judged against should come from the statement
+      // too, not just the spending screen.
+      await widget.onStatementImported?.call();
     }
   }
 
@@ -240,16 +248,20 @@ class _HomeScreenState extends State<HomeScreen> {
       // shortcuts stay one tap away without covering the thing being demoed.
       floatingActionButton: !kDemoTools || !_hasDemoActions
           ? null
-          : FloatingActionButton.small(
+          : FloatingActionButton.extended(
               heroTag: 'demo-tools',
               tooltip: 'Demo tools',
               backgroundColor: const Color(0xff173b2f),
               foregroundColor: Colors.white,
               onPressed: _openDemoSheet,
-              child: Icon(
+              icon: Icon(
                 DevGate.isUnlocked ? Icons.bolt : Icons.lock_outline,
                 size: 20,
               ),
+              // Labelled, because an unlabelled icon in the corner is
+              // findable only if you already know it is there — no use when
+              // you are on stage and slightly panicking.
+              label: const Text('Demo'),
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.miniStartFloat,
       appBar: AppBar(
