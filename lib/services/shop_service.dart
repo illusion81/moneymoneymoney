@@ -5,7 +5,17 @@ class ShopService {
   List<ShopItem> catalog() => kShopCatalog;
 
   List<ShopItem> itemsFor(ShopItemCategory category) {
-    return kShopCatalog.where((item) => item.category == category).toList();
+    final items =
+        kShopCatalog.where((item) => item.category == category).toList();
+    // Plus-only items sit at the tail of their section. A locked windmill in
+    // the middle of the decorations reads as a broken item; at the end it
+    // reads as an upgrade. List.sort is not stable, so keep the authored
+    // order within each half explicitly.
+    final authored = {for (var i = 0; i < items.length; i++) items[i].id: i};
+    items.sort((a, b) => a.plusOnly == b.plusOnly
+        ? authored[a.id]!.compareTo(authored[b.id]!)
+        : (a.plusOnly ? 1 : -1));
+    return items;
   }
 
   ShopState initialState() {

@@ -37,7 +37,6 @@ class HomeScreen extends StatefulWidget {
     this.lastEarnedSummary,
     this.api,
     this.onDebugSimulate,
-    this.onShowDiamonds,
     this.onDebugFillFarm,
     this.onRetakeQuestionnaire,
   });
@@ -55,10 +54,6 @@ class HomeScreen extends StatefulWidget {
   /// Debug: add another week of on-budget days. Wired to a FAB so the demo
   /// can be driven from this screen instead of via the shop.
   final VoidCallback? onDebugSimulate;
-
-  /// Opens the diamond store (paid currency).
-  final VoidCallback? onShowDiamonds;
-
   /// Debug: own and place everything, for the demo.
   final VoidCallback? onDebugFillFarm;
   final void Function({required double spending}) onCheckIn;
@@ -131,6 +126,40 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// A labelled block of menu entries. Returns nothing at all when every
+  /// entry in the group is unavailable, so an empty heading never appears.
+  List<PopupMenuEntry<VoidCallback>> _menuGroup(
+    BuildContext context,
+    String heading,
+    List<(IconData, String, VoidCallback)> entries,
+  ) {
+    if (entries.isEmpty) return const [];
+    return [
+      PopupMenuItem<VoidCallback>(
+        enabled: false,
+        height: 32,
+        child: Text(
+          heading.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ),
+      for (final (icon, label, action) in entries)
+        PopupMenuItem<VoidCallback>(
+          value: action,
+          // PopupMenuItem hands its child a bounded width, so a long label
+          // like "Retake questionnaire" overflows unless it can shrink.
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 20),
+            const SizedBox(width: 12),
+            Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+          ]),
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final latestDay = widget.summary.days.isEmpty
@@ -181,6 +210,11 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
+          // Only two things stay as their own icon: the membership badge
+          // (it doubles as status — gold when you are a member) and the shop,
+          // which is where the currency you earn actually goes. Everything
+          // else was eight icons of undifferentiated grey; it now lives in one
+          // grouped menu.
           IconButton(
             key: const Key('get-plus-button'),
             icon: Icon(
@@ -192,60 +226,60 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: widget.isPlusMember ? 'Plus member' : 'Get Plus',
             onPressed: widget.onShowPlus,
           ),
-          if (widget.api != null)
-            IconButton(
-              icon: const Icon(Icons.groups_outlined),
-              tooltip: 'Your circle',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => CircleScreen(
-                  api: widget.api!,
-                  streak: widget.summary.currentStreak,
-                  level: widget.progression.level.level,
-                  adherence: localAdherence,
-                ),
-              )),
-            ),
-          if (widget.api != null)
-            IconButton(
-              icon: const Icon(Icons.savings_outlined),
-              tooltip: 'Saving for something',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => GoalsScreen(api: widget.api!),
-              )),
-            ),
-          if (widget.api != null)
-            IconButton(
-              icon: Icon(
-                _bankConnected
-                    ? Icons.account_balance
-                    : Icons.account_balance_outlined,
-              ),
-              tooltip: _bankConnected ? 'Bank connected' : 'Connect your bank',
-              onPressed: _openConnectBank,
-            ),
-          if (widget.onShowDiamonds != null)
-            IconButton(
-              tooltip: 'Diamonds',
-              onPressed: widget.onShowDiamonds,
-              icon: const Icon(Icons.diamond_outlined),
-            ),
           IconButton(
             tooltip: 'Shop',
             onPressed: widget.onShowShop,
             icon: const Icon(Icons.store_outlined),
           ),
-          IconButton(
-            tooltip: 'Report',
-            onPressed: widget.onShowReport,
-            icon: const Icon(Icons.description_outlined),
+          PopupMenuButton<VoidCallback>(
+            key: const Key('home-more-menu'),
+            tooltip: 'More',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (action) => action(),
+            itemBuilder: (context) => [
+              ..._menuGroup(context, 'Your money', [
+                if (widget.api != null)
+                  (
+                    _bankConnected
+                        ? Icons.account_balance
+                        : Icons.account_balance_outlined,
+                    _bankConnected ? 'Bank connected' : 'Connect your bank',
+                    _openConnectBank,
+                  ),
+                if (widget.api != null)
+                  (
+                    Icons.savings_outlined,
+                    'Saving for something',
+                    () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => GoalsScreen(api: widget.api!),
+                        )),
+                  ),
+                (Icons.description_outlined, 'Your report', widget.onShowReport),
+                if (widget.onRetakeQuestionnaire != null)
+                  (
+                    Icons.fact_check_outlined,
+                    'Retake questionnaire',
+                    widget.onRetakeQuestionnaire!,
+                  ),
+              ]),
+              if (widget.api != null) const PopupMenuDivider(),
+              ..._menuGroup(context, 'People', [
+                if (widget.api != null)
+                  (
+                    Icons.groups_outlined,
+                    'Your circle',
+                    () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => CircleScreen(
+                            api: widget.api!,
+                            streak: widget.summary.currentStreak,
+                            level: widget.progression.level.level,
+                            adherence: localAdherence,
+                          ),
+                        )),
+                  ),
+              ]),
+            ],
           ),
-          if (widget.onRetakeQuestionnaire != null)
-            IconButton(
-              key: const Key('retake-questionnaire-button'),
-              tooltip: 'Retake questionnaire',
-              onPressed: widget.onRetakeQuestionnaire,
-              icon: const Icon(Icons.fact_check_outlined),
-            ),
         ],
       ),
       bottomNavigationBar: AppNavBar(
