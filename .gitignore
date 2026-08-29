@@ -104,6 +104,7 @@ app.*.symbols
 
 # Node (tooling only)
 node_modules/
+.worktrees/
 
 # Lane A / backend
 backend,dataAPI/.env
@@ -116,3 +117,6 @@ _laneA_tmp/
 # Bank exports - never commit real transaction data
 *.csv
 CSVData*.csv
+
+# opencode agent scratch
+.opencode/

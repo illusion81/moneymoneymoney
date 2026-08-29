@@ -75,7 +75,7 @@ class _RestoreHarnessState extends State<_RestoreHarness> {
         summary: _summary,
         progression: _progression,
         shopState: ShopService().initialState(),
-        onCheckIn: ({required spending, required actionCompleted}) {},
+        onCheckIn: ({required spending}) {},
         onRestore: (note) {
           final result = _engine.restoreDay(
             days: _summary.days,
@@ -102,6 +102,9 @@ class _RestoreHarnessState extends State<_RestoreHarness> {
         onShowReport: () {},
         onShowAchievements: () {},
         onShowShop: () {},
+        onShowSpending: () {},
+        onShowPlus: () {},
+        isPlusMember: false,
         onShowCalendar: () {},
         onShowHomestead: () {},
         onFetchTodaySpending: () async => 0,
@@ -166,6 +169,43 @@ void main() {
     expect(find.text('Wealth Forest'), findsOneWidget);
     expect(find.text('Today\'s money action'), findsOneWidget);
     expect(find.text('Check In'), findsOneWidget);
+    // The money action is advisory now — the tree depends on budget alone,
+    // so there is no completion checkbox to tick.
+    expect(find.byKey(const Key('action-complete-checkbox')), findsNothing);
+  });
+
+  testWidgets('a within-budget check-in is healthy with no checkbox to tick', (
+    tester,
+  ) async {
+    await startPlan(tester);
+    await tester.enterText(find.byKey(const Key('spending-field')), '10');
+    await tester.tap(find.text('Check In'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('celebration-continue-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Healthy tree'), findsOneWidget);
+  });
+
+  testWidgets('a healthy check-in celebrates with a dialog', (tester) async {
+    await startPlan(tester);
+    await tester.enterText(find.byKey(const Key('spending-field')), '10');
+    await tester.tap(find.text('Check In'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('celebration-dialog')), findsOneWidget);
+    expect(find.text('Nice work!'), findsOneWidget);
+  });
+
+  testWidgets('an over-budget check-in does not celebrate', (tester) async {
+    await startPlan(tester);
+    await tester.enterText(find.byKey(const Key('spending-field')), '500');
+    await tester.tap(find.text('Check In'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('celebration-dialog')), findsNothing);
+    expect(find.text('Withered tree'), findsOneWidget);
   });
 
   testWidgets('the Calendar tab navigates to the calendar screen', (
@@ -202,8 +242,11 @@ void main() {
 
     await startPlan(tester);
     await tester.enterText(find.byKey(const Key('spending-field')), '40');
-    await tester.tap(find.byKey(const Key('action-complete-checkbox')));
     await tester.tap(find.text('Check In'));
+    await tester.pumpAndSettle();
+
+    // A healthy check-in celebrates first; dismiss it before navigating.
+    await tester.tap(find.byKey(const Key('celebration-continue-button')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('retake-questionnaire-button')));
@@ -238,7 +281,6 @@ void main() {
   ) async {
     await startPlan(tester);
     await tester.enterText(find.byKey(const Key('spending-field')), '40');
-    await tester.tap(find.byKey(const Key('action-complete-checkbox')));
     await tester.tap(find.text('Check In'));
     await tester.pumpAndSettle();
 
@@ -248,7 +290,6 @@ void main() {
   testWidgets('overspending changes tree status to withered', (tester) async {
     await startPlan(tester);
     await tester.enterText(find.byKey(const Key('spending-field')), '200');
-    await tester.tap(find.byKey(const Key('action-complete-checkbox')));
     await tester.tap(find.text('Check In'));
     await tester.pumpAndSettle();
 
@@ -261,10 +302,14 @@ void main() {
       await startPlan(tester);
 
       expect(find.text('Level 1'), findsOneWidget);
-      // Debug builds auto-grant a large coin balance on startup (see
-      // _MyAppState._MyAppState) so the shop/homestead can be tested freely.
-      expect(find.byKey(const Key('coin-balance')), findsOneWidget);
-      expect(find.text('999999'), findsOneWidget);
+      // A new user starts with nothing — coins are only granted by earning
+      // them, or explicitly via the debug panel.
+      final coinBalanceFinder = find.byKey(const Key('coin-balance'));
+      expect(coinBalanceFinder, findsOneWidget);
+      expect(
+        find.descendant(of: coinBalanceFinder, matching: find.text('0')),
+        findsOneWidget,
+      );
     },
   );
 
@@ -273,7 +318,6 @@ void main() {
   ) async {
     await startPlan(tester);
     await tester.enterText(find.byKey(const Key('spending-field')), '10');
-    await tester.tap(find.byKey(const Key('action-complete-checkbox')));
     await tester.tap(find.text('Check In'));
     await tester.pumpAndSettle();
 
@@ -295,7 +339,6 @@ void main() {
   ) async {
     await startPlan(tester);
     await tester.enterText(find.byKey(const Key('spending-field')), '200');
-    await tester.tap(find.byKey(const Key('action-complete-checkbox')));
     await tester.tap(find.text('Check In'));
     await tester.pumpAndSettle();
 
@@ -349,6 +392,8 @@ void main() {
             onPurchase: (_) {},
             onEquip: (_) {},
             onBack: () {},
+            isPlusMember: false,
+            onShowPlus: () {},
           ),
         ),
       );

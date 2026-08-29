@@ -12,7 +12,8 @@ class ReportGenerator {
       warning =
           'Your current savings target looks unrealistic because fixed expenses and savings exceed income.';
     } else if (flexibleMonthly < profile.monthlyIncome * 0.1) {
-      warning = 'Your flexible budget is tight. Keep daily spending deliberate.';
+      warning =
+          'Your flexible budget is tight. Keep daily spending deliberate.';
     } else {
       warning = null;
     }

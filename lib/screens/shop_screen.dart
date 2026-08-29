@@ -6,7 +6,7 @@ import '../models/shop_item.dart';
 import '../services/item_visuals.dart';
 import '../services/shop_service.dart';
 
-class ShopScreen extends StatelessWidget {
+class ShopScreen extends StatefulWidget {
   const ShopScreen({
     super.key,
     required this.progression,
@@ -14,8 +14,11 @@ class ShopScreen extends StatelessWidget {
     required this.onPurchase,
     required this.onEquip,
     required this.onBack,
+    required this.isPlusMember,
+    required this.onShowPlus,
     this.onDebugMaxCoins,
     this.onDebugUnlockAll,
+    this.onDebugGrantXp,
   });
 
   final ProgressionState progression;
@@ -24,18 +27,42 @@ class ShopScreen extends StatelessWidget {
   final void Function(String itemId) onEquip;
   final VoidCallback onBack;
 
-  /// Testing aids, only ever shown in debug builds (gated by [kDebugMode]) —
-  /// never real user-facing features.
+  /// Plus-only items stay locked behind a membership prompt until this is
+  /// true; the lock opens the Plus screen rather than attempting a buy.
+  final bool isPlusMember;
+  final VoidCallback onShowPlus;
+
+  /// Testing aids, only ever shown in debug builds (gated by [kDebugMode])
+  /// and only while the user switches debug mode on — never real
+  /// user-facing features.
   final VoidCallback? onDebugMaxCoins;
 
   /// Marks every catalog item as owned, bypassing price and level gates.
   final VoidCallback? onDebugUnlockAll;
 
+  /// Debug: jump to the next level so the level-up moment can be rehearsed.
+  final VoidCallback? onDebugGrantXp;
+
+  @override
+  State<ShopScreen> createState() => _ShopScreenState();
+}
+
+class _ShopScreenState extends State<ShopScreen> {
+  /// Debug actions stay hidden until explicitly switched on, so a normal
+  /// play-through can't stumble into free coins.
+  bool _debugMode = false;
+
   @override
   Widget build(BuildContext context) {
     final shopService = ShopService();
-    final debugMaxCoins = onDebugMaxCoins;
-    final debugUnlockAll = onDebugUnlockAll;
+    final progression = widget.progression;
+    final shopState = widget.shopState;
+    final onBack = widget.onBack;
+    final debugMaxCoins = widget.onDebugMaxCoins;
+    final debugUnlockAll = widget.onDebugUnlockAll;
+    final debugGrantXp = widget.onDebugGrantXp;
+    final hasDebugActions =
+        debugMaxCoins != null || debugUnlockAll != null || debugGrantXp != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -46,14 +73,35 @@ class ShopScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
         ),
         actions: [
-          if (kDebugMode && debugUnlockAll != null)
+          if (kDebugMode && hasDebugActions)
+            IconButton(
+              key: const Key('debug-mode-toggle'),
+              tooltip: _debugMode
+                  ? 'Turn debug mode off'
+                  : 'Turn debug mode on',
+              onPressed: () => setState(() => _debugMode = !_debugMode),
+              icon: Icon(
+                _debugMode
+                    ? Icons.developer_mode
+                    : Icons.developer_mode_outlined,
+                color: _debugMode ? const Color(0xffc79a33) : null,
+              ),
+            ),
+          if (kDebugMode && _debugMode && debugUnlockAll != null)
             IconButton(
               key: const Key('debug-unlock-all-button'),
               tooltip: 'Debug: unlock all items',
               onPressed: debugUnlockAll,
               icon: const Icon(Icons.lock_open_outlined),
             ),
-          if (kDebugMode && debugMaxCoins != null)
+          if (kDebugMode && _debugMode && debugGrantXp != null)
+            OutlinedButton.icon(
+              key: const Key('debug-grant-xp'),
+              icon: const Icon(Icons.bolt),
+              label: const Text('Grant XP to next level'),
+              onPressed: debugGrantXp,
+            ),
+          if (kDebugMode && _debugMode && debugMaxCoins != null)
             IconButton(
               key: const Key('debug-max-coins-button'),
               tooltip: 'Debug: max coins',
@@ -79,8 +127,9 @@ class ShopScreen extends StatelessWidget {
                     children: [
                       Text(
                         'Level ${progression.level.level}',
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const Spacer(),
                       const Icon(
@@ -100,9 +149,9 @@ class ShopScreen extends StatelessWidget {
                 for (final category in ShopItemCategory.values) ...[
                   Text(
                     _categoryLabel(category),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   for (final item in shopService.itemsFor(category))
@@ -112,8 +161,10 @@ class ShopScreen extends StatelessWidget {
                       equipped:
                           shopState.equippedItemIds[item.category] == item.id,
                       progression: progression,
-                      onPurchase: () => onPurchase(item.id),
-                      onEquip: () => onEquip(item.id),
+                      isPlusMember: widget.isPlusMember,
+                      onShowPlus: widget.onShowPlus,
+                      onPurchase: () => widget.onPurchase(item.id),
+                      onEquip: () => widget.onEquip(item.id),
                     ),
                   const SizedBox(height: 12),
                 ],
@@ -150,6 +201,8 @@ class _ShopItemCard extends StatelessWidget {
     required this.owned,
     required this.equipped,
     required this.progression,
+    required this.isPlusMember,
+    required this.onShowPlus,
     required this.onPurchase,
     required this.onEquip,
   });
@@ -158,6 +211,8 @@ class _ShopItemCard extends StatelessWidget {
   final bool owned;
   final bool equipped;
   final ProgressionState progression;
+  final bool isPlusMember;
+  final VoidCallback onShowPlus;
   final VoidCallback onPurchase;
   final VoidCallback onEquip;
 
@@ -190,9 +245,18 @@ class _ShopItemCard extends StatelessWidget {
       if (isDecoration) {
         return const Chip(label: Text('Owned'));
       }
-      return OutlinedButton(
-        onPressed: onEquip,
-        child: const Text('Equip'),
+      return OutlinedButton(onPressed: onEquip, child: const Text('Equip'));
+    }
+    if (item.plusOnly && !isPlusMember) {
+      return OutlinedButton.icon(
+        key: Key('plus-lock-${item.id}'),
+        onPressed: onShowPlus,
+        icon: const Icon(Icons.lock, size: 16),
+        label: const Text('Plus'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xffc79a33),
+          side: const BorderSide(color: Color(0xffc79a33)),
+        ),
       );
     }
     if (levelLocked) {

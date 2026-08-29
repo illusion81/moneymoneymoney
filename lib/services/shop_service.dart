@@ -20,6 +20,7 @@ class ShopService {
     required String itemId,
     required ShopState state,
     required ProgressionState progression,
+    bool isPlusMember = false,
   }) {
     final item = _findItem(itemId);
     if (item == null) {
@@ -40,6 +41,15 @@ class ShopService {
         message: '${item.name} is already owned.',
       );
     }
+    if (item.plusOnly && !isPlusMember) {
+      return PurchaseResult(
+        success: false,
+        failure: PurchaseFailure.plusRequired,
+        state: state,
+        progression: progression,
+        message: '${item.name} is a Plus member exclusive.',
+      );
+    }
     if (progression.level.level < item.requiredLevel) {
       return PurchaseResult(
         success: false,
@@ -55,8 +65,7 @@ class ShopService {
         failure: PurchaseFailure.insufficientCoins,
         state: state,
         progression: progression,
-        message:
-            'Not enough coins. ${item.name} costs ${item.price} coins.',
+        message: 'Not enough coins. ${item.name} costs ${item.price} coins.',
       );
     }
 
@@ -97,10 +106,7 @@ class ShopService {
 
     return ShopState(
       ownedItemIds: state.ownedItemIds,
-      equippedItemIds: {
-        ...state.equippedItemIds,
-        item.category: itemId,
-      },
+      equippedItemIds: {...state.equippedItemIds, item.category: itemId},
     );
   }
 

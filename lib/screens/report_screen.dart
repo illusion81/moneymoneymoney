@@ -59,9 +59,9 @@ class ReportScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   'Daily actions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 for (final action in report.dailyActions)

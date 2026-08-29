@@ -12,11 +12,11 @@ class Allocation {
   });
 
   factory Allocation.fromJson(Map<String, dynamic> j) => Allocation(
-        invest: (j['invest'] as num).toDouble(),
-        stable: (j['stable'] as num).toDouble(),
-        living: (j['living'] as num).toDouble(),
-        reward: (j['reward'] as num).toDouble(),
-      );
+    invest: (j['invest'] as num).toDouble(),
+    stable: (j['stable'] as num).toDouble(),
+    living: (j['living'] as num).toDouble(),
+    reward: (j['reward'] as num).toDouble(),
+  );
 }
 
 class Profile {
@@ -36,14 +36,14 @@ class Profile {
   });
 
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
-        userId: j['user_id'] as String,
-        archetype: j['archetype'] as String,
-        archetypeBlurb: j['archetype_blurb'] as String,
-        allocation: Allocation.fromJson(j['allocation'] as Map<String, dynamic>),
-        monthlyIncome: (j['monthly_income'] as num).toDouble(),
-        discretionary: (j['discretionary'] as num).toDouble(),
-        guardrailNote: j['guardrail_note'] as String?,
-      );
+    userId: j['user_id'] as String,
+    archetype: j['archetype'] as String,
+    archetypeBlurb: j['archetype_blurb'] as String,
+    allocation: Allocation.fromJson(j['allocation'] as Map<String, dynamic>),
+    monthlyIncome: (j['monthly_income'] as num).toDouble(),
+    discretionary: (j['discretionary'] as num).toDouble(),
+    guardrailNote: j['guardrail_note'] as String?,
+  );
 }
 
 class SurveyAnswers {
@@ -62,13 +62,13 @@ class SurveyAnswers {
   });
 
   Map<String, dynamic> toJson() => {
-        'monthly_income': monthlyIncome,
-        'fixed_costs': fixedCosts,
-        'risk_appetite': riskAppetite,
-        'horizon_months': horizonMonths,
-        'has_emergency_fund': hasEmergencyFund,
-        'top_worry': topWorry,
-      };
+    'monthly_income': monthlyIncome,
+    'fixed_costs': fixedCosts,
+    'risk_appetite': riskAppetite,
+    'horizon_months': horizonMonths,
+    'has_emergency_fund': hasEmergencyFund,
+    'top_worry': topWorry,
+  };
 }
 
 class Account {
@@ -83,12 +83,12 @@ class Account {
   });
 
   factory Account.fromJson(Map<String, dynamic> j) => Account(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        kind: j['kind'] as String,
-        balance: (j['balance'] as num).toDouble(),
-        currency: (j['currency'] ?? 'AUD') as String,
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    kind: j['kind'] as String,
+    balance: (j['balance'] as num).toDouble(),
+    currency: (j['currency'] ?? 'AUD') as String,
+  );
 }
 
 class Txn {
@@ -107,20 +107,21 @@ class Txn {
   bool get isSpend => amount < 0;
 
   factory Txn.fromJson(Map<String, dynamic> j) => Txn(
-        id: j['id'] as String,
-        accountId: j['account_id'] as String,
-        postDate: j['post_date'] as String,
-        description: j['description'] as String,
-        amount: (j['amount'] as num).toDouble(),
-        category: j['category'] as String,
-        bucket: j['bucket'] as String,
-      );
+    id: j['id'] as String,
+    accountId: j['account_id'] as String,
+    postDate: j['post_date'] as String,
+    description: j['description'] as String,
+    amount: (j['amount'] as num).toDouble(),
+    category: j['category'] as String,
+    bucket: j['bucket'] as String,
+  );
 }
 
 class ConnectionStatus {
   final String provider; // basiq | mock
   final bool connected;
   final String? institution, persona;
+
   /// Open this in a browser to link a bank. Null when already connected.
   final String? consentUrl;
   final String message;
@@ -139,13 +140,13 @@ class ConnectionStatus {
   bool get isMock => provider == 'mock';
 
   factory ConnectionStatus.fromJson(Map<String, dynamic> j) => ConnectionStatus(
-        provider: j['provider'] as String,
-        connected: j['connected'] as bool,
-        institution: j['institution'] as String?,
-        persona: j['persona'] as String?,
-        consentUrl: j['consent_url'] as String?,
-        message: (j['message'] ?? '') as String,
-      );
+    provider: j['provider'] as String,
+    connected: j['connected'] as bool,
+    institution: j['institution'] as String?,
+    persona: j['persona'] as String?,
+    consentUrl: j['consent_url'] as String?,
+    message: (j['message'] ?? '') as String,
+  );
 }
 
 class BucketPlan {
@@ -163,13 +164,13 @@ class BucketPlan {
   });
 
   factory BucketPlan.fromJson(Map<String, dynamic> j) => BucketPlan(
-        bucket: j['bucket'] as String,
-        targetPct: (j['target_pct'] as num).toDouble(),
-        targetAmount: (j['target_amount'] as num).toDouble(),
-        actualAmount: (j['actual_amount'] as num).toDouble(),
-        variance: (j['variance'] as num).toDouble(),
-        onTrack: j['on_track'] as bool,
-      );
+    bucket: j['bucket'] as String,
+    targetPct: (j['target_pct'] as num).toDouble(),
+    targetAmount: (j['target_amount'] as num).toDouble(),
+    actualAmount: (j['actual_amount'] as num).toDouble(),
+    variance: (j['variance'] as num).toDouble(),
+    onTrack: j['on_track'] as bool,
+  );
 }
 
 class Plan {
@@ -191,21 +192,22 @@ class Plan {
   });
 
   factory Plan.fromJson(Map<String, dynamic> j) => Plan(
-        stale: j['stale'] as bool? ?? false,
-        periodDays: j['period_days'] as int,
-        incomeObserved: (j['income_observed'] as num).toDouble(),
-        buckets: (j['buckets'] as List)
-            .map((b) => BucketPlan.fromJson(b as Map<String, dynamic>))
-            .toList(),
-        adherence: (j['adherence'] as num).toDouble(),
-        headline: j['headline'] as String,
-      );
+    stale: j['stale'] as bool? ?? false,
+    periodDays: j['period_days'] as int,
+    incomeObserved: (j['income_observed'] as num).toDouble(),
+    buckets: (j['buckets'] as List)
+        .map((b) => BucketPlan.fromJson(b as Map<String, dynamic>))
+        .toList(),
+    adherence: (j['adherence'] as num).toDouble(),
+    headline: j['headline'] as String,
+  );
 }
 
 class Mission {
   final String id, title, detail, bucket, kind;
   final double target, progress;
   final bool complete, claimed;
+
   /// True = completion is derived from transaction data.
   /// False = the user asserts it; label it "self-reported" in the UI.
   final bool verified;
@@ -228,20 +230,20 @@ class Mission {
   });
 
   factory Mission.fromJson(Map<String, dynamic> j) => Mission(
-        id: j['id'] as String,
-        title: j['title'] as String,
-        detail: j['detail'] as String,
-        bucket: j['bucket'] as String,
-        kind: j['kind'] as String,
-        target: (j['target'] as num).toDouble(),
-        progress: (j['progress'] as num).toDouble(),
-        complete: j['complete'] as bool,
-        claimed: j['claimed'] as bool,
-        verified: j['verified'] as bool? ?? true,
-        xp: j['xp'] as int,
-        coins: j['coins'] as int,
-        expiresInDays: j['expires_in_days'] as int,
-      );
+    id: j['id'] as String,
+    title: j['title'] as String,
+    detail: j['detail'] as String,
+    bucket: j['bucket'] as String,
+    kind: j['kind'] as String,
+    target: (j['target'] as num).toDouble(),
+    progress: (j['progress'] as num).toDouble(),
+    complete: j['complete'] as bool,
+    claimed: j['claimed'] as bool,
+    verified: j['verified'] as bool? ?? true,
+    xp: j['xp'] as int,
+    coins: j['coins'] as int,
+    expiresInDays: j['expires_in_days'] as int,
+  );
 }
 
 class Progression {
@@ -264,15 +266,15 @@ class Progression {
       xpForNextLevel == 0 ? 1.0 : xpIntoLevel / xpForNextLevel;
 
   factory Progression.fromJson(Map<String, dynamic> j) => Progression(
-        xp: j['xp'] as int,
-        level: j['level'] as int,
-        xpIntoLevel: j['xp_into_level'] as int,
-        xpForNextLevel: j['xp_for_next_level'] as int,
-        coins: j['coins'] as int,
-        streakDays: j['streak_days'] as int,
-        unlockedSkins: (j['unlocked_skins'] as List).cast<String>(),
-        activeSkin: j['active_skin'] as String,
-      );
+    xp: j['xp'] as int,
+    level: j['level'] as int,
+    xpIntoLevel: j['xp_into_level'] as int,
+    xpForNextLevel: j['xp_for_next_level'] as int,
+    coins: j['coins'] as int,
+    streakDays: j['streak_days'] as int,
+    unlockedSkins: (j['unlocked_skins'] as List).cast<String>(),
+    activeSkin: j['active_skin'] as String,
+  );
 }
 
 class ClaimResult {
@@ -290,13 +292,12 @@ class ClaimResult {
   });
 
   factory ClaimResult.fromJson(Map<String, dynamic> j) => ClaimResult(
-        missionId: j['mission_id'] as String,
-        xpAwarded: j['xp_awarded'] as int,
-        coinsAwarded: j['coins_awarded'] as int,
-        levelledUp: j['levelled_up'] as bool,
-        progression:
-            Progression.fromJson(j['progression'] as Map<String, dynamic>),
-      );
+    missionId: j['mission_id'] as String,
+    xpAwarded: j['xp_awarded'] as int,
+    coinsAwarded: j['coins_awarded'] as int,
+    levelledUp: j['levelled_up'] as bool,
+    progression: Progression.fromJson(j['progression'] as Map<String, dynamic>),
+  );
 }
 
 class TowerFloor {
@@ -311,11 +312,11 @@ class TowerFloor {
   });
 
   factory TowerFloor.fromJson(Map<String, dynamic> j) => TowerFloor(
-        index: j['index'] as int,
-        bucket: j['bucket'] as String,
-        height: (j['height'] as num).toDouble(),
-        health: (j['health'] as num).toDouble(),
-      );
+    index: j['index'] as int,
+    bucket: j['bucket'] as String,
+    height: (j['height'] as num).toDouble(),
+    health: (j['health'] as num).toDouble(),
+  );
 }
 
 class TowerState {
@@ -338,15 +339,15 @@ class TowerState {
   });
 
   factory TowerState.fromJson(Map<String, dynamic> j) => TowerState(
-        stale: j['stale'] as bool? ?? false,
-        stage: j['stage'] as int,
-        floors: (j['floors'] as List)
-            .map((f) => TowerFloor.fromJson(f as Map<String, dynamic>))
-            .toList(),
-        health: (j['health'] as num).toDouble(),
-        weather: j['weather'] as String,
-        caption: j['caption'] as String,
-      );
+    stale: j['stale'] as bool? ?? false,
+    stage: j['stage'] as int,
+    floors: (j['floors'] as List)
+        .map((f) => TowerFloor.fromJson(f as Map<String, dynamic>))
+        .toList(),
+    health: (j['health'] as num).toDouble(),
+    weather: j['weather'] as String,
+    caption: j['caption'] as String,
+  );
 }
 
 class ShopItem {
@@ -364,13 +365,13 @@ class ShopItem {
   });
 
   factory ShopItem.fromJson(Map<String, dynamic> j) => ShopItem(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        cost: j['cost'] as int,
-        kind: j['kind'] as String,
-        owned: j['owned'] as bool,
-        description: j['description'] as String,
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    cost: j['cost'] as int,
+    kind: j['kind'] as String,
+    owned: j['owned'] as bool,
+    description: j['description'] as String,
+  );
 }
 
 

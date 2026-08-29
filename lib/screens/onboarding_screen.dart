@@ -271,10 +271,8 @@ class _EnumDropdown<T> extends StatelessWidget {
       ),
       items: values
           .map(
-            (item) => DropdownMenuItem<T>(
-              value: item,
-              child: Text(labelFor(item)),
-            ),
+            (item) =>
+                DropdownMenuItem<T>(value: item, child: Text(labelFor(item))),
           )
           .toList(),
       onChanged: (value) {

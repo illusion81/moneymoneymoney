@@ -25,6 +25,9 @@ class HomeScreen extends StatefulWidget {
     required this.onShowReport,
     required this.onShowAchievements,
     required this.onShowShop,
+    required this.onShowSpending,
+    required this.onShowPlus,
+    required this.isPlusMember,
     required this.onShowCalendar,
     required this.onShowHomestead,
     required this.onFetchTodaySpending,
@@ -38,15 +41,18 @@ class HomeScreen extends StatefulWidget {
   final ProgressionState progression;
   final ShopState shopState;
   final String? lastEarnedSummary;
+
   /// When supplied, the screen can link a bank and pull real spending
   /// instead of asking the user to type it.
   final ApiClient? api;
-  final void Function({required double spending, required bool actionCompleted})
-  onCheckIn;
+  final void Function({required double spending}) onCheckIn;
   final void Function(String recoveryNote) onRestore;
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
   final VoidCallback onShowShop;
+  final VoidCallback onShowSpending;
+  final VoidCallback onShowPlus;
+  final bool isPlusMember;
   final VoidCallback onShowCalendar;
   final VoidCallback onShowHomestead;
   final Future<double> Function() onFetchTodaySpending;
@@ -61,7 +67,6 @@ enum _SpendingMode { manual, bank }
 class _HomeScreenState extends State<HomeScreen> {
   final _spendingController = TextEditingController();
   final _recoveryNoteController = TextEditingController();
-  bool _actionCompleted = false;
   String? _errorText;
   bool _bankConnected = false;
   _SpendingMode _spendingMode = _SpendingMode.manual;
@@ -115,6 +120,17 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
+          IconButton(
+            key: const Key('get-plus-button'),
+            icon: Icon(
+              widget.isPlusMember
+                  ? Icons.workspace_premium
+                  : Icons.workspace_premium_outlined,
+              color: const Color(0xffc79a33),
+            ),
+            tooltip: widget.isPlusMember ? 'Plus member' : 'Get Plus',
+            onPressed: widget.onShowPlus,
+          ),
           if (widget.api != null)
             IconButton(
               icon: const Icon(Icons.groups_outlined),
@@ -135,15 +151,19 @@ class _HomeScreenState extends State<HomeScreen> {
             IconButton(
               icon: const Icon(Icons.receipt_long_outlined),
               tooltip: 'Where your money went',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => SpendingScreen(api: widget.api!),
-              )),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SpendingScreen(api: widget.api!),
+                ),
+              ),
             ),
           if (widget.api != null)
             IconButton(
-              icon: Icon(_bankConnected
-                  ? Icons.account_balance
-                  : Icons.account_balance_outlined),
+              icon: Icon(
+                _bankConnected
+                    ? Icons.account_balance
+                    : Icons.account_balance_outlined,
+              ),
               tooltip: _bankConnected ? 'Bank connected' : 'Connect your bank',
               onPressed: _openConnectBank,
             ),
@@ -174,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: AppNavBar(
         selectedIndex: 0,
         onShowForest: () {},
+        onShowSpending: widget.onShowSpending,
         onShowCalendar: widget.onShowCalendar,
         onShowHomestead: widget.onShowHomestead,
         onShowAchievements: widget.onShowAchievements,
@@ -223,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 8),
                       Text(
                         latestDay?.message ??
-                            'Complete today\'s money action to grow your tree.',
+                            'Check in today and stay within budget to grow your tree.',
                         textAlign: TextAlign.center,
                       ),
                       if (latestDay?.status == TreeStatus.restored &&
@@ -323,16 +344,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     decimal: true,
                   ),
                 ),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  key: const Key('action-complete-checkbox'),
-                  value: _actionCompleted,
-                  onChanged: (value) =>
-                      setState(() => _actionCompleted = value ?? false),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Money action completed'),
-                ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: _checkIn,
@@ -361,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() => _errorText = null);
-    widget.onCheckIn(spending: spending, actionCompleted: _actionCompleted);
+    widget.onCheckIn(spending: spending);
   }
 
   void _selectManualMode() {

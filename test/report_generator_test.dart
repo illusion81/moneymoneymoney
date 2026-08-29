@@ -23,24 +23,27 @@ void main() {
       expect(report.profileSummary, contains('6000'));
     });
 
-    test('warns and sets daily budget to zero when savings target is unrealistic', () {
-      final report = ReportGenerator().generate(
-        const FinanceProfile(
-          monthlyIncome: 3000,
-          fixedMonthlyExpenses: 2600,
-          monthlySavingsGoal: 800,
-          riskPreference: RiskPreference.conservative,
-          financialGoal: FinancialGoal.reduceSpending,
-          spendingPressure: SpendingPressure.high,
-        ),
-      );
+    test(
+      'warns and sets daily budget to zero when savings target is unrealistic',
+      () {
+        final report = ReportGenerator().generate(
+          const FinanceProfile(
+            monthlyIncome: 3000,
+            fixedMonthlyExpenses: 2600,
+            monthlySavingsGoal: 800,
+            riskPreference: RiskPreference.conservative,
+            financialGoal: FinancialGoal.reduceSpending,
+            spendingPressure: SpendingPressure.high,
+          ),
+        );
 
-      expect(report.disposableIncome, 400);
-      expect(report.dailyBudget, 0);
-      expect(report.warning, isNotNull);
-      expect(report.warning, contains('unrealistic'));
-      expect(report.dailyActions.join(' '), contains('spending'));
-    });
+        expect(report.disposableIncome, 400);
+        expect(report.dailyBudget, 0);
+        expect(report.warning, isNotNull);
+        expect(report.warning, contains('unrealistic'));
+        expect(report.dailyActions.join(' '), contains('spending'));
+      },
+    );
 
     test('uses risk preference and goal to tailor advice', () {
       final report = ReportGenerator().generate(

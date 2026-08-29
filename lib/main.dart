@@ -1,6 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'data/api_client.dart';
@@ -21,13 +21,17 @@ import 'screens/money_style_flow.dart';
 import 'screens/money_style_result_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
+import 'screens/plus_screen.dart';
 import 'screens/shop_screen.dart';
+import 'screens/spending_screen.dart';
 import 'services/bank_spending_service.dart';
 import 'services/forest_engine.dart';
 import 'services/home_layout_service.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
+import 'widgets/level_up_overlay.dart';
+import 'widgets/celebration_dialog.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,6 +44,8 @@ enum AppView {
   report,
   forest,
   calendar,
+  spending,
+  plus,
   homestead,
   achievements,
   shop,
@@ -60,6 +66,9 @@ class _MyAppState extends State<MyApp> {
   final ApiClient _apiClient = ApiClient();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
+  // The messenger's context sits above the Navigator, so dialogs need their
+  // own key to push a route from.
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   WealthReport? _report;
   MoneyStyleResult? _moneyStyleResult;
@@ -79,22 +88,14 @@ class _MyAppState extends State<MyApp> {
   String? _lastEarnedSummary;
   bool _planStarted = false;
 
+  /// Demo-only membership flag — see PlusScreen; no real payment exists.
+  bool _isPlusMember = false;
+
   _MyAppState() {
     _shopState = _shopService.initialState();
     _homeLayout = _homeLayoutService.initialState();
-    if (kDebugMode) {
-      // Debug builds start with an effectively unlimited coin balance so
-      // the shop/homestead can be tested without grinding for coins.
-      _spendEvents.add(
-        RewardEvent(
-          date: DateTime.now(),
-          type: RewardEventType.debugGrant,
-          xp: 0,
-          coins: 999999,
-          description: 'Debug: max coins',
-        ),
-      );
-    }
+    // Everyone starts at zero coins. Debug builds can grant more on demand
+    // via the shop's debug panel, but never automatically.
     _progression = _progressionEngine.compute(
       days: const [],
       achievements: const [],
@@ -108,6 +109,7 @@ class _MyAppState extends State<MyApp> {
       title: 'Money Money Money',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
+      navigatorKey: _navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff2f7d50)),
         scaffoldBackgroundColor: const Color(0xfff5f1e8),
@@ -182,6 +184,9 @@ class _MyAppState extends State<MyApp> {
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
+          onShowSpending: () => setState(() => _view = AppView.spending),
+          onShowPlus: () => setState(() => _view = AppView.plus),
+          isPlusMember: _isPlusMember,
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
           onFetchTodaySpending: _fetchTodaySpending,
@@ -192,11 +197,28 @@ class _MyAppState extends State<MyApp> {
           summary: _summary,
           shopState: _shopState,
           onShowForest: () => setState(() => _view = AppView.forest),
+          onShowSpending: () => setState(() => _view = AppView.spending),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
           onShowReport: () => setState(() => _view = AppView.report),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
+        );
+      case AppView.spending:
+        return SpendingScreen(
+          api: _apiClient,
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
+          onShowAchievements: () =>
+              setState(() => _view = AppView.achievements),
+        );
+      case AppView.plus:
+        return PlusScreen(
+          isPlusMember: _isPlusMember,
+          onSubscribe: _handleSubscribePlus,
+          onCancelMembership: _handleCancelPlus,
+          onBack: () => setState(() => _view = AppView.forest),
         );
       case AppView.homestead:
         return HomesteadScreen(
@@ -206,6 +228,7 @@ class _MyAppState extends State<MyApp> {
           onPlace: _handlePlaceDecoration,
           onRemove: _handleRemoveDecoration,
           onShowForest: () => setState(() => _view = AppView.forest),
+          onShowSpending: () => setState(() => _view = AppView.spending),
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowReport: () => setState(() => _view = AppView.report),
           onShowAchievements: () =>
@@ -224,6 +247,7 @@ class _MyAppState extends State<MyApp> {
           summary: _summary,
           progression: _progression,
           onShowForest: () => setState(() => _view = AppView.forest),
+          onShowSpending: () => setState(() => _view = AppView.spending),
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
         );
@@ -239,9 +263,12 @@ class _MyAppState extends State<MyApp> {
           shopState: _shopState,
           onPurchase: _handlePurchase,
           onEquip: _handleEquip,
+          isPlusMember: _isPlusMember,
+          onShowPlus: () => setState(() => _view = AppView.plus),
           onBack: () => setState(() => _view = AppView.forest),
           onDebugMaxCoins: _handleDebugMaxCoins,
           onDebugUnlockAll: _handleDebugUnlockAll,
+          onDebugGrantXp: _handleDebugGrantXp,
         );
     }
   }
@@ -291,10 +318,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _handleCheckIn({
-    required double spending,
-    required bool actionCompleted,
-  }) {
+  void _handleCheckIn({required double spending}) {
     final report = _report;
     if (report == null) {
       return;
@@ -305,19 +329,35 @@ class _MyAppState extends State<MyApp> {
       report: report,
       date: DateTime.now(),
       spending: spending,
-      actionCompleted: actionCompleted,
     );
 
     final beforeXp = _progression.totalXp;
     final beforeCoins = _progression.coinBalance;
+    final beforeLevel = _progression.level.level;
+    var earnedXp = 0;
+    var earnedCoins = 0;
 
     setState(() {
       _summary = result.summary;
       _recomputeProgression();
-      final earnedXp = _progression.totalXp - beforeXp;
-      final earnedCoins = _progression.coinBalance - beforeCoins;
+      earnedXp = _progression.totalXp - beforeXp;
+      earnedCoins = _progression.coinBalance - beforeCoins;
       _lastEarnedSummary = '+$earnedXp XP, +$earnedCoins coins';
     });
+
+    // Celebrate only a day that actually stayed within budget — an
+    // over-budget day gets the restoration panel instead.
+    if (result.day.status == TreeStatus.healthy) {
+      final context = _navigatorKey.currentContext;
+      if (context != null) {
+        showCelebrationDialog(
+          context: context,
+          earnedXp: earnedXp,
+          earnedCoins: earnedCoins,
+          streak: _summary.currentStreak,
+        );
+      }
+    }
   }
 
   void _handleRestore(String recoveryNote) {
@@ -348,6 +388,7 @@ class _MyAppState extends State<MyApp> {
       itemId: itemId,
       state: _shopState,
       progression: _progression,
+      isPlusMember: _isPlusMember,
     );
 
     if (!result.success) {
@@ -411,6 +452,46 @@ class _MyAppState extends State<MyApp> {
     return sumTodaySpending(transactions);
   }
 
+  /// Fires the level-up overlay when the level number actually increased.
+  /// Called after any action that can award XP.
+  void _celebrateIfLevelled(int beforeLevel, {required int xp, required int coins}) {
+    final after = _progression.level.level;
+    if (after <= beforeLevel) return;
+    final ctx = _messengerKey.currentContext;
+    if (ctx == null) return;
+    LevelUpOverlay.show(
+      ctx,
+      newLevel: after,
+      xpGained: xp,
+      coinsGained: coins,
+      unlockedLabel: after % 5 == 0 ? 'New tower stage unlocked' : null,
+    );
+  }
+
+  /// Debug only: grant enough XP to cross the next level boundary, so the
+  /// level-up moment can be tested and rehearsed without waiting for real
+  /// check-ins. Hidden outside debug builds.
+  void _handleDebugGrantXp() {
+    final beforeLevel = _progression.level.level;
+    final beforeXp = _progression.totalXp;
+    final beforeCoins = _progression.coinBalance;
+    setState(() {
+      _spendEvents.add(
+        RewardEvent(
+          date: DateTime.now(),
+          type: RewardEventType.debugGrant,
+          xp: _progression.level.xpForNextLevel - _progression.level.xpIntoLevel + 5,
+          coins: 40,
+          description: 'Debug: grant XP to next level',
+        ),
+      );
+      _recomputeProgression();
+    });
+    _celebrateIfLevelled(beforeLevel,
+        xp: _progression.totalXp - beforeXp,
+        coins: _progression.coinBalance - beforeCoins);
+  }
+
   void _handleDebugMaxCoins() {
     setState(() {
       _spendEvents.add(
@@ -424,6 +505,16 @@ class _MyAppState extends State<MyApp> {
       );
       _recomputeProgression();
     });
+  }
+
+  void _handleSubscribePlus() {
+    setState(() => _isPlusMember = true);
+    _showMessage('Plus activated (demo — no payment was taken).');
+  }
+
+  void _handleCancelPlus() {
+    setState(() => _isPlusMember = false);
+    _showMessage('Plus membership cancelled.');
   }
 
   void _handleDebugUnlockAll() {

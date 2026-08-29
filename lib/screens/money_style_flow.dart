@@ -43,25 +43,25 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                   Text(
                     'Discover Your Money Style',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xff173b2f),
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xff173b2f),
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     '12 everyday choices. No dollar amounts. No judgment.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
                   Text(
                     'Your answers will reveal how you approach money in your own unique way.\n\nThere are no "right" answers—just insights about what works for you.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          height: 1.6,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(height: 1.6),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 60),

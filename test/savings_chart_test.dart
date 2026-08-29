@@ -36,9 +36,7 @@ void main() {
     expect(find.byKey(const Key('savings-chart-canvas')), findsOneWidget);
   });
 
-  testWidgets('renders a single-point series without throwing', (
-    tester,
-  ) async {
+  testWidgets('renders a single-point series without throwing', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -83,7 +81,9 @@ void main() {
     'selection is cleared instead of crashing when the points list shrinks',
     (tester) async {
       Widget harness(List<SavingsPoint> points) {
-        return MaterialApp(home: Scaffold(body: SavingsChart(points: points)));
+        return MaterialApp(
+          home: Scaffold(body: SavingsChart(points: points)),
+        );
       }
 
       await tester.pumpWidget(
@@ -100,9 +100,7 @@ void main() {
 
       // Simulate switching to a period whose series has fewer points.
       await tester.pumpWidget(
-        harness(const [
-          SavingsPoint(label: 'Aug 2026', cumulativeSaved: 30),
-        ]),
+        harness(const [SavingsPoint(label: 'Aug 2026', cumulativeSaved: 30)]),
       );
       await tester.pumpAndSettle();
 

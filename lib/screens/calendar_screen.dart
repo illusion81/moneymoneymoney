@@ -11,6 +11,7 @@ class CalendarScreen extends StatelessWidget {
     required this.summary,
     required this.shopState,
     required this.onShowForest,
+    required this.onShowSpending,
     required this.onShowHomestead,
     required this.onShowReport,
     required this.onShowAchievements,
@@ -20,6 +21,7 @@ class CalendarScreen extends StatelessWidget {
   final ForestSummary summary;
   final ShopState shopState;
   final VoidCallback onShowForest;
+  final VoidCallback onShowSpending;
   final VoidCallback onShowHomestead;
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
@@ -49,8 +51,9 @@ class CalendarScreen extends StatelessWidget {
         ],
       ),
       bottomNavigationBar: AppNavBar(
-        selectedIndex: 1,
+        selectedIndex: 2,
         onShowForest: onShowForest,
+        onShowSpending: onShowSpending,
         onShowCalendar: () {},
         onShowHomestead: onShowHomestead,
         onShowAchievements: onShowAchievements,
@@ -73,7 +76,11 @@ class CalendarScreen extends StatelessWidget {
 }
 
 class ForestCalendar extends StatelessWidget {
-  const ForestCalendar({super.key, required this.summary, required this.shopState});
+  const ForestCalendar({
+    super.key,
+    required this.summary,
+    required this.shopState,
+  });
 
   final ForestSummary summary;
   final ShopState shopState;

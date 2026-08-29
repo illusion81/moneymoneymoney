@@ -87,9 +87,8 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
                             ),
                             child: Text(
                               currentQuestion.scenario,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontStyle: FontStyle.italic),
                             ),
                           ),
                         ),
@@ -99,9 +98,8 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
                         padding: const EdgeInsets.only(bottom: 24),
                         child: Text(
                           currentQuestion.prompt,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
 
@@ -113,7 +111,9 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
                           child: _AnswerButton(
                             answer: currentQuestion.answers[index],
                             onPressed: () => _selectAnswer(index),
-                            isSelected: _session.selectedAnswers[currentQuestion.id] == index,
+                            isSelected:
+                                _session.selectedAnswers[currentQuestion.id] ==
+                                index,
                           ),
                         ),
                       ),
@@ -162,7 +162,9 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
   }
 
   bool _isAnswerSelected() {
-    return _session.selectedAnswers.containsKey(moneyStyleQuestions[_currentQuestionIndex].id);
+    return _session.selectedAnswers.containsKey(
+      moneyStyleQuestions[_currentQuestionIndex].id,
+    );
   }
 
   void _selectAnswer(int answerIndex) {
@@ -242,11 +244,11 @@ class _AnswerButton extends StatelessWidget {
       child: Text(
         answer.text,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.black87,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            ),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.black87,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+        ),
       ),
     );
   }
