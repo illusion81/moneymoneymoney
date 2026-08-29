@@ -28,6 +28,7 @@ import 'services/home_layout_service.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
+import 'services/money_style_repository.dart';
 
 void main() {
   runApp(const MyApp());
@@ -46,7 +47,9 @@ enum AppView {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.apiClient, this.moneyStyleStore});
+  final ApiClient? apiClient;
+  final MoneyStyleStore? moneyStyleStore;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -57,7 +60,8 @@ class _MyAppState extends State<MyApp> {
   final ProgressionEngine _progressionEngine = ProgressionEngine();
   final ShopService _shopService = ShopService();
   final HomeLayoutService _homeLayoutService = HomeLayoutService();
-  final ApiClient _apiClient = ApiClient();
+  late final ApiClient _apiClient;
+  late final MoneyStyleStore _moneyStyleStore;
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -80,6 +84,8 @@ class _MyAppState extends State<MyApp> {
   bool _planStarted = false;
 
   _MyAppState() {
+    _apiClient = widget.apiClient ?? ApiClient();
+    _moneyStyleStore = widget.moneyStyleStore ?? SharedPreferencesMoneyStyleRepository();
     _shopState = _shopService.initialState();
     _homeLayout = _homeLayoutService.initialState();
     if (kDebugMode) {
@@ -270,10 +276,17 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleMoneyStyleComplete(MoneyStyleCompletion completion) {
+    _moneyStyleStore.save(completion);
+    _syncMoneyStyle(completion);
     setState(() {
       _moneyStyleCompletion = completion;
       _view = AppView.moneyStyleResult;
     });
+  }
+
+  void _syncMoneyStyle(MoneyStyleCompletion completion) {
+    final result = completion.result;
+    _apiClient.submitMoneyStyle(MoneyStyleSubmission(sessionId: completion.session.sessionId, questionVersion: 'money-style-v1', selectedAnswers: const {}, skippedQuestionIds: completion.session.skippedQuestions.toList(), answeredCount: completion.session.totalAnswered, confidenceTier: result?.confidenceTier.name, archetypeId: result?.archetype.name)).catchError((error) { debugPrint('Money Style not sent to backend: $error'); return MoneyStyleSubmission(sessionId: '', questionVersion: '', selectedAnswers: const {}, skippedQuestionIds: const [], answeredCount: 0); });
   }
 
   void _startPlan() {
