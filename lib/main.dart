@@ -71,6 +71,7 @@ class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   WealthReport? _report;
+  FinanceProfile? _profile;
   MoneyStyleResult? _moneyStyleResult;
   ForestSummary _summary = const ForestSummary(
     days: [],
@@ -173,6 +174,7 @@ class _MyAppState extends State<MyApp> {
         return HomeScreen(
           report: report,
           summary: _summary,
+          financeProfile: _profile,
           progression: _progression,
           shopState: _shopState,
           lastEarnedSummary: _lastEarnedSummary,
@@ -287,6 +289,7 @@ class _MyAppState extends State<MyApp> {
     _pushProfileToBackend(profile);
     final alreadyStarted = _planStarted;
     setState(() {
+      _profile = profile;
       _report = ReportGenerator().generate(profile);
       _summary = _forestEngine.summarize(
         _summary.days,
