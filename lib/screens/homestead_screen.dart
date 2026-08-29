@@ -59,8 +59,8 @@ class HomesteadScreen extends StatefulWidget {
 
 /// Isometric tile geometry for the homestead grid, exposed so tests can
 /// derive the on-screen position of a given grid cell.
-const double kHomeTileWidth = 48;
-const double kHomeTileHeight = 24;
+const double kHomeTileWidth = 84;
+const double kHomeTileHeight = 42;
 const _geometry = IsoGridGeometry(
   tileWidth: kHomeTileWidth,
   tileHeight: kHomeTileHeight,
@@ -383,15 +383,32 @@ class _DecorationIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Decorations that map to an animal render as the real artwork; anything
+    // else keeps the coloured disc. A yard of flat icon badges reads as a
+    // wireframe, not a homestead.
+    final animal = visual.animalAsset;
+    if (animal != null) {
+      return Image.asset(
+        'assets/animals/$animal.png',
+        width: 58,
+        height: 58,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, _, _) => _disc(),
+      );
+    }
+    return _disc();
+  }
+
+  Widget _disc() {
     return Container(
-      width: 32,
-      height: 32,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: visual.color,
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2),
       ),
-      child: Icon(visual.icon, color: Colors.white, size: 18),
+      child: Icon(visual.icon, color: Colors.white, size: 24),
     );
   }
 }

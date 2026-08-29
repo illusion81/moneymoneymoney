@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
+import '../widgets/dev_gate.dart';
+
 import '../models/progression.dart';
 import '../models/shop_item.dart';
 import '../services/item_visuals.dart';
@@ -98,8 +100,10 @@ class _ShopScreenState extends State<ShopScreen> {
             OutlinedButton.icon(
               key: const Key('debug-grant-xp'),
               icon: const Icon(Icons.bolt),
-              label: const Text('Grant XP to next level'),
-              onPressed: debugGrantXp,
+              label: const Text('Simulate a 7-day streak'),
+              onPressed: () async {
+                if (await DevGate.ensureUnlocked(context)) debugGrantXp();
+              },
             ),
           if (kDebugMode && _debugMode && debugMaxCoins != null)
             IconButton(
@@ -191,6 +195,8 @@ class _ShopScreenState extends State<ShopScreen> {
         return 'Sky';
       case ShopItemCategory.decoration:
         return 'Decorations';
+      case ShopItemCategory.animal:
+        return 'Animals';
     }
   }
 }
