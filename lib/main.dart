@@ -879,20 +879,24 @@ class _MyAppState extends State<MyApp> {
     final existing = _report;
     if (existing == null) return;
 
-    ProfileSuggestion? suggestion;
+    ProfileSuggestion? fetched;
     try {
-      suggestion = await _fetchProfileSuggestion();
+      fetched = await _fetchProfileSuggestion();
     } catch (error) {
       debugPrint('Could not read the imported statement: $error');
       return;
     }
-    if (suggestion == null || !mounted) return;
-
+    // Copied into a non-nullable local: type promotion does not survive into
+    // the dialog builder closure below.
+    final suggestion = fetched;
     final profile = _profile;
-    if (profile == null) return;
+    if (suggestion == null || profile == null) return;
+    if (!mounted) return;
 
     final ctx = _navigatorKey.currentContext;
-    if (ctx == null) return;
+    // Two different lifetimes to check: this State survived the await
+    // (checked above), and so did the navigator's own context.
+    if (ctx == null || !ctx.mounted) return;
 
     final accepted = await showDialog<bool>(
       context: ctx,
