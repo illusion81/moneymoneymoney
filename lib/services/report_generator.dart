@@ -1,8 +1,10 @@
 import '../models/finance_profile.dart';
+import '../models/money_style.dart';
+import 'risk_assessment.dart';
 import '../models/wealth_report.dart';
 
 class ReportGenerator {
-  WealthReport generate(FinanceProfile profile) {
+  WealthReport generate(FinanceProfile profile, {String? style}) {
     final disposableIncome =
         profile.monthlyIncome - profile.fixedMonthlyExpenses;
     final flexibleMonthly = disposableIncome - profile.monthlySavingsGoal;
@@ -25,20 +27,24 @@ class ReportGenerator {
       dailyBudget: double.parse(dailyBudget.toStringAsFixed(2)),
       savingsAdvice:
           'Protect ${profile.monthlySavingsGoal.toStringAsFixed(0)} each month before flexible spending.',
-      riskAdvice: _riskAdvice(profile.riskPreference),
+      riskAdvice: _riskAdvice(profile.riskLevel),
       warning: warning,
-      dailyActions: _dailyActions(profile),
+      dailyActions: [..._dailyActions(profile), ?style],
     );
   }
 
-  String _riskAdvice(RiskPreference preference) {
-    switch (preference) {
-      case RiskPreference.conservative:
+  String _riskAdvice(RiskLevel level) {
+    switch (level) {
+      case RiskLevel.cautious:
+        return 'Keep your money in cash and capital-protected products until a full emergency buffer is in place.';
+      case RiskLevel.steady:
         return 'Prioritize a cash buffer and low-volatility choices before taking extra risk.';
-      case RiskPreference.balanced:
+      case RiskLevel.balanced:
         return 'Split attention between steady savings and learning broad investing basics.';
-      case RiskPreference.growth:
+      case RiskLevel.growth:
         return 'Use a long-term investment mindset, but only after daily spending stays controlled.';
+      case RiskLevel.aggressive:
+        return 'You can hold higher-risk, long-term positions — but only while the emergency buffer and daily budget stay intact.';
     }
   }
 
@@ -80,4 +86,31 @@ class ReportGenerator {
         ];
     }
   }
+}
+
+/// Turns a Money Style result into one extra daily action, so the quiz
+/// changes something the user sees every day rather than only a one-off
+/// result screen. Returns null when the quiz has not been taken.
+String? styleActionFor({
+  required DecisionStylePole decision,
+  required SupportStylePole support,
+}) {
+  final decisionPart = decision == DecisionStylePole.pause
+      ? 'Sleep on any non-essential purchase before you buy it'
+      : 'Decide today and log it, rather than leaving it open';
+  final supportPart = support == SupportStylePole.selfDirected
+      ? 'note the reason for yourself'
+      : 'tell someone you trust what you decided';
+  return '$decisionPart — then $supportPart.';
+}
+
+/// Convenience for a full [MoneyStyleResult].
+String? styleActionForResult(MoneyStyleResult? result) {
+  if (result == null) {
+    return null;
+  }
+  return styleActionFor(
+    decision: result.decisionStyleWinner,
+    support: result.supportStyleWinner,
+  );
 }

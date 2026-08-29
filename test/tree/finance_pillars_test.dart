@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneymoneymoney/models/finance_profile.dart';
+import 'package:moneymoneymoney/services/risk_assessment.dart';
 import 'package:moneymoneymoney/tree/finance_pillars.dart';
 
 void main() {
@@ -11,7 +12,7 @@ void main() {
     monthlyIncome: income,
     fixedMonthlyExpenses: expenses,
     monthlySavingsGoal: savings,
-    riskPreference: RiskPreference.balanced,
+    riskLevel: RiskLevel.balanced,
     financialGoal: FinancialGoal.emergencyFund,
     spendingPressure: SpendingPressure.medium,
   );

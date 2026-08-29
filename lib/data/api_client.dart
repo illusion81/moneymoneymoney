@@ -128,6 +128,8 @@ class ApiClient {
   Future<Profile> profile() async =>
       Profile.fromJson(await _getObj('/api/profile'));
 
+  Future<MoneyStyleSubmission> submitMoneyStyle(MoneyStyleSubmission value) async => MoneyStyleSubmission.fromJson((await _send('POST', '/api/money-style', body: value.toJson())) as Map<String, dynamic>);
+
   // ---------------------------------------------------------------- bank
 
   Future<ConnectionStatus> connectBank({String persona = 'Whistler'}) async =>
@@ -183,8 +185,8 @@ class ApiClient {
   /// the backend cannot know them otherwise and your rank would never move.
   Future<Circle> leaderboard({int? streak, int? level}) async =>
       Circle.fromJson(await _getObj('/api/social/leaderboard', {
-        if (streak != null) 'streak': streak,
-        if (level != null) 'level': level,
+        'streak': ?streak,
+        'level': ?level,
       }));
 
   Future<void> cheer(String toName, {String message = 'Keep going'}) =>

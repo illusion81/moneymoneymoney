@@ -1,3 +1,6 @@
+import '../data/money_style_questions.dart';
+import '../models/money_style.dart';
+
 // Dart mirrors of the backend contract (docs/API.md).
 // Field names match the JSON exactly — if you rename one here, it breaks.
 // Owner: Lane A (data). Talk to Mike before changing a field.
@@ -69,6 +72,39 @@ class SurveyAnswers {
     'has_emergency_fund': hasEmergencyFund,
     'top_worry': topWorry,
   };
+}
+
+class MoneyStyleSubmission {
+  const MoneyStyleSubmission({required this.sessionId, required this.questionVersion, required this.selectedAnswers, required this.skippedQuestionIds, required this.answeredCount, this.confidenceTier, this.archetypeId});
+  final String sessionId, questionVersion;
+  final Map<String, String> selectedAnswers;
+  final List<int> skippedQuestionIds;
+  final int answeredCount;
+  final String? confidenceTier, archetypeId;
+  Map<String, dynamic> toJson() => {'session_id': sessionId, 'question_version': questionVersion, 'selected_answers': selectedAnswers, 'skipped_question_ids': skippedQuestionIds, 'answered_count': answeredCount, 'confidence_tier': confidenceTier, 'archetype_id': archetypeId};
+  factory MoneyStyleSubmission.fromJson(Map<String, dynamic> j) => MoneyStyleSubmission(sessionId: j['session_id'] as String, questionVersion: j['question_version'] as String, selectedAnswers: (j['selected_answers'] as Map).map((k,v) => MapEntry('$k','$v')), skippedQuestionIds: (j['skipped_question_ids'] as List).cast<int>(), answeredCount: j['answered_count'] as int, confidenceTier: j['confidence_tier'] as String?, archetypeId: j['archetype_id'] as String?);
+
+  factory MoneyStyleSubmission.fromCompletion(MoneyStyleCompletion completion) {
+    final result = completion.result;
+    final tier = switch (result?.confidenceTier) {
+      ConfidenceTier.earlySnapshot => 'early_snapshot',
+      ConfidenceTier.standard => 'standard',
+      ConfidenceTier.fullClarity => 'full_clarity',
+      null => null,
+    };
+    final archetype = switch (result?.archetype.pattern) {
+      'Steady Pause Self-Directed' => 'steady_pause_self',
+      'Steady Pause Collaborative' => 'steady_pause_collaborative',
+      'Steady Momentum Self-Directed' => 'steady_momentum_self',
+      'Steady Momentum Collaborative' => 'steady_momentum_collaborative',
+      'Responsive Pause Self-Directed' => 'responsive_pause_self',
+      'Responsive Pause Collaborative' => 'responsive_pause_collaborative',
+      'Responsive Momentum Self-Directed' => 'responsive_momentum_self',
+      'Responsive Momentum Collaborative' => 'responsive_momentum_collaborative',
+      _ => null,
+    };
+    return MoneyStyleSubmission(sessionId: completion.session.sessionId, questionVersion: 'money-style-v1', selectedAnswers: completion.session.answerIdsFor(moneyStyleQuestions), skippedQuestionIds: completion.session.skippedQuestions.toList(), answeredCount: completion.session.totalAnswered, confidenceTier: tier, archetypeId: archetype);
+  }
 }
 
 class Account {

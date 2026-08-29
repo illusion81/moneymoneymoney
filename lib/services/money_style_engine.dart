@@ -2,6 +2,23 @@ import '../data/money_style_archetypes.dart';
 import '../models/money_style.dart';
 
 class MoneyStyleEngine {
+  bool hasMinimumDimensionCoverage(
+    AnswerSession session,
+    List<MoneyStyleQuestion> questions,
+  ) {
+    final observed = <Dimension>{};
+    for (final entry in session.selectedAnswers.entries) {
+      for (final question in questions) {
+        if (question.id == entry.key &&
+            entry.value >= 0 &&
+            entry.value < question.answers.length) {
+          observed.add(question.answers[entry.value].dimension);
+          break;
+        }
+      }
+    }
+    return observed.length == Dimension.values.length;
+  }
   // Calculate raw dimension scores from selected answers
   DimensionScores calculateDimensionScores(
     AnswerSession session,
@@ -65,9 +82,9 @@ class MoneyStyleEngine {
   ) {
     var updatedScores = scores;
 
-    // Money Rhythm tie-breaker: Q2
+    // Money Rhythm tie-breaker: Q1
     if (scores.steadyCount == scores.responsiveCount) {
-      final breakerAnswer = _getTieBreakerAnswer(2, session, questions);
+      final breakerAnswer = _getTieBreakerAnswer(1, session, questions);
       if (breakerAnswer != null &&
           breakerAnswer.dimension == Dimension.moneyRhythm) {
         if (breakerAnswer.pole == MoneyRhythmPole.steady) {
@@ -205,10 +222,11 @@ class MoneyStyleEngine {
   }
 
   // Generate final result from a session
-  MoneyStyleResult generateResult(
+  MoneyStyleResult? generateResult(
     AnswerSession session,
     List<MoneyStyleQuestion> questions,
   ) {
+    if (!hasMinimumDimensionCoverage(session, questions)) return null;
     // Calculate raw scores
     var scores = calculateDimensionScores(session, questions);
 
