@@ -104,6 +104,7 @@ app.*.symbols
 
 # Node (tooling only)
 node_modules/
+.worktrees/
 
 # Lane A / backend
 backend,dataAPI/.env
