@@ -1,14 +1,27 @@
 import 'package:flutter/material.dart';
 
 import '../models/shop_item.dart';
+import '../ui/market_icon.dart';
 
 /// The single source of icon/color mapping for shop items, shared by the
 /// shop, forest, and homestead screens.
 class ShopItemVisual {
-  const ShopItemVisual({required this.icon, required this.color});
+  const ShopItemVisual({
+    required this.icon,
+    required this.color,
+    this.marketIcon,
+  });
 
+  /// Material fallback, used wherever no pixel-art market icon matches.
   final IconData icon;
   final Color color;
+
+  /// The pixel-art market icon to render in place of [icon], when the shop
+  /// item's concept has a genuine match in the 30-icon market sheet. Null
+  /// means the concept still lacks art, so callers keep the Material [icon].
+  ///
+  /// Rendered by [ShopItemIcon] rather than read directly.
+  final MarketIcon? marketIcon;
 }
 
 IconData treeSkinIcon({required String? equippedId, required int level}) {
