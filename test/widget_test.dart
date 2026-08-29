@@ -8,7 +8,7 @@ void main() {
   Future<void> pumpApp(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(vizMode: false));
   }
 
   testWidgets('first app screen shows the questionnaire', (tester) async {

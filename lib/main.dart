@@ -9,6 +9,8 @@ import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'services/forest_engine.dart';
 import 'services/report_generator.dart';
+import 'app_mode.dart';
+import 'viz/workbench/viz_workbench_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +19,10 @@ void main() {
 enum AppView { onboarding, report, home, achievements }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.vizMode = kVizMode});
+
+  /// When true the app boots into the viz workbench instead of onboarding.
+  final bool vizMode;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -47,7 +52,9 @@ class _MyAppState extends State<MyApp> {
         scaffoldBackgroundColor: const Color(0xfff5f1e8),
         useMaterial3: true,
       ),
-      home: _buildCurrentView(),
+      home: widget.vizMode
+          ? const VizWorkbenchScreen()
+          : _buildCurrentView(),
     );
   }
 
