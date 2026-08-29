@@ -10,14 +10,19 @@ mock provider returns real-shaped data with no bank connection at all.
 from __future__ import annotations
 
 import os
-from fastapi import FastAPI, HTTPException
+import shutil
+import tempfile
+import datetime as dt
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import store
 from models import (SurveyAnswers, Profile, ConnectionStatus, Account, Transaction,
-                    Plan, Mission, ClaimResult, Progression, TowerState, ShopItem)
+                    Plan, Mission, ClaimResult, Progression, TowerState, ShopItem,
+                    ConsentStatus)
 from bank import MockProvider, BasiqProvider, BasiqError, CsvProvider
+from pdf_statement import PdfStatementProvider
 from engine.allocation import build_profile
 from engine.plan import build_plan
 from engine.missions import generate as generate_missions
@@ -40,6 +45,22 @@ _forced_provider: str | None = None
 
 
 _csv = None
+_pdf = None
+
+
+def _pdf_provider():
+    global _pdf
+    if _pdf is None and os.getenv("WEALTH_PDF"):
+        try:
+            _pdf = PdfStatementProvider()
+            print(f"[data] PDF statement loaded: {os.getenv('WEALTH_PDF')}")
+        except Exception as e:
+            # Silence here used to look identical to "it ignored my file" —
+            # the server fell through to Basiq and nobody knew why.
+            print(f"[data] WEALTH_PDF is set but could not be read: {e}")
+            print("[data] falling back to the next provider")
+            return None
+    return _pdf
 
 
 def _csv_provider():
@@ -48,16 +69,24 @@ def _csv_provider():
     if _csv is None and os.getenv("WEALTH_CSV"):
         try:
             _csv = CsvProvider()
-        except Exception:
+            print(f"[data] CSV loaded: {os.getenv('WEALTH_CSV')}")
+        except Exception as e:
+            print(f"[data] WEALTH_CSV is set but could not be read: {e}")
             return None
     return _csv
 
 
 def provider():
-    """CSV > Basiq > mock, unless overridden. Never raises."""
+    """PDF > CSV > Basiq > mock, unless overridden. Never raises."""
     global _basiq
     if _forced_provider == "mock":
         return _mock
+    if _forced_provider == "upload" and _uploaded is not None:
+        return _uploaded
+    if _forced_provider == "pdf" or (_forced_provider is None and os.getenv("WEALTH_PDF")):
+        d = _pdf_provider()
+        if d is not None:
+            return d
     if _forced_provider == "csv" or (_forced_provider is None and os.getenv("WEALTH_CSV")):
         c = _csv_provider()
         if c is not None:
@@ -79,6 +108,88 @@ def _safe(fn, *a, **kw):
     except Exception:
         name = fn.__name__
         return getattr(_mock, name)(*a, **kw)
+
+
+# Prompt for renewal this far before expiry. Long enough that a user who opens
+# the app weekly still sees it; short enough not to nag.
+RENEWAL_WINDOW_DAYS = 21
+
+
+def consent_status() -> ConsentStatus:
+    p = provider()
+    if not isinstance(p, BasiqProvider):
+        return ConsentStatus(
+            state="never_connected", action_required=False,
+            headline="No bank connected",
+            detail="Running on demo data. Connect a bank to build the tower from real spending.",
+        )
+    try:
+        c = p.consent()
+    except Exception:
+        return ConsentStatus(
+            state="active", action_required=False, headline="Connected",
+            detail="Could not read consent details right now.",
+        )
+
+    if c["revoked"]:
+        return ConsentStatus(
+            state="revoked", granted_at=c["granted_at"], action_required=True,
+            headline="Bank access disconnected",
+            detail="Your tower is safe and frozen exactly where you left it. "
+                   "Reconnect to start building again — nothing has been lost.",
+            reconnect_url=_safe_consent_url(p),
+        )
+
+    expires = c["expires_at"]
+    days = None
+    if expires:
+        try:
+            days = (dt.date.fromisoformat(expires) - dt.date.today()).days
+        except ValueError:
+            days = None
+    elif c["granted_at"]:
+        try:
+            gone = (dt.date.today() - dt.date.fromisoformat(c["granted_at"])).days
+            days = BasiqProvider.CONSENT_MAX_DAYS - gone
+            expires = (dt.date.today() + dt.timedelta(days=days)).isoformat()
+        except ValueError:
+            days = None
+
+    if days is not None and days <= 0:
+        return ConsentStatus(
+            state="expired", granted_at=c["granted_at"], expires_at=expires,
+            days_remaining=0, action_required=True,
+            headline="Bank access expired",
+            detail="Consent lasts up to 12 months. Your tower is frozen, not deleted — "
+                   "renew to pick up where you left off.",
+            reconnect_url=_safe_consent_url(p),
+        )
+    if days is not None and days <= RENEWAL_WINDOW_DAYS:
+        return ConsentStatus(
+            state="expiring_soon", granted_at=c["granted_at"], expires_at=expires,
+            days_remaining=days, action_required=True,
+            headline=f"Bank access ends in {days} days",
+            detail="Renew now and the tower keeps growing without a break.",
+            reconnect_url=_safe_consent_url(p),
+        )
+    return ConsentStatus(
+        state="active", granted_at=c["granted_at"], expires_at=expires,
+        days_remaining=days, action_required=False,
+        headline="Bank connected",
+        detail="Spending syncs automatically. You can disconnect any time.",
+    )
+
+
+def _safe_consent_url(p) -> str | None:
+    try:
+        return p.consent_url()
+    except Exception:
+        return None
+
+
+def feed_is_down() -> bool:
+    """Consent gone = do NOT silently serve mock data as if it were theirs."""
+    return consent_status().state in ("revoked", "expired")
 
 
 def data_trusted() -> bool:
@@ -138,11 +249,71 @@ def get_transactions(days: int = 30) -> list[Transaction]:
 
 # ------------------------------------------------------------------ plan
 
+UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "wealth-tower-uploads")
+_uploaded = None      # provider built from whatever the user uploaded
+
+
+@app.post("/api/bank/upload", response_model=ConnectionStatus)
+async def upload_statement(file: UploadFile = File(...)) -> ConnectionStatus:
+    """Let the user hand us a statement instead of connecting a bank.
+
+    Accepts .csv or .pdf. The file is written to a temp dir on the server that
+    runs this API — it is never forwarded to Basiq or anywhere else. This is the
+    path for the majority of people who will never finish a CDR consent flow.
+    """
+    global _uploaded, _forced_provider
+
+    name = (file.filename or "statement").strip()
+    ext = os.path.splitext(name)[1].lower()
+    if ext not in (".csv", ".pdf"):
+        raise HTTPException(400, "Upload a .csv or .pdf statement.")
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    dest = os.path.join(UPLOAD_DIR, f"upload{ext}")
+    with open(dest, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+
+    try:
+        provider_obj = (CsvProvider(dest) if ext == ".csv"
+                        else PdfStatementProvider(dest))
+        txns = provider_obj.transactions(400)
+    except Exception as e:
+        raise HTTPException(422, f"Could not read that statement: {e}")
+
+    if not txns:
+        raise HTTPException(
+            422, "No transactions found in that file. If it is a scanned image "
+                 "rather than a text PDF, we cannot read it yet.")
+
+    _uploaded = provider_obj
+    _forced_provider = "upload"
+    store.user(UID).pop("last_plan", None)
+    store.user(UID).pop("last_tower", None)
+
+    return ConnectionStatus(
+        provider="mock", connected=True,
+        institution=f"Uploaded statement ({name})",
+        persona="upload",
+        message=f"{len(txns)} transactions read. Nothing left this machine.",
+    )
+
+
+@app.get("/api/bank/consent", response_model=ConsentStatus)
+def get_consent() -> ConsentStatus:
+    return consent_status()
+
+
 @app.get("/api/plan", response_model=Plan)
 def get_plan(days: int = 30) -> Plan:
     profile = _require_profile()
+    u = store.user(UID)
+    if feed_is_down() and u.get("last_plan"):
+        frozen = u["last_plan"].model_copy(update={"stale": True})
+        return frozen
     txns = _safe(provider().transactions, days)
-    return build_plan(txns, profile.allocation, profile.monthly_income, days)
+    plan = build_plan(txns, profile.allocation, profile.monthly_income, days)
+    u["last_plan"] = plan          # keep the last good one so we can freeze, not erase
+    return plan
 
 
 # ------------------------------------------------------------------ missions
@@ -225,9 +396,16 @@ def get_progression() -> Progression:
 @app.get("/api/tower", response_model=TowerState)
 def get_tower(days: int = 30) -> TowerState:
     profile = _require_profile()
+    u = store.user(UID)
+    if feed_is_down() and u.get("last_tower"):
+        # Frozen, never erased. Their XP, level, coins and skins are ours, not
+        # the bank's — losing bank access must not cost them progress.
+        return u["last_tower"].model_copy(update={"stale": True})
     txns = _safe(provider().transactions, days)
     plan = build_plan(txns, profile.allocation, profile.monthly_income, days)
-    return build_tower(plan, get_progression())
+    tower = build_tower(plan, get_progression())
+    u["last_tower"] = tower
+    return tower
 
 
 # ------------------------------------------------------------------ shop
@@ -275,8 +453,8 @@ class ProviderBody(BaseModel):
 def set_provider(body: ProviderBody) -> dict:
     """Flip the data source at runtime. 'auto' restores normal behaviour."""
     global _forced_provider
-    if body.provider not in ("basiq", "mock", "csv", "auto"):
-        raise HTTPException(400, "provider must be basiq, mock, csv or auto")
+    if body.provider not in ("basiq", "mock", "csv", "pdf", "auto"):
+        raise HTTPException(400, "provider must be basiq, mock, csv, pdf or auto")
     _forced_provider = None if body.provider in ("auto", "basiq") else body.provider
     return health()
 
@@ -285,13 +463,18 @@ def set_provider(body: ProviderBody) -> dict:
 def health() -> dict:
     p = provider()
     name = ("basiq" if isinstance(p, BasiqProvider)
-            else "csv" if isinstance(p, CsvProvider) else "mock")
+            else "csv" if isinstance(p, CsvProvider)
+            else "pdf" if isinstance(p, PdfStatementProvider) else "mock")
+    if _forced_provider == "upload":
+        name = "upload"
     return {
         "ok": True,
         "provider": name,
         # UI contract: when false, show a "demo data" banner and do NOT render
         # any per-mission "verified by your bank" badge.
         "data_trusted": name == "basiq",
+        "pdf_configured": bool(os.getenv("WEALTH_PDF")),
+        "pdf_path": os.getenv("WEALTH_PDF") or None,
         "csv_configured": bool(os.getenv("WEALTH_CSV")),
         "basiq_configured": bool(os.getenv("BASIQ_API_KEY")),
         "forced": _forced_provider,

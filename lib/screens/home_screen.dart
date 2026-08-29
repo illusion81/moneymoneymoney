@@ -5,6 +5,11 @@ import '../models/progression.dart';
 import '../models/shop_item.dart';
 import '../models/wealth_report.dart';
 import '../services/forest_engine.dart';
+import '../data/api_client.dart';
+import '../services/item_visuals.dart';
+import '../widgets/app_nav_bar.dart';
+import 'connect_bank_screen.dart';
+import 'spending_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -18,7 +23,12 @@ class HomeScreen extends StatefulWidget {
     required this.onShowReport,
     required this.onShowAchievements,
     required this.onShowShop,
+    required this.onShowCalendar,
+    required this.onShowHomestead,
+    required this.onFetchTodaySpending,
     this.lastEarnedSummary,
+    this.api,
+    this.onRetakeQuestionnaire,
   });
 
   final WealthReport report;
@@ -26,22 +36,63 @@ class HomeScreen extends StatefulWidget {
   final ProgressionState progression;
   final ShopState shopState;
   final String? lastEarnedSummary;
+  /// When supplied, the screen can link a bank and pull real spending
+  /// instead of asking the user to type it.
+  final ApiClient? api;
   final void Function({required double spending, required bool actionCompleted})
   onCheckIn;
   final void Function(String recoveryNote) onRestore;
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
   final VoidCallback onShowShop;
+  final VoidCallback onShowCalendar;
+  final VoidCallback onShowHomestead;
+  final Future<double> Function() onFetchTodaySpending;
+  final VoidCallback? onRetakeQuestionnaire;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+
+enum _SpendingMode { manual, bank }
 
 class _HomeScreenState extends State<HomeScreen> {
   final _spendingController = TextEditingController();
   final _recoveryNoteController = TextEditingController();
   bool _actionCompleted = false;
   String? _errorText;
+  bool _bankConnected = false;
+  _SpendingMode _spendingMode = _SpendingMode.manual;
+  bool _bankLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBank();
+  }
+
+  /// Only a live bank connection counts as trusted — a CSV or PDF the user
+  /// uploaded could have been edited before we saw it.
+  Future<void> _checkBank() async {
+    final api = widget.api;
+    if (api == null) return;
+    try {
+      final trusted = await api.dataTrusted();
+      if (mounted) setState(() => _bankConnected = trusted);
+    } catch (_) {}
+  }
+
+  Future<void> _openConnectBank() async {
+    final api = widget.api;
+    if (api == null) return;
+    final linked = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ConnectBankScreen(api: api)),
+    );
+    if (linked == true) {
+      await _checkBank();
+      _selectBankMode();
+    }
+  }
 
   @override
   void dispose() {
@@ -62,6 +113,22 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
+          if (widget.api != null)
+            IconButton(
+              icon: const Icon(Icons.receipt_long_outlined),
+              tooltip: 'Where your money went',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => SpendingScreen(api: widget.api!),
+              )),
+            ),
+          if (widget.api != null)
+            IconButton(
+              icon: Icon(_bankConnected
+                  ? Icons.account_balance
+                  : Icons.account_balance_outlined),
+              tooltip: _bankConnected ? 'Bank connected' : 'Connect your bank',
+              onPressed: _openConnectBank,
+            ),
           IconButton(
             tooltip: 'Shop',
             onPressed: widget.onShowShop,
@@ -72,6 +139,13 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: widget.onShowReport,
             icon: const Icon(Icons.description_outlined),
           ),
+          if (widget.onRetakeQuestionnaire != null)
+            IconButton(
+              key: const Key('retake-questionnaire-button'),
+              tooltip: 'Retake questionnaire',
+              onPressed: widget.onRetakeQuestionnaire,
+              icon: const Icon(Icons.fact_check_outlined),
+            ),
           IconButton(
             tooltip: 'Achievements',
             onPressed: widget.onShowAchievements,
@@ -79,32 +153,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: AppNavBar(
         selectedIndex: 0,
-        onDestinationSelected: (index) {
-          if (index == 1) {
-            widget.onShowReport();
-          } else if (index == 2) {
-            widget.onShowAchievements();
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.park_outlined),
-            selectedIcon: Icon(Icons.park),
-            label: 'Forest',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description),
-            label: 'Report',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined),
-            selectedIcon: Icon(Icons.emoji_events),
-            label: 'Awards',
-          ),
-        ],
+        onShowForest: () {},
+        onShowCalendar: widget.onShowCalendar,
+        onShowHomestead: widget.onShowHomestead,
+        onShowAchievements: widget.onShowAchievements,
       ),
       body: SafeArea(
         child: Center(
@@ -121,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: _skyColor(widget.shopState),
+                    color: skyColor(widget.shopState),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -130,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: _groundColor(widget.shopState),
+                          color: groundColor(widget.shopState),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
@@ -211,9 +265,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 14),
+                Row(
+                  children: [
+                    ChoiceChip(
+                      key: const Key('spending-mode-manual'),
+                      label: const Text('Manual'),
+                      selected: _spendingMode == _SpendingMode.manual,
+                      onSelected: (_) => _selectManualMode(),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      key: const Key('spending-mode-bank'),
+                      label: const Text('From bank'),
+                      selected: _spendingMode == _SpendingMode.bank,
+                      onSelected: (_) => _selectBankMode(),
+                    ),
+                    if (_bankLoading) ...[
+                      const SizedBox(width: 10),
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   key: const Key('spending-field'),
                   controller: _spendingController,
+                  readOnly: _spendingMode == _SpendingMode.bank,
                   decoration: InputDecoration(
                     labelText: 'Today\'s spending',
                     prefixIcon: const Icon(Icons.payments_outlined),
@@ -265,6 +346,41 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.onCheckIn(spending: spending, actionCompleted: _actionCompleted);
   }
 
+  void _selectManualMode() {
+    setState(() {
+      _spendingMode = _SpendingMode.manual;
+      _errorText = null;
+    });
+  }
+
+  Future<void> _selectBankMode() async {
+    setState(() {
+      _spendingMode = _SpendingMode.bank;
+      _bankLoading = true;
+      _errorText = null;
+    });
+
+    try {
+      final spending = await widget.onFetchTodaySpending();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _spendingController.text = spending.toStringAsFixed(2);
+        _bankLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _spendingMode = _SpendingMode.manual;
+        _bankLoading = false;
+        _errorText = 'Could not load bank data. Enter spending manually.';
+      });
+    }
+  }
+
   String _statusText(ForestDay? day) {
     switch (day?.status) {
       case TreeStatus.healthy:
@@ -301,48 +417,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return Icons.eco;
     }
 
-    final equippedSkin = shopState.equippedItemIds[ShopItemCategory.treeSkin];
-    final level = day?.treeLevel ?? 0;
-    switch (equippedSkin) {
-      case 'tree-crystal-pine':
-        return Icons.ac_unit;
-      case 'tree-bonsai':
-        return Icons.spa;
-      case 'tree-cherry-blossom':
-        return Icons.local_florist;
-      case 'tree-golden-ginkgo':
-        return level >= 2 ? Icons.park : Icons.eco;
-      default:
-        if (level >= 3) {
-          return Icons.forest;
-        }
-        if (level >= 2) {
-          return Icons.park;
-        }
-        return Icons.eco;
-    }
-  }
-
-  Color _groundColor(ShopState shopState) {
-    switch (shopState.equippedItemIds[ShopItemCategory.ground]) {
-      case 'ground-riverbank':
-        return const Color(0xffcfe8ea);
-      case 'ground-autumn':
-        return const Color(0xffe9d1a3);
-      default:
-        return const Color(0xffdcefd9);
-    }
-  }
-
-  Color _skyColor(ShopState shopState) {
-    switch (shopState.equippedItemIds[ShopItemCategory.sky]) {
-      case 'sky-sunset':
-        return const Color(0xfffbe3d0);
-      case 'sky-aurora':
-        return const Color(0xffe3ecfb);
-      default:
-        return Colors.white;
-    }
+    return treeSkinIcon(
+      equippedId: shopState.equippedItemIds[ShopItemCategory.treeSkin],
+      level: day?.treeLevel ?? 0,
+    );
   }
 }
 

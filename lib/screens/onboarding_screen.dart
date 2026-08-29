@@ -119,6 +119,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       icon: const Icon(Icons.psychology),
                       label: const Text('Discover Your Money Style'),
                     ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _skip,
+                      child: const Text('Skip for now'),
+                    ),
                   ],
                 ),
               ),
@@ -142,6 +147,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         riskPreference: _riskPreference,
         financialGoal: _financialGoal,
         spendingPressure: _spendingPressure,
+      ),
+    );
+  }
+
+  /// Skips the questionnaire with a reasonable default profile. The user can
+  /// fill in real numbers later via "retake questionnaire" on the Forest
+  /// screen.
+  void _skip() {
+    widget.onProfileSubmitted(
+      const FinanceProfile(
+        monthlyIncome: 3000,
+        fixedMonthlyExpenses: 1500,
+        monthlySavingsGoal: 300,
+        riskPreference: RiskPreference.balanced,
+        financialGoal: FinancialGoal.emergencyFund,
+        spendingPressure: SpendingPressure.medium,
       ),
     );
   }

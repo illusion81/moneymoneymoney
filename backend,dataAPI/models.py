@@ -69,11 +69,39 @@ class Transaction(BaseModel):
     bucket: Bucket
 
 
+ConsentState = Literal[
+    "never_connected",   # no bank ever linked
+    "active",            # healthy
+    "expiring_soon",     # inside the renewal window — prompt now, before it lapses
+    "expired",           # ran out; CDR consent is capped at 12 months
+    "revoked",           # the user killed it from their bank or from us
+]
+
+
+class ConsentStatus(BaseModel):
+    """CDR consent lifecycle.
+
+    Consent is granted once for up to 12 months, and the user can revoke it at
+    any time from their bank's dashboard or from inside our app — effective
+    immediately. Both endings must be handled gracefully: the tower freezes at
+    its last known state, it is never erased.
+    """
+    state: ConsentState
+    granted_at: Optional[str] = None
+    expires_at: Optional[str] = None
+    days_remaining: Optional[int] = None
+    action_required: bool = False
+    headline: str
+    detail: str
+    reconnect_url: Optional[str] = None
+
+
 class ConnectionStatus(BaseModel):
     provider: Literal["basiq", "mock"]
     connected: bool
     institution: Optional[str] = None
     persona: Optional[str] = None
+    consent_url: Optional[str] = None   # open this in a browser to link a bank
     message: str = ""
 
 
@@ -89,6 +117,7 @@ class BucketPlan(BaseModel):
 
 
 class Plan(BaseModel):
+    stale: bool = False          # True = last known good data, feed is down
     period_days: int
     income_observed: float
     buckets: list[BucketPlan]
@@ -144,6 +173,7 @@ class TowerFloor(BaseModel):
 
 
 class TowerState(BaseModel):
+    stale: bool = False          # True = frozen at last sync; do not erase it
     stage: int           # 1..6 visual stage, derived from level
     floors: list[TowerFloor]
     health: float        # 0..1 overall — withers on overspend

@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../models/progression.dart';
 import '../models/shop_item.dart';
+import '../services/item_visuals.dart';
 import '../services/shop_service.dart';
 
 class ShopScreen extends StatelessWidget {
@@ -12,6 +14,8 @@ class ShopScreen extends StatelessWidget {
     required this.onPurchase,
     required this.onEquip,
     required this.onBack,
+    this.onDebugMaxCoins,
+    this.onDebugUnlockAll,
   });
 
   final ProgressionState progression;
@@ -20,9 +24,18 @@ class ShopScreen extends StatelessWidget {
   final void Function(String itemId) onEquip;
   final VoidCallback onBack;
 
+  /// Testing aids, only ever shown in debug builds (gated by [kDebugMode]) —
+  /// never real user-facing features.
+  final VoidCallback? onDebugMaxCoins;
+
+  /// Marks every catalog item as owned, bypassing price and level gates.
+  final VoidCallback? onDebugUnlockAll;
+
   @override
   Widget build(BuildContext context) {
     final shopService = ShopService();
+    final debugMaxCoins = onDebugMaxCoins;
+    final debugUnlockAll = onDebugUnlockAll;
 
     return Scaffold(
       appBar: AppBar(
@@ -32,6 +45,22 @@ class ShopScreen extends StatelessWidget {
           onPressed: onBack,
           icon: const Icon(Icons.arrow_back),
         ),
+        actions: [
+          if (kDebugMode && debugUnlockAll != null)
+            IconButton(
+              key: const Key('debug-unlock-all-button'),
+              tooltip: 'Debug: unlock all items',
+              onPressed: debugUnlockAll,
+              icon: const Icon(Icons.lock_open_outlined),
+            ),
+          if (kDebugMode && debugMaxCoins != null)
+            IconButton(
+              key: const Key('debug-max-coins-button'),
+              tooltip: 'Debug: max coins',
+              onPressed: debugMaxCoins,
+              icon: const Icon(Icons.bug_report_outlined),
+            ),
+        ],
       ),
       body: SafeArea(
         child: Center(
@@ -109,6 +138,8 @@ class ShopScreen extends StatelessWidget {
         return 'Ground';
       case ShopItemCategory.sky:
         return 'Sky';
+      case ShopItemCategory.decoration:
+        return 'Decorations';
     }
   }
 }
@@ -141,6 +172,7 @@ class _ShopItemCard extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: ListTile(
+        leading: _ItemIconChip(item: item),
         title: Text(item.name),
         subtitle: Text(item.description),
         trailing: _trailingControl(levelLocked, canAfford),
@@ -149,10 +181,15 @@ class _ShopItemCard extends StatelessWidget {
   }
 
   Widget _trailingControl(bool levelLocked, bool canAfford) {
+    final isDecoration = item.category == ShopItemCategory.decoration;
+
     if (equipped) {
       return const Chip(label: Text('Equipped'));
     }
     if (owned) {
+      if (isDecoration) {
+        return const Chip(label: Text('Owned'));
+      }
       return OutlinedButton(
         onPressed: onEquip,
         child: const Text('Equip'),
@@ -165,6 +202,23 @@ class _ShopItemCard extends StatelessWidget {
     return FilledButton(
       onPressed: canAfford ? onPurchase : null,
       child: Text('Buy for ${item.price}'),
+    );
+  }
+}
+
+class _ItemIconChip extends StatelessWidget {
+  const _ItemIconChip({required this.item});
+
+  final ShopItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = shopItemVisual(item);
+
+    return CircleAvatar(
+      backgroundColor: visual.color.withValues(alpha: 0.15),
+      foregroundColor: visual.color,
+      child: Icon(visual.icon),
     );
   }
 }
