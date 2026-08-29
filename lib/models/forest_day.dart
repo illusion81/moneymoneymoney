@@ -1,6 +1,10 @@
 import 'progression.dart';
 
-enum TreeStatus { pending, healthy, withered, restored }
+/// [frozen] is a day you missed that a streak freeze covered. It is not a
+/// healthy day — it earns nothing — but it does not break the chain either.
+/// Missing a day is the moment people delete a habit app; the freeze is the
+/// product saying "you are still in this" instead of resetting you to zero.
+enum TreeStatus { pending, healthy, withered, restored, frozen }
 
 class ForestDay {
   const ForestDay({
@@ -58,11 +62,36 @@ class ForestSummary {
   final List<Achievement> achievements;
 }
 
+/// How many freezes the player holds, and how many they may hold at once.
+/// Plus members carry more — this is the one subscription perk that changes
+/// what happens on your worst day rather than what your farm looks like.
+class FreezeState {
+  const FreezeState({required this.available, required this.capacity});
+
+  final int available;
+  final int capacity;
+
+  bool get isFull => available >= capacity;
+
+  FreezeState copyWith({int? available, int? capacity}) => FreezeState(
+        available: available ?? this.available,
+        capacity: capacity ?? this.capacity,
+      );
+}
+
 class CheckInResult {
-  const CheckInResult({required this.day, required this.summary});
+  const CheckInResult({
+    required this.day,
+    required this.summary,
+    this.freezesUsed = 0,
+  });
 
   final ForestDay day;
   final ForestSummary summary;
+
+  /// Freezes spent covering days missed since the last check-in, so the
+  /// caller can deduct them and tell the user what happened.
+  final int freezesUsed;
 }
 
 class RestorationQuote {

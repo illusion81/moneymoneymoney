@@ -12,15 +12,18 @@ class ForestEngine {
     required WealthReport report,
     required DateTime date,
     required double spending,
+    int freezesAvailable = 0,
   }) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
-    final previousDays = _withMissedDays(
+    final gap = _withMissedDays(
       existingDays
           .where((day) => !_isSameDate(day.date, normalizedDate))
           .toList(),
       normalizedDate,
       report.dailyBudget,
+      freezesAvailable,
     );
+    final previousDays = gap.days;
     final overBudget = spending > report.dailyBudget;
     final healthy = !overBudget;
     final provisionalDays = [
@@ -55,39 +58,59 @@ class ForestEngine {
         .map((day) => _isSameDate(day.date, normalizedDate) ? updatedDay : day)
         .toList();
 
-    return CheckInResult(day: updatedDay, summary: summarize(updatedDays));
+    return CheckInResult(
+      day: updatedDay,
+      summary: summarize(updatedDays),
+      freezesUsed: gap.freezesUsed,
+    );
   }
 
-  List<ForestDay> _withMissedDays(
+  _GapFill _withMissedDays(
     List<ForestDay> existingDays,
     DateTime checkInDate,
     double dailyBudget,
+    int freezesAvailable,
   ) {
     if (existingDays.isEmpty) {
-      return existingDays;
+      return _GapFill(existingDays, 0);
     }
 
     final orderedDays = [...existingDays]
       ..sort((a, b) => a.date.compareTo(b.date));
-    final missedDays = <ForestDay>[];
+    final missedDates = <DateTime>[];
     var missedDate = orderedDays.last.date.add(const Duration(days: 1));
-
     while (missedDate.isBefore(checkInDate)) {
+      missedDates.add(missedDate);
+      missedDate = missedDate.add(const Duration(days: 1));
+    }
+
+    // Freezes are spent on the days nearest today. Covering the most recent
+    // gap is what keeps the chain intact; spending them on the oldest missed
+    // day would break the streak anyway and waste the freeze.
+    final covered = missedDates.length < freezesAvailable
+        ? missedDates.length
+        : freezesAvailable;
+    final firstFrozenIndex = missedDates.length - covered;
+
+    final missedDays = <ForestDay>[];
+    for (var i = 0; i < missedDates.length; i++) {
+      final frozen = i >= firstFrozenIndex;
       missedDays.add(
         ForestDay(
-          date: missedDate,
-          status: TreeStatus.withered,
+          date: missedDates[i],
+          status: frozen ? TreeStatus.frozen : TreeStatus.withered,
           treeLevel: 0,
           spending: 0,
           dailyBudget: dailyBudget,
           actionCompleted: false,
-          message: 'Today withered because no check-in was completed.',
+          message: frozen
+              ? 'You missed this day. A streak freeze held your progress.'
+              : 'Today withered because no check-in was completed.',
         ),
       );
-      missedDate = missedDate.add(const Duration(days: 1));
     }
 
-    return [...orderedDays, ...missedDays];
+    return _GapFill([...orderedDays, ...missedDays], covered);
   }
 
   ForestSummary summarize(
@@ -282,7 +305,8 @@ class ForestEngine {
     var streak = 0;
     for (final day in days.reversed) {
       if (day.status == TreeStatus.healthy ||
-          day.status == TreeStatus.restored) {
+          day.status == TreeStatus.restored ||
+          day.status == TreeStatus.frozen) {
         streak++;
       } else {
         break;
@@ -414,4 +438,13 @@ class ForestEngine {
         first.month == second.month &&
         first.day == second.day;
   }
+}
+
+
+/// What filling a gap in the calendar produced: the days, and how many
+/// freezes it consumed doing it.
+class _GapFill {
+  const _GapFill(this.days, this.freezesUsed);
+  final List<ForestDay> days;
+  final int freezesUsed;
 }

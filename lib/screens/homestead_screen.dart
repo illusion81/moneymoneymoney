@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../widgets/decoration_view.dart';
+
 import '../models/forest_day.dart';
 import '../models/home_layout.dart';
 import '../models/shop_item.dart';
@@ -59,8 +61,8 @@ class HomesteadScreen extends StatefulWidget {
 
 /// Isometric tile geometry for the homestead grid, exposed so tests can
 /// derive the on-screen position of a given grid cell.
-const double kHomeTileWidth = 48;
-const double kHomeTileHeight = 24;
+const double kHomeTileWidth = 84;
+const double kHomeTileHeight = 42;
 const _geometry = IsoGridGeometry(
   tileWidth: kHomeTileWidth,
   tileHeight: kHomeTileHeight,
@@ -371,27 +373,49 @@ class _PlacedDecoration extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onLongPress: onRemove,
-      child: _DecorationIcon(visual: shopItemVisual(item)),
+      child: _DecorationIcon(visual: shopItemVisual(item), itemId: item.id),
     );
   }
 }
 
 class _DecorationIcon extends StatelessWidget {
-  const _DecorationIcon({required this.visual});
+  const _DecorationIcon({required this.visual, this.itemId});
 
   final ShopItemVisual visual;
+  final String? itemId;
 
   @override
   Widget build(BuildContext context) {
+    // Decorations that map to an animal render as the real artwork; anything
+    // else keeps the coloured disc. A yard of flat icon badges reads as a
+    // wireframe, not a homestead.
+    final animal = visual.animalAsset;
+    if (animal != null) {
+      return Image.asset(
+        'assets/animals/$animal.png',
+        width: 58,
+        height: 58,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, _, _) => _disc(),
+      );
+    }
+    // Decorations are painted, not icon badges — see decoration_view.dart.
+    if (itemId != null && itemId!.startsWith('deco-')) {
+      return DecorationView(itemId: itemId!, size: 58);
+    }
+    return _disc();
+  }
+
+  Widget _disc() {
     return Container(
-      width: 32,
-      height: 32,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: visual.color,
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2),
       ),
-      child: Icon(visual.icon, color: Colors.white, size: 18),
+      child: Icon(visual.icon, color: Colors.white, size: 24),
     );
   }
 }
@@ -420,7 +444,14 @@ class _SavingsStatsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Title and three chips do not fit side by side at real phone width
+          // (390pt) — Wrap lets the chips drop to their own line instead of
+          // running off the edge.
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
+            runSpacing: 8,
+            spacing: 12,
             children: [
               Text(
                 'Surplus assets',
@@ -428,20 +459,16 @@ class _SavingsStatsSection extends StatelessWidget {
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
-              const Spacer(),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 6,
                 children: [
-                  for (final option in StatsPeriod.values) ...[
+                  for (final option in StatsPeriod.values)
                     ChoiceChip(
                       key: Key('stats-period-${option.name}'),
                       label: Text(_periodLabel(option)),
                       selected: option == period,
                       onSelected: (_) => onPeriodChanged(option),
                     ),
-                    if (option != StatsPeriod.values.last)
-                      const SizedBox(width: 6),
-                  ],
                 ],
               ),
             ],

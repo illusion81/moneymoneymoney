@@ -26,6 +26,7 @@ import 'screens/plan_range_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/plus_screen.dart';
+import 'screens/diamond_store_screen.dart';
 import 'screens/shop_screen.dart';
 import 'screens/spending_screen.dart';
 import 'services/bank_spending_service.dart';
@@ -34,6 +35,9 @@ import 'services/home_layout_service.dart';
 import 'services/profile_suggestions.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
+import 'services/risk_assessment.dart' show RiskLevel;
+import 'services/ad_service.dart';
+import 'services/payment_service.dart';
 import 'services/shop_service.dart';
 import 'services/money_style_repository.dart';
 import 'widgets/level_up_overlay.dart';
@@ -57,6 +61,7 @@ enum AppView {
   homestead,
   achievements,
   shop,
+  diamonds,
 }
 
 class MyApp extends StatefulWidget {
@@ -112,6 +117,27 @@ class _MyAppState extends State<MyApp> {
 
   /// Demo-only membership flag — see PlusScreen; no real payment exists.
   bool _isPlusMember = false;
+  int _diamonds = 0;
+
+  /// Streak freezes. Free players hold one; Plus members hold three and earn
+  /// them twice as fast. This is the perk that matters — everything else Plus
+  /// sells is decoration, and this is the one that protects the thing people
+  /// actually care about losing.
+  static const int _freeFreezeCap = 1;
+  static const int _plusFreezeCap = 3;
+  FreezeState _freezes = const FreezeState(available: 1, capacity: 1);
+
+  /// Healthy days banked toward the next freeze.
+  int _daysTowardFreeze = 0;
+
+  int get _freezeEarnEvery => _isPlusMember ? 3 : 7;
+
+  /// The diamond store is reachable from more than one place (the shop, and
+  /// the Plus screen). Back should return where you came from rather than
+  /// always dumping you on the forest.
+  AppView _diamondsReturnTo = AppView.forest;
+  final PaymentGateway _payments = MockPaymentGateway();
+  final AdGateway _ads = MockAdGateway();
 
   _MyAppState() {
     _shopState = _shopService.initialState();
@@ -137,6 +163,41 @@ class _MyAppState extends State<MyApp> {
     unawaited(_loadMoneyStyle());
   }
 
+  /// Plus gets a warmer, richer look: deeper greens, a brass accent and a
+  /// darker ground. It is purely cosmetic — nothing about the plan, the
+  /// leaderboard or the tree changes — but it makes the membership feel like
+  /// something rather than a flag in a database.
+  ThemeData _buildTheme({required bool plus}) {
+    final seed = plus ? const Color(0xff1f5d3c) : const Color(0xff2f7d50);
+    final base = ColorScheme.fromSeed(seedColor: seed);
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: plus
+          ? base.copyWith(
+              secondary: const Color(0xffb08d3f),
+              tertiary: const Color(0xffd9b45f),
+              surfaceContainerHighest: const Color(0xffe9e2d2),
+            )
+          : base,
+      scaffoldBackgroundColor:
+          plus ? const Color(0xfff2ede0) : const Color(0xfff5f1e8),
+      cardTheme: CardThemeData(
+        elevation: plus ? 2 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(plus ? 16 : 12),
+          side: plus
+              ? const BorderSide(color: Color(0xffd9c79a))
+              : BorderSide.none,
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor:
+            plus ? const Color(0xffe8e0cd) : const Color(0xffe8f0ea),
+        foregroundColor: const Color(0xff173b2f),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -144,11 +205,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
       navigatorKey: _navigatorKey,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff2f7d50)),
-        scaffoldBackgroundColor: const Color(0xfff5f1e8),
-        useMaterial3: true,
-      ),
+      theme: _buildTheme(plus: _isPlusMember),
       home: _buildCurrentView(),
     );
   }
@@ -210,7 +267,7 @@ class _MyAppState extends State<MyApp> {
               );
       case AppView.rangePlan:
         return PlanRangeScreen(
-          onKeep: () => setState(() => _view = AppView.moneyStyleResult),
+          onKeep: _handleRangeSnapshot,
           onExact: () => setState(() => _view = AppView.onboarding),
         );
       case AppView.report:
@@ -243,6 +300,7 @@ class _MyAppState extends State<MyApp> {
           shopState: _shopState,
           lastEarnedSummary: _lastEarnedSummary,
           onCheckIn: _handleCheckIn,
+          freezes: _freezes,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
           onRetakeQuestionnaire: () => setState(
@@ -263,6 +321,8 @@ class _MyAppState extends State<MyApp> {
           showMoneyStyleReminder: _moneyStyleDeferred,
           onResumeMoneyStyle: _startMoneyStyleQuiz,
           onDismissMoneyStyleReminder: _dismissMoneyStyleReminder,
+          onDebugSimulate: _handleDebugSimulateStreak,
+          onDebugFillFarm: _handleDebugFillFarm,
         );
       case AppView.calendar:
         return CalendarScreen(
@@ -324,6 +384,19 @@ class _MyAppState extends State<MyApp> {
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
         );
+      case AppView.diamonds:
+        return DiamondStoreScreen(
+          gateway: _payments,
+          diamonds: _diamonds,
+          isPlusMember: _isPlusMember,
+          onPurchased: (delta) => setState(() => _diamonds += delta),
+          onSubscribe: _handleSubscribePlus,
+          onBack: () => setState(() => _view = _diamondsReturnTo),
+          onWatchAd: () async {
+            final result = await _ads.showRewarded();
+            return result.rewarded ? result.amount : 0;
+          },
+        );
       case AppView.shop:
         if (report == null) {
           return OnboardingScreen(
@@ -340,9 +413,14 @@ class _MyAppState extends State<MyApp> {
           isPlusMember: _isPlusMember,
           onShowPlus: () => setState(() => _view = AppView.plus),
           onBack: () => setState(() => _view = AppView.forest),
+          diamonds: _diamonds,
+          onShowDiamonds: () => setState(() {
+            _diamondsReturnTo = AppView.shop;
+            _view = AppView.diamonds;
+          }),
           onDebugMaxCoins: _handleDebugMaxCoins,
           onDebugUnlockAll: _handleDebugUnlockAll,
-          onDebugGrantXp: _handleDebugGrantXp,
+          onDebugGrantXp: _handleDebugSimulateStreak,
         );
     }
   }
@@ -378,6 +456,63 @@ class _MyAppState extends State<MyApp> {
       _view = AppView.forest;
       _planStarted = true;
     });
+  }
+
+  /// "Keep this range-based snapshot" used to bounce straight back to the
+  /// result screen, which looked like a dead button. A range answer is still an
+  /// answer: turn it into a profile using the midpoint of each band and open
+  /// the app, exactly like the exact-numbers path does. The user can always
+  /// redo it precisely from the questionnaire later.
+  void _handleRangeSnapshot(RangeSnapshot snap) {
+    final income = switch (snap.income) {
+      IncomeRange.under2500 => 2000.0,
+      IncomeRange.from2500To5000 => 3750.0,
+      IncomeRange.from5000To8000 => 6500.0,
+      IncomeRange.over8000 => 9500.0,
+      IncomeRange.preferNotToSay => 4000.0,
+    };
+    final fixedShare = switch (snap.costs) {
+      FixedCostShareRange.underHalf => 0.35,
+      FixedCostShareRange.aboutHalf => 0.50,
+      FixedCostShareRange.overHalf => 0.65,
+      FixedCostShareRange.unsure => 0.50,
+      FixedCostShareRange.preferNotToSay => 0.50,
+    };
+    final fixed = (income * fixedShare).roundToDouble();
+    // A quarter of what is left, rounded to $50 so the target reads like a
+    // number a person would choose rather than a calculation.
+    final savings = (((income - fixed) * 0.25) / 50).round() * 50.0;
+
+    final goal = switch (snap.priority) {
+      PlanningPriority.breathingRoom => FinancialGoal.emergencyFund,
+      PlanningPriority.upcomingCost => FinancialGoal.saveForPurchase,
+      PlanningPriority.reduceSpending => FinancialGoal.reduceSpending,
+      PlanningPriority.debtOrganisation => FinancialGoal.debtControl,
+      PlanningPriority.explore => FinancialGoal.emergencyFund,
+    };
+    final risk = switch (snap.priority) {
+      PlanningPriority.breathingRoom ||
+      PlanningPriority.debtOrganisation =>
+        RiskLevel.cautious,
+      PlanningPriority.upcomingCost ||
+      PlanningPriority.reduceSpending =>
+        RiskLevel.steady,
+      PlanningPriority.explore => RiskLevel.balanced,
+    };
+    final pressure = switch (snap.costs) {
+      FixedCostShareRange.underHalf => SpendingPressure.low,
+      FixedCostShareRange.overHalf => SpendingPressure.high,
+      _ => SpendingPressure.medium,
+    };
+
+    _handleProfileSubmitted(FinanceProfile(
+      monthlyIncome: income,
+      fixedMonthlyExpenses: fixed,
+      monthlySavingsGoal: savings,
+      riskLevel: risk,
+      financialGoal: goal,
+      spendingPressure: pressure,
+    ));
   }
 
   void _startMoneyStyleQuiz() {
@@ -534,6 +669,7 @@ class _MyAppState extends State<MyApp> {
       report: report,
       date: DateTime.now(),
       spending: spending,
+      freezesAvailable: _freezes.available,
     );
 
     final beforeXp = _progression.totalXp;
@@ -544,15 +680,36 @@ class _MyAppState extends State<MyApp> {
 
     setState(() {
       _summary = result.summary;
+      if (result.freezesUsed > 0) {
+        _freezes = _freezes.copyWith(
+          available: _freezes.available - result.freezesUsed,
+        );
+      }
+      if (result.day.status == TreeStatus.healthy) _bankFreezeProgress();
       _recomputeProgression();
       earnedXp = _progression.totalXp - beforeXp;
       earnedCoins = _progression.coinBalance - beforeCoins;
       _lastEarnedSummary = '+$earnedXp XP, +$earnedCoins coins';
     });
 
-    // Celebrate only a day that actually stayed within budget — an
-    // over-budget day gets the restoration panel instead.
-    if (result.day.status == TreeStatus.healthy) {
+    if (result.freezesUsed > 0) {
+      final n = result.freezesUsed;
+      _showMessage(
+        n == 1
+            ? 'You missed a day. A streak freeze covered it — your '
+                '${_summary.currentStreak}-day streak is intact.'
+            : '$n streak freezes covered the days you missed. Your '
+                '${_summary.currentStreak}-day streak is intact.',
+      );
+    }
+
+    // Two celebrations exist and they must not stack. Levelling up is the
+    // bigger moment, so it wins; otherwise a within-budget day gets the
+    // ordinary check-in celebration. An over-budget day gets neither — it
+    // gets the restoration panel instead.
+    if (_progression.level.level > beforeLevel) {
+      _celebrateIfLevelled(beforeLevel, xp: earnedXp, coins: earnedCoins);
+    } else if (result.day.status == TreeStatus.healthy) {
       final context = _navigatorKey.currentContext;
       if (context != null) {
         showCelebrationDialog(
@@ -563,6 +720,34 @@ class _MyAppState extends State<MyApp> {
         );
       }
     }
+  }
+
+  /// Freezes are earned, not given: every [_freezeEarnEvery] healthy days
+  /// tops one back up. Must be called inside setState.
+  void _bankFreezeProgress() {
+    if (_freezes.isFull) {
+      _daysTowardFreeze = 0;
+      return;
+    }
+    _daysTowardFreeze++;
+    if (_daysTowardFreeze >= _freezeEarnEvery) {
+      _daysTowardFreeze = 0;
+      _freezes = _freezes.copyWith(available: _freezes.available + 1);
+    }
+  }
+
+  /// Keeps the freeze capacity in step with membership. Subscribing raises the
+  /// cap and hands over the extra freezes immediately — the perk should be
+  /// visible the moment it is paid for. Lapsing lowers the cap but never takes
+  /// back a freeze already held.
+  void _syncFreezeCapacity() {
+    final cap = _isPlusMember ? _plusFreezeCap : _freeFreezeCap;
+    if (cap == _freezes.capacity) return;
+    final gained = cap > _freezes.capacity ? cap - _freezes.capacity : 0;
+    _freezes = FreezeState(
+      available: (_freezes.available + gained).clamp(0, cap),
+      capacity: cap,
+    );
   }
 
   void _handleRestore(String recoveryNote) {
@@ -685,33 +870,115 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  /// Debug only: grant enough XP to cross the next level boundary, so the
-  /// level-up moment can be tested and rehearsed without waiting for real
-  /// check-ins. Hidden outside debug builds.
-  void _handleDebugGrantXp() {
+  /// Debug only: build a run of consecutive within-budget days.
+  ///
+  /// This replaces an earlier "grant XP" button that did not work. Two reasons
+  /// it could not:
+  ///   1. ProgressionEngine derives XP from the DAYS list; spendEvents only
+  ///      ever contribute coins. A synthetic XP event was silently ignored.
+  ///   2. The tree's size comes from ForestEngine's streak (1/2/3), not from
+  ///      the player level at all — so XP could never grow the tree.
+  ///
+  /// Feeding real days through the real engine fixes both: the streak grows the
+  /// tree, and the XP those days earn levels the player up for real.
+  void _handleDebugSimulateStreak() {
+    final report = _report;
+    if (report == null) return;
+
     final beforeLevel = _progression.level.level;
     final beforeXp = _progression.totalXp;
     final beforeCoins = _progression.coinBalance;
+
+    var days = _summary.days;
+    // Walk BACKWARDS from the earliest day we already have. Re-running over the
+    // same dates just overwrites them, which is why pressing this repeatedly
+    // used to do nothing after the first time.
+    final earliest = days.isEmpty
+        ? DateTime.now()
+        : days.map((d) => d.date).reduce((a, b) => a.isBefore(b) ? a : b);
+
+    for (var i = 1; i <= 7; i++) {
+      final result = _forestEngine.checkIn(
+        existingDays: days,
+        report: report,
+        date: earliest.subtract(Duration(days: i)),
+        spending: report.dailyBudget * 0.6, // comfortably under budget
+      );
+      days = result.summary.days;
+    }
+
     setState(() {
+      _summary = _forestEngine.summarize(
+        days,
+        progression: _progression,
+        shopState: _shopState,
+      );
+      _recomputeProgression();
+    });
+
+    _celebrateIfLevelled(beforeLevel,
+        xp: _progression.totalXp - beforeXp,
+        coins: _progression.coinBalance - beforeCoins);
+  }
+
+  /// Demo only: own everything and lay it out.
+  ///
+  /// Buying eleven animals and placing ten decorations by hand is two minutes
+  /// of clicking that nobody wants to watch in a three-minute pitch. This grants
+  /// the lot and arranges the homestead in one press. It writes state directly
+  /// rather than going through ShopService, so it deliberately bypasses coin
+  /// and level checks — which is exactly why it sits behind the dev PIN.
+  void _handleDebugFillFarm() {
+    final owned = <String>{
+      ..._shopState.ownedItemIds,
+      for (final item in kShopCatalog) item.id,
+    };
+
+    // Equip one of each category so skins and ground actually change.
+    final equipped = <ShopItemCategory, String>{..._shopState.equippedItemIds};
+    for (final category in ShopItemCategory.values) {
+      if (category == ShopItemCategory.animal) continue;
+      final pick = kShopCatalog.where((i) => i.category == category).toList();
+      if (pick.isNotEmpty) {
+        equipped[category] = pick.last.id; // the fanciest one
+      }
+    }
+
+    // Spread the decorations over the grid rather than stacking them.
+    var layout = _homeLayoutService.initialState();
+    final decor = kShopCatalog
+        .where((i) => i.category == ShopItemCategory.decoration)
+        .toList();
+    var slot = 0;
+    for (final item in decor) {
+      final row = (slot ~/ kHomeGridSize) % kHomeGridSize;
+      final col = slot % kHomeGridSize;
+      layout = _homeLayoutService.place(
+        state: layout,
+        itemId: item.id,
+        row: row,
+        col: col,
+      );
+      slot += 2; // leave a gap so it does not look like a wall
+    }
+
+    setState(() {
+      _shopState = ShopState(ownedItemIds: owned, equippedItemIds: equipped);
+      _homeLayout = layout;
+      _isPlusMember = true;
+      _diamonds = _diamonds < 500 ? 500 : _diamonds;
       _spendEvents.add(
         RewardEvent(
           date: DateTime.now(),
           type: RewardEventType.debugGrant,
-          xp:
-              _progression.level.xpForNextLevel -
-              _progression.level.xpIntoLevel +
-              5,
-          coins: 40,
-          description: 'Debug: grant XP to next level',
+          xp: 0,
+          coins: 5000,
+          description: 'Debug: demo setup',
         ),
       );
       _recomputeProgression();
     });
-    _celebrateIfLevelled(
-      beforeLevel,
-      xp: _progression.totalXp - beforeXp,
-      coins: _progression.coinBalance - beforeCoins,
-    );
+    _showMessage('Demo farm ready — everything owned and placed.');
   }
 
   void _handleDebugMaxCoins() {
@@ -730,12 +997,21 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleSubscribePlus() {
-    setState(() => _isPlusMember = true);
-    _showMessage('Plus activated (demo — no payment was taken).');
+    setState(() {
+      _isPlusMember = true;
+      _syncFreezeCapacity();
+    });
+    _showMessage(
+      'Plus activated (demo — no payment was taken). '
+      'You now hold ${_freezes.available} streak freezes.',
+    );
   }
 
   void _handleCancelPlus() {
-    setState(() => _isPlusMember = false);
+    setState(() {
+      _isPlusMember = false;
+      _syncFreezeCapacity();
+    });
     _showMessage('Plus membership cancelled.');
   }
 

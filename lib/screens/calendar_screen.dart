@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/day_checklist.dart';
+
 import '../models/forest_day.dart';
 import '../models/shop_item.dart';
 import '../services/item_visuals.dart';
 import '../widgets/app_nav_bar.dart';
 
-class CalendarScreen extends StatelessWidget {
+class CalendarScreen extends StatefulWidget {
   const CalendarScreen({
     super.key,
     required this.summary,
@@ -28,35 +30,57 @@ class CalendarScreen extends StatelessWidget {
   final VoidCallback onShowShop;
 
   @override
+  State<CalendarScreen> createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends State<CalendarScreen> {
+  /// Defaults to today so the checklist is useful the moment you arrive.
+  DateTime _selectedDate = DateTime.now();
+
+  @override
   Widget build(BuildContext context) {
+    final today = DateTime(
+        DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final sel = DateTime(
+        _selectedDate.year, _selectedDate.month, _selectedDate.day);
+    ForestDay? selectedDay;
+    for (final d in widget.summary.days) {
+      if (d.date.year == sel.year &&
+          d.date.month == sel.month &&
+          d.date.day == sel.day) {
+        selectedDay = d;
+        break;
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendar'),
         actions: [
           IconButton(
             tooltip: 'Shop',
-            onPressed: onShowShop,
+            onPressed: widget.onShowShop,
             icon: const Icon(Icons.store_outlined),
           ),
           IconButton(
             tooltip: 'Report',
-            onPressed: onShowReport,
+            onPressed: widget.onShowReport,
             icon: const Icon(Icons.description_outlined),
           ),
           IconButton(
             tooltip: 'Achievements',
-            onPressed: onShowAchievements,
+            onPressed: widget.onShowAchievements,
             icon: const Icon(Icons.emoji_events_outlined),
           ),
         ],
       ),
       bottomNavigationBar: AppNavBar(
         selectedIndex: 2,
-        onShowForest: onShowForest,
-        onShowSpending: onShowSpending,
+        onShowForest: widget.onShowForest,
+        onShowSpending: widget.onShowSpending,
         onShowCalendar: () {},
-        onShowHomestead: onShowHomestead,
-        onShowAchievements: onShowAchievements,
+        onShowHomestead: widget.onShowHomestead,
+        onShowAchievements: widget.onShowAchievements,
       ),
       body: SafeArea(
         child: Center(
@@ -65,7 +89,19 @@ class CalendarScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                ForestCalendar(summary: summary, shopState: shopState),
+                ForestCalendar(
+                  summary: widget.summary,
+                  shopState: widget.shopState,
+                  selectedDate: sel,
+                  onSelectDate: (d) => setState(() => _selectedDate = d),
+                ),
+                DayChecklist(
+                  date: sel,
+                  day: selectedDay,
+                  isToday: sel == today,
+                  isFuture: sel.isAfter(today),
+                  onCheckIn: sel == today ? widget.onShowForest : null,
+                ),
               ],
             ),
           ),
@@ -77,6 +113,8 @@ class CalendarScreen extends StatelessWidget {
 
 class ForestCalendar extends StatelessWidget {
   const ForestCalendar({
+    this.selectedDate,
+    this.onSelectDate,
     super.key,
     required this.summary,
     required this.shopState,
@@ -84,6 +122,10 @@ class ForestCalendar extends StatelessWidget {
 
   final ForestSummary summary;
   final ShopState shopState;
+
+  /// Currently selected day, highlighted in the grid.
+  final DateTime? selectedDate;
+  final ValueChanged<DateTime>? onSelectDate;
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +187,9 @@ class ForestCalendar extends StatelessWidget {
               crossAxisCount: 7,
               mainAxisSpacing: 6,
               crossAxisSpacing: 6,
-              childAspectRatio: 0.78,
+              // At a real phone width each cell is ~40pt wide; 0.78 left it
+              // 8pt short of the day number + tree + dot stack.
+              childAspectRatio: 0.66,
             ),
             itemBuilder: (context, index) {
               if (index < leadingEmptyCells) {
@@ -173,6 +217,9 @@ class ForestCalendar extends StatelessWidget {
                 treeLevel: recordedDay?.treeLevel ?? 0,
                 shopState: shopState,
                 isToday: _isSameDate(date, today),
+                isSelected:
+                    selectedDate != null && _isSameDate(date, selectedDate!),
+                onTap: onSelectDate == null ? null : () => onSelectDate!(date),
               );
             },
           ),
@@ -227,6 +274,8 @@ class _ForestDayCell extends StatelessWidget {
     required this.treeLevel,
     required this.shopState,
     required this.isToday,
+    this.onTap,
+    this.isSelected = false,
   });
 
   final DateTime date;
@@ -234,6 +283,8 @@ class _ForestDayCell extends StatelessWidget {
   final int treeLevel;
   final ShopState shopState;
   final bool isToday;
+  final VoidCallback? onTap;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -242,14 +293,21 @@ class _ForestDayCell extends StatelessWidget {
 
     return Tooltip(
       message: '${_dateKey(date)} ${_statusLabel(status)}',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
         decoration: BoxDecoration(
           color: _cellColor(status),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isToday ? const Color(0xff2f7d50) : const Color(0xffe5decf),
-            width: isToday ? 2 : 1,
+            color: isSelected
+                ? const Color(0xff173b2f)
+                : isToday
+                    ? const Color(0xff2f7d50)
+                    : const Color(0xffe5decf),
+            width: isSelected ? 2.5 : (isToday ? 2 : 1),
           ),
         ),
         child: Column(
@@ -265,15 +323,16 @@ class _ForestDayCell extends StatelessWidget {
             Icon(
               _treeIcon(status, treeLevel, shopState),
               key: Key('forest-tree-${status.name}-$dateKey'),
-              size: 24,
+              size: 20,
               color: color,
             ),
             Container(
-              width: 6,
-              height: 6,
+              width: 5,
+              height: 5,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -285,6 +344,8 @@ class _ForestDayCell extends StatelessWidget {
         return Icons.energy_savings_leaf_outlined;
       case TreeStatus.restored:
         return Icons.eco;
+      case TreeStatus.frozen:
+        return Icons.ac_unit;
       case TreeStatus.pending:
         return Icons.grass;
       case TreeStatus.healthy:
@@ -303,6 +364,8 @@ class _ForestDayCell extends StatelessWidget {
         return const Color(0xfff3eadf);
       case TreeStatus.restored:
         return const Color(0xffe8f5f3);
+      case TreeStatus.frozen:
+        return const Color(0xffe6eff7);
       case TreeStatus.pending:
         return const Color(0xfffaf8f1);
     }
@@ -316,6 +379,8 @@ class _ForestDayCell extends StatelessWidget {
         return const Color(0xff8a6a4f);
       case TreeStatus.restored:
         return const Color(0xff3f8f8a);
+      case TreeStatus.frozen:
+        return const Color(0xff4a7fa8);
       case TreeStatus.pending:
         return const Color(0xffc79a33);
     }
@@ -354,6 +419,8 @@ String _statusLabel(TreeStatus status) {
       return 'withered tree';
     case TreeStatus.restored:
       return 'restored tree';
+    case TreeStatus.frozen:
+      return 'frozen — streak held';
     case TreeStatus.pending:
       return 'pending';
   }

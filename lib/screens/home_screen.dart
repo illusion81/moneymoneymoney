@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../models/forest_day.dart';
@@ -7,12 +8,14 @@ import '../models/wealth_report.dart';
 import '../services/forest_engine.dart';
 import '../data/api_client.dart';
 import '../services/item_visuals.dart';
+import '../widgets/dev_gate.dart';
+import '../widgets/farm_scene.dart';
+import '../widgets/tree_view.dart';
 import '../widgets/app_nav_bar.dart';
 import '../widgets/money_style_reminder_card.dart';
 import 'connect_bank_screen.dart';
 import 'circle_screen.dart';
 import 'goals_screen.dart';
-import 'spending_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -23,6 +26,7 @@ class HomeScreen extends StatefulWidget {
     required this.shopState,
     required this.onCheckIn,
     required this.onRestore,
+    required this.freezes,
     required this.onShowReport,
     required this.onShowAchievements,
     required this.onShowShop,
@@ -34,6 +38,8 @@ class HomeScreen extends StatefulWidget {
     required this.onFetchTodaySpending,
     this.lastEarnedSummary,
     this.api,
+    this.onDebugSimulate,
+    this.onDebugFillFarm,
     this.onRetakeQuestionnaire,
     this.showMoneyStyleReminder = false,
     this.onResumeMoneyStyle,
@@ -49,8 +55,18 @@ class HomeScreen extends StatefulWidget {
   /// When supplied, the screen can link a bank and pull real spending
   /// instead of asking the user to type it.
   final ApiClient? api;
+
+  /// Debug: add another week of on-budget days. Wired to a FAB so the demo
+  /// can be driven from this screen instead of via the shop.
+  final VoidCallback? onDebugSimulate;
+  /// Debug: own and place everything, for the demo.
+  final VoidCallback? onDebugFillFarm;
   final void Function({required double spending}) onCheckIn;
   final void Function(String recoveryNote) onRestore;
+
+  /// Freezes held, and the cap. Shown so a missed day is never a surprise:
+  /// people should know they have a safety net *before* they need it.
+  final FreezeState freezes;
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
   final VoidCallback onShowShop;
@@ -79,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _recoveryNoteController = TextEditingController();
   String? _errorText;
   bool _bankConnected = false;
+  double? _adherence;
   _SpendingMode _spendingMode = _SpendingMode.manual;
   bool _bankLoading = false;
 
@@ -97,6 +114,12 @@ class _HomeScreenState extends State<HomeScreen> {
       final trusted = await api.dataTrusted();
       if (mounted) setState(() => _bankConnected = trusted);
     } catch (_) {}
+    try {
+      final plan = await api.plan();
+      if (mounted) setState(() => _adherence = plan.adherence);
+    } catch (_) {
+      // No profile yet, or backend down — fall back to streak-only growth.
+    }
   }
 
   Future<void> _openConnectBank() async {
@@ -118,6 +141,40 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// A labelled block of menu entries. Returns nothing at all when every
+  /// entry in the group is unavailable, so an empty heading never appears.
+  List<PopupMenuEntry<VoidCallback>> _menuGroup(
+    BuildContext context,
+    String heading,
+    List<(IconData, String, VoidCallback)> entries,
+  ) {
+    if (entries.isEmpty) return const [];
+    return [
+      PopupMenuItem<VoidCallback>(
+        enabled: false,
+        height: 32,
+        child: Text(
+          heading.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ),
+      for (final (icon, label, action) in entries)
+        PopupMenuItem<VoidCallback>(
+          value: action,
+          // PopupMenuItem hands its child a bounded width, so a long label
+          // like "Retake questionnaire" overflows unless it can shrink.
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 20),
+            const SizedBox(width: 12),
+            Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+          ]),
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final latestDay = widget.summary.days.isEmpty
@@ -127,9 +184,52 @@ class _HomeScreenState extends State<HomeScreen> {
     final statusColor = _statusColor(latestDay);
 
     return Scaffold(
+      floatingActionButton: !kDebugMode
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (widget.onDebugFillFarm != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: FloatingActionButton.extended(
+                      heroTag: 'fill',
+                      onPressed: () async {
+                        if (await DevGate.ensureUnlocked(context)) {
+                          widget.onDebugFillFarm!();
+                        }
+                      },
+                      icon: Icon(DevGate.isUnlocked
+                          ? Icons.auto_awesome
+                          : Icons.lock_outline),
+                      label: const Text('Demo'),
+                    ),
+                  ),
+                if (widget.onDebugSimulate != null)
+                  FloatingActionButton.extended(
+                    heroTag: 'sim',
+                    onPressed: () async {
+                      // Gated so nobody fast-forwards the farm mid-pitch.
+                      if (await DevGate.ensureUnlocked(context)) {
+                        widget.onDebugSimulate!();
+                      }
+                    },
+                    icon: Icon(DevGate.isUnlocked
+                        ? Icons.fast_forward
+                        : Icons.lock_outline),
+                    label: const Text('+1 week'),
+                  ),
+              ],
+            ),
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
+          // Only two things stay as their own icon: the membership badge
+          // (it doubles as status — gold when you are a member) and the shop,
+          // which is where the currency you earn actually goes. Everything
+          // else was eight icons of undifferentiated grey; it now lives in one
+          // grouped menu.
           IconButton(
             key: const Key('get-plus-button'),
             icon: Icon(
@@ -141,63 +241,59 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: widget.isPlusMember ? 'Plus member' : 'Get Plus',
             onPressed: widget.onShowPlus,
           ),
-          if (widget.api != null)
-            IconButton(
-              icon: const Icon(Icons.groups_outlined),
-              tooltip: 'Your circle',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => CircleScreen(api: widget.api!),
-              )),
-            ),
-          if (widget.api != null)
-            IconButton(
-              icon: const Icon(Icons.savings_outlined),
-              tooltip: 'Saving for something',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => GoalsScreen(api: widget.api!),
-              )),
-            ),
-          if (widget.api != null)
-            IconButton(
-              icon: const Icon(Icons.receipt_long_outlined),
-              tooltip: 'Where your money went',
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SpendingScreen(api: widget.api!),
-                ),
-              ),
-            ),
-          if (widget.api != null)
-            IconButton(
-              icon: Icon(
-                _bankConnected
-                    ? Icons.account_balance
-                    : Icons.account_balance_outlined,
-              ),
-              tooltip: _bankConnected ? 'Bank connected' : 'Connect your bank',
-              onPressed: _openConnectBank,
-            ),
           IconButton(
             tooltip: 'Shop',
             onPressed: widget.onShowShop,
             icon: const Icon(Icons.store_outlined),
           ),
-          IconButton(
-            tooltip: 'Report',
-            onPressed: widget.onShowReport,
-            icon: const Icon(Icons.description_outlined),
-          ),
-          if (widget.onRetakeQuestionnaire != null)
-            IconButton(
-              key: const Key('retake-questionnaire-button'),
-              tooltip: 'Retake questionnaire',
-              onPressed: widget.onRetakeQuestionnaire,
-              icon: const Icon(Icons.fact_check_outlined),
-            ),
-          IconButton(
-            tooltip: 'Achievements',
-            onPressed: widget.onShowAchievements,
-            icon: const Icon(Icons.emoji_events_outlined),
+          PopupMenuButton<VoidCallback>(
+            key: const Key('home-more-menu'),
+            tooltip: 'More',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (action) => action(),
+            itemBuilder: (context) => [
+              ..._menuGroup(context, 'Your money', [
+                if (widget.api != null)
+                  (
+                    _bankConnected
+                        ? Icons.account_balance
+                        : Icons.account_balance_outlined,
+                    _bankConnected ? 'Bank connected' : 'Connect your bank',
+                    _openConnectBank,
+                  ),
+                if (widget.api != null)
+                  (
+                    Icons.savings_outlined,
+                    'Saving for something',
+                    () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => GoalsScreen(api: widget.api!),
+                        )),
+                  ),
+                (Icons.description_outlined, 'Your report', widget.onShowReport),
+                if (widget.onRetakeQuestionnaire != null)
+                  (
+                    Icons.fact_check_outlined,
+                    'Retake questionnaire',
+                    widget.onRetakeQuestionnaire!,
+                  ),
+              ]),
+              if (widget.api != null) const PopupMenuDivider(),
+              ..._menuGroup(context, 'People', [
+                if (widget.api != null)
+                  (
+                    Icons.groups_outlined,
+                    'Your circle',
+                    () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => CircleScreen(
+                            api: widget.api!,
+                            streak: widget.summary.currentStreak,
+                            level: widget.progression.level.level,
+                            adherence: localAdherence,
+                          ),
+                        )),
+                  ),
+              ]),
+            ],
           ),
         ],
       ),
@@ -214,7 +310,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              // Extra bottom room so the debug FABs never sit on top of
+              // something the user needs to read or tap.
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
               children: [
                 _ProgressionHeader(
                   progression: widget.progression,
@@ -237,18 +335,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Column(
                     children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: groundColor(widget.shopState),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          _treeIcon(latestDay, widget.shopState),
-                          size: 112,
-                          color: statusColor,
-                        ),
+                      FarmScene(
+                        // Growth is half streak, half plan adherence — the
+                        // tree must answer to the budget, not just to logins.
+                        growth: _farmGrowth(latestDay),
+                        health: _treeHealth(latestDay),
+                        skinId: widget.shopState
+                            .equippedItemIds[ShopItemCategory.treeSkin],
+                        skyColor: skyColor(widget.shopState),
+                        groundColor: groundColor(widget.shopState),
+                        // Animals are bought in the shop with coins you earn
+                        // by holding your plan — they do not appear for free.
+                        animals: widget.shopState.ownedItemIds
+                            .map((id) => kShopCatalog
+                                .where((i) => i.id == id)
+                                .firstOrNull)
+                            .whereType<ShopItem>()
+                            .where((i) => i.category == ShopItemCategory.animal)
+                            .map((i) => i.asset!)
+                            .toList(),
+                        // One tree, then another every three levels — the
+                        // forest grows as you do.
+                        treeCount: 1 + (widget.progression.level.level ~/ 3),
+                        seed: widget.summary.days.length + 7,
+                        height: 280,
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -294,6 +404,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   healthy: widget.summary.healthyTreeCount,
                   withered: widget.summary.witheredTreeCount,
                 ),
+                const SizedBox(height: 12),
+                _FreezeBar(
+                  freezes: widget.freezes,
+                  isPlusMember: widget.isPlusMember,
+                  onShowPlus: widget.onShowPlus,
+                ),
+                if (latestDay?.status == TreeStatus.frozen) ...[
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xffe6eff7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.ac_unit, color: Color(0xff4a7fa8)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'You missed a day and a freeze covered it. Your '
+                          '${widget.summary.currentStreak}-day streak is still '
+                          'standing — check in today and it keeps growing.',
+                        ),
+                      ),
+                    ]),
+                  ),
+                ],
                 if (latestDay?.status == TreeStatus.withered) ...[
                   const SizedBox(height: 18),
                   _RestorationPanel(
@@ -436,6 +573,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'Withered tree';
       case TreeStatus.restored:
         return 'Restored tree';
+      case TreeStatus.frozen:
+        return 'Streak frozen';
       case TreeStatus.pending:
       case null:
         return 'Ready to grow';
@@ -450,12 +589,56 @@ class _HomeScreenState extends State<HomeScreen> {
         return const Color(0xff8a6a4f);
       case TreeStatus.restored:
         return const Color(0xff3f8f8a);
+      case TreeStatus.frozen:
+        return const Color(0xff4a7fa8);
       case TreeStatus.pending:
       case null:
         return const Color(0xffc79a33);
     }
   }
 
+  /// 0..1. Half of it is the check-in streak, half is how closely they are
+  /// holding their actual budget. Streak alone would mean the tree rewards
+  /// opening the app, which is not the product's claim.
+  /// Share of recorded days that stayed within budget.
+  ///
+  /// The backend's adherence comes from bank transactions, which never change
+  /// while you play — so it sat at 45% no matter what you did, and your rank
+  /// could never move. This is the number the app actually knows.
+  double? get localAdherence {
+    final days = widget.summary.days;
+    if (days.isEmpty) return null;
+    final kept = days
+        .where((d) =>
+            d.status == TreeStatus.healthy || d.status == TreeStatus.restored)
+        .length;
+    return kept / days.length;
+  }
+
+  double _farmGrowth(ForestDay? day) {
+    // Three inputs so the farm keeps visibly growing well past the first week:
+    //   streak    — caps at 7 days, gets you started
+    //   adherence — how closely the real budget is being held
+    //   level     — long-run progress, keeps climbing after the streak maxes
+    final streakPart = (widget.summary.currentStreak / 7).clamp(0.0, 1.0);
+    final adherencePart = _adherence ?? streakPart;
+    final levelPart = (widget.progression.level.level / 10).clamp(0.0, 1.0);
+    return (streakPart * 0.35 + adherencePart * 0.3 + levelPart * 0.35)
+        .clamp(0.0, 1.0);
+  }
+
+  TreeHealth _treeHealth(ForestDay? day) => switch (day?.status) {
+        TreeStatus.withered => TreeHealth.withered,
+        TreeStatus.restored => TreeHealth.restored,
+        TreeStatus.healthy => TreeHealth.healthy,
+        // A frozen day means the tree was held, not harmed — it should look
+        // alive, because that is the whole promise of the freeze.
+        TreeStatus.frozen => TreeHealth.healthy,
+        _ => TreeHealth.pending,
+      };
+
+  // Kept for the shop preview, which still shows icons.
+  // ignore: unused_element
   IconData _treeIcon(ForestDay? day, ShopState shopState) {
     if (day?.status == TreeStatus.withered) {
       return Icons.energy_savings_leaf_outlined;
@@ -689,6 +872,58 @@ class _MetricTile extends StatelessWidget {
           Text(label),
         ],
       ),
+    );
+  }
+}
+
+/// The safety net, shown before it is needed. A habit app's worst moment is
+/// the day after you miss one — knowing a freeze is sitting there is what
+/// stops people deleting the app instead of opening it.
+class _FreezeBar extends StatelessWidget {
+  const _FreezeBar({
+    required this.freezes,
+    required this.isPlusMember,
+    required this.onShowPlus,
+  });
+
+  final FreezeState freezes;
+  final bool isPlusMember;
+  final VoidCallback onShowPlus;
+
+  @override
+  Widget build(BuildContext context) {
+    final has = freezes.available > 0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: has ? const Color(0xffeef4fa) : const Color(0xfff5f3ee),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(children: [
+        Icon(
+          has ? Icons.ac_unit : Icons.ac_unit_outlined,
+          size: 20,
+          color: has ? const Color(0xff4a7fa8) : const Color(0xff9a968c),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            has
+                ? 'Streak freezes: ${freezes.available} of ${freezes.capacity}. '
+                    'Miss a day and one covers you automatically.'
+                : 'No streak freezes left. Earn one back by checking in.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+        if (!isPlusMember) ...[
+          const SizedBox(width: 8),
+          TextButton(
+            key: const Key('freeze-upgrade'),
+            onPressed: onShowPlus,
+            child: const Text('Hold 3'),
+          ),
+        ],
+      ]),
     );
   }
 }

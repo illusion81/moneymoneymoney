@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../models/finance_profile.dart';
 import '../services/profile_suggestions.dart';
 import '../services/risk_assessment.dart';
+import '../widgets/dev_gate.dart';
 import '../widgets/money_style_reminder_card.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -81,9 +83,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  /// A believable student profile: enough income to have choices, enough
+  /// fixed cost to make the budget bite, and a savings goal that is reachable
+  /// but not automatic. Deliberately not round numbers — round numbers look
+  /// like placeholder data to anyone paying attention.
+  static const _demoProfile = FinanceProfile(
+    monthlyIncome: 3200,
+    fixedMonthlyExpenses: 1450,
+    monthlySavingsGoal: 450,
+    riskLevel: RiskLevel.steady,
+    financialGoal: FinancialGoal.saveForPurchase,
+    spendingPressure: SpendingPressure.medium,
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Demo aid: the questionnaire is six fields and three dropdowns, which is
+      // thirty seconds you do not have on stage. PIN-gated like the other dev
+      // shortcuts so a judge poking at the app can't skip their own answers.
+      floatingActionButton: !kDebugMode
+          ? null
+          : FloatingActionButton.extended(
+              heroTag: 'demo-profile',
+              onPressed: () async {
+                if (!await DevGate.ensureUnlocked(context)) return;
+                widget.onProfileSubmitted(_demoProfile);
+              },
+              icon: Icon(
+                  DevGate.isUnlocked ? Icons.bolt : Icons.lock_outline),
+              label: const Text('Fill survey'),
+            ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

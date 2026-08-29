@@ -1,6 +1,6 @@
 import 'progression.dart';
 
-enum ShopItemCategory { treeSkin, ground, sky, decoration }
+enum ShopItemCategory { treeSkin, ground, sky, decoration, animal }
 
 class ShopItem {
   const ShopItem({
@@ -12,6 +12,7 @@ class ShopItem {
     required this.requiredLevel,
     required this.isDefault,
     this.plusOnly = false,
+    this.asset,
   });
 
   final String id;
@@ -25,6 +26,9 @@ class ShopItem {
   /// Premium item: buying it requires an active Plus membership on top of
   /// the usual coin and level cost.
   final bool plusOnly;
+
+  /// Artwork file stem, e.g. 'cow' -> assets/animals/cow.png.
+  final String? asset;
 }
 
 class ShopState {
@@ -60,7 +64,39 @@ class PurchaseResult {
 
 /// The hard-coded shop catalog. Default items are owned and equipped from
 /// the start at price 0.
+/// Animals live on the farm. You buy them with coins earned by holding your
+/// plan — they do not just appear, which is the point of having an economy.
+const List<ShopItem> _kAnimals = [
+  ShopItem(id: 'animal-chicken', name: 'Chicken', description: 'First resident of any decent farm.', category: ShopItemCategory.animal, price: 40, requiredLevel: 1, isDefault: false, asset: 'chiken'),
+  ShopItem(id: 'animal-rabbit', name: 'Rabbit', description: 'Quiet, tidy, eats your clover.', category: ShopItemCategory.animal, price: 60, requiredLevel: 1, isDefault: false, asset: 'rabbit'),
+  ShopItem(id: 'animal-cat', name: 'Cat', description: 'Supervises. Contributes nothing.', category: ShopItemCategory.animal, price: 90, requiredLevel: 2, isDefault: false, asset: 'cat'),
+  ShopItem(id: 'animal-dog', name: 'Dog', description: 'Keeps the others honest.', category: ShopItemCategory.animal, price: 120, requiredLevel: 2, isDefault: false, asset: 'dog'),
+  ShopItem(id: 'animal-pig', name: 'Pig', description: 'Surprisingly good company.', category: ShopItemCategory.animal, price: 160, requiredLevel: 3, isDefault: false, asset: 'pig'),
+  ShopItem(id: 'animal-goat', name: 'Goat', description: 'Will eat a subscription reminder.', category: ShopItemCategory.animal, price: 200, requiredLevel: 3, isDefault: false, asset: 'goat'),
+  ShopItem(id: 'animal-cow', name: 'Cow', description: 'The sign you have properly arrived.', category: ShopItemCategory.animal, price: 300, requiredLevel: 4, isDefault: false, asset: 'cow'),
+  ShopItem(id: 'animal-fox', name: 'Fox', description: 'Turned up uninvited. Stayed.', category: ShopItemCategory.animal, price: 350, requiredLevel: 5, isDefault: false, asset: 'fox'),
+  // Plus-only, and deliberately available from level 1 — a membership that
+  // unlocks nothing until level 8 is a membership that sells nothing.
+  ShopItem(id: 'animal-panda', name: 'Panda', description: 'Plus members only.', category: ShopItemCategory.animal, price: 0, requiredLevel: 1, isDefault: false, plusOnly: true, asset: 'panda'),
+  ShopItem(id: 'animal-penguin', name: 'Penguin', description: 'Plus members only.', category: ShopItemCategory.animal, price: 0, requiredLevel: 1, isDefault: false, plusOnly: true, asset: 'penguin'),
+  ShopItem(id: 'animal-tiger', name: 'Tiger', description: 'Plus members only. Ignore the goat.', category: ShopItemCategory.animal, price: 0, requiredLevel: 2, isDefault: false, plusOnly: true, asset: 'tiger'),
+  ShopItem(id: 'animal-elephant', name: 'Elephant', description: 'Plus members only.', category: ShopItemCategory.animal, price: 0, requiredLevel: 3, isDefault: false, plusOnly: true, asset: 'elephant'),
+];
+
+/// More things to put on the homestead. A yard with four items looks unfinished
+/// no matter how well each one is drawn.
+const List<ShopItem> _kMoreDecor = [
+  ShopItem(id: 'deco-pond', name: 'Pond', description: 'Still water, a lily pad, no maintenance.', category: ShopItemCategory.decoration, price: 180, requiredLevel: 2, isDefault: false),
+  ShopItem(id: 'deco-fence', name: 'Picket Fence', description: 'Marks the edge of what is yours.', category: ShopItemCategory.decoration, price: 140, requiredLevel: 2, isDefault: false),
+  ShopItem(id: 'deco-vegetable-patch', name: 'Vegetable Patch', description: 'Cheaper than the delivery app.', category: ShopItemCategory.decoration, price: 220, requiredLevel: 3, isDefault: false),
+  ShopItem(id: 'deco-signpost', name: 'Signpost', description: 'Points at where you are heading.', category: ShopItemCategory.decoration, price: 120, requiredLevel: 2, isDefault: false),
+  ShopItem(id: 'deco-lamp-post', name: 'Lamp Post', description: 'Keeps the yard warm after dark.', category: ShopItemCategory.decoration, price: 260, requiredLevel: 4, isDefault: false),
+  ShopItem(id: 'deco-windmill', name: 'Windmill', description: 'Plus members only. Turns whether or not anyone is watching.', category: ShopItemCategory.decoration, price: 0, requiredLevel: 3, isDefault: false, plusOnly: true),
+];
+
 const List<ShopItem> kShopCatalog = [
+  ..._kAnimals,
+  ..._kMoreDecor,
   ShopItem(
     id: 'tree-classic-oak',
     name: 'Classic Oak',

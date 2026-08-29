@@ -1,46 +1,308 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="Wealth Forest — a forest that grows from what you actually spend.">
 
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="moneymoneymoney">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Wealth Forest">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>moneymoneymoney</title>
+  <title>Wealth Forest</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /*
+      Presentation shell. Two hard rules learned the painful way:
+
+      1. NEVER put a CSS transform on the element Flutter renders into, or on
+         any ancestor of it. Flutter converts browser pointer coordinates using
+         the untransformed box, so a scaled frame means every tap lands in the
+         wrong place — the app looks frozen. The phone is sized with vh instead.
+
+      2. Nothing may sit ON TOP of the app. The notch used to overlap the
+         AppBar title. The status strip and home bar are now their own rows
+         above and below the app, so the app owns every pixel it is given.
+    */
+    :root { color-scheme: light; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #f6f4ee;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 64px;
+    }
+
+    #phone { display: contents; }   /* no frame by default (phones) */
+
+    #screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .strip { display: none; }
+
+    /* Flutter renders here. It must stay untransformed. */
+    #app {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      background: #f6f4ee;
+    }
+
+    #pitch { display: none; }
+
+    /* ------------------------------------------------------ desktop frame */
+    @media (min-width: 900px) and (min-height: 640px) {
+      body {
+        background: radial-gradient(1100px 640px at 22% -10%, #ffffff 0%, #eceadf 55%, #e3e0d3 100%);
+      }
+
+      #phone {
+        display: block;
+        position: relative;
+        /* Sized off the viewport so it never needs a transform to fit. */
+        height: min(844px, calc(100vh - 56px));
+        aspect-ratio: 390 / 844;
+        background: #0d0d0f;
+        border-radius: 54px;
+        padding: 11px;
+        box-shadow:
+          0 2px 3px rgba(0,0,0,.35),
+          0 42px 70px -22px rgba(0,0,0,.45),
+          inset 0 0 0 2px #3c3c42;
+      }
+
+      #screen {
+        border-radius: 43px;
+        overflow: hidden;
+        background: #000;
+      }
+
+      /* Black rows around the app — the app never renders under them. */
+      .strip {
+        display: block;
+        position: relative;
+        flex: 0 0 auto;
+        background: #000;
+      }
+      .strip.top    { height: 34px; }
+      .strip.bottom { height: 22px; }
+
+      .strip.top::after {          /* dynamic island, inside the black row */
+        content: '';
+        position: absolute;
+        top: 7px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 104px;
+        height: 26px;
+        border-radius: 14px;
+        background: #17171b;
+      }
+
+      .strip.bottom::after {       /* home indicator */
+        content: '';
+        position: absolute;
+        bottom: 7px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 130px;
+        height: 5px;
+        border-radius: 3px;
+        background: rgba(255,255,255,.55);
+      }
+
+      .btn {
+        position: absolute;
+        width: 3px;
+        background: #2a2a30;
+        border-radius: 3px;
+      }
+      .btn.silent { left: -3px;  top: 15%; height: 3.4%; }
+      .btn.up     { left: -3px;  top: 22%; height: 7%;   }
+      .btn.down   { left: -3px;  top: 31%; height: 7%;   }
+      .btn.power  { right: -3px; top: 25%; height: 11%;  }
+
+      #pitch {
+        display: block;
+        max-width: 330px;
+        color: #2c3a33;
+      }
+      #pitch h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.14;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+      }
+      #pitch p {
+        margin: 0 0 14px;
+        font-size: 15px;
+        line-height: 1.55;
+        color: #55635c;
+      }
+      #pitch .tag {
+        display: inline-block;
+        padding: 5px 11px;
+        border-radius: 999px;
+        background: #e4efe6;
+        color: #2f7d50;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+      }
+
+      #qr {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 22px;
+        padding: 14px;
+        background: #fff;
+        border: 1px solid #e0ddd0;
+        border-radius: 14px;
+        max-width: 300px;
+      }
+      #qr canvas, #qr img { display: block; width: 96px; height: 96px; }
+      #qr .label { font-size: 13px; line-height: 1.45; color: #55635c; }
+      #qr .label b { display: block; color: #2c3a33; margin-bottom: 3px; font-size: 14px; }
+      #qr.hidden { display: none; }
+    }
+
+    /* Short laptop screens: keep the phone, drop the copy. */
+    @media (min-width: 900px) and (max-height: 820px) {
+      #pitch h1 { font-size: 26px; }
+      #pitch p:nth-of-type(2) { display: none; }
+    }
+    @media (min-width: 1100px) { #stage { gap: 80px; } }
+
+    /* ---------------------------------------------------------- loading */
+    #loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: #f6f4ee;
+      color: #55635c;
+      font-size: 13px;
+      z-index: 20;
+      transition: opacity .35s ease;
+    }
+    #loading.gone { opacity: 0; pointer-events: none; }
+    #loading .spinner {
+      width: 26px; height: 26px;
+      border: 3px solid #dcd8c9;
+      border-top-color: #2f7d50;
+      border-radius: 50%;
+      animation: spin 900ms linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="stage">
+    <div id="pitch">
+      <span class="tag">Weekend of Startups 2026</span>
+      <h1>A forest that grows from what you actually spend.</h1>
+      <p>Connect a bank or drop in a statement. Every day you hold your budget,
+         your tree grows — checked against real transactions, not against what
+         you typed in.</p>
+      <p>Other habit apps trust whatever you tell them. This one checks.</p>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
-  <script src="flutter_bootstrap.js" async></script>
+      <div id="qr" class="hidden">
+        <div id="qr-code"></div>
+        <div class="label">
+          <b>Scan to try it</b>
+          <span id="qr-url"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="phone">
+      <span class="btn silent"></span>
+      <span class="btn up"></span>
+      <span class="btn down"></span>
+      <span class="btn power"></span>
+      <div id="screen">
+        <div class="strip top"></div>
+        <div id="app">
+          <div id="loading">
+            <div class="spinner"></div>
+            <div>Planting…</div>
+          </div>
+        </div>
+        <div class="strip bottom"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR for judges to open it on their own phone. Fails silently offline. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    (function () {
+      var host = location.hostname;
+      // A localhost QR would send a judge's phone to their own machine.
+      if (host === 'localhost' || host === '127.0.0.1') return;
+      if (typeof QRCode === 'undefined') return;
+      try {
+        new QRCode(document.getElementById('qr-code'), {
+          text: location.origin,
+          width: 96,
+          height: 96,
+          colorDark: '#173b2f',
+          colorLight: '#ffffff',
+        });
+        document.getElementById('qr-url').textContent =
+          location.origin.replace(/^https?:\/\//, '');
+        document.getElementById('qr').classList.remove('hidden');
+      } catch (e) { /* no QR, no harm */ }
+    })();
+  </script>
+
+  <script>
+    {{flutter_js}}
+    {{flutter_build_config}}
+
+    _flutter.loader.load({
+      onEntrypointLoaded: async function (engineInitializer) {
+        const appRunner = await engineInitializer.initializeEngine({
+          hostElement: document.querySelector('#app'),
+        });
+        const loading = document.querySelector('#loading');
+        if (loading) {
+          loading.classList.add('gone');
+          setTimeout(function () { loading.remove(); }, 400);
+        }
+        await appRunner.runApp();
+      }
+    });
+  </script>
 </body>
 </html>

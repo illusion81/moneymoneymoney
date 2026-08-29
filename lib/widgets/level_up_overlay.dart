@@ -41,7 +41,7 @@ class LevelUpOverlay extends StatefulWidget {
         barrierLabel: 'Level up',
         barrierColor: Colors.black54,
         transitionDuration: const Duration(milliseconds: 220),
-        pageBuilder: (ctx, _, __) => LevelUpOverlay(
+        pageBuilder: (ctx, _, _) => LevelUpOverlay(
           newLevel: newLevel,
           xpGained: xpGained,
           coinsGained: coinsGained,
