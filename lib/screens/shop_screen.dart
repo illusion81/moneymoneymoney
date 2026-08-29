@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../demo_flags.dart';
-
-import '../widgets/dev_gate.dart';
-
 import '../models/progression.dart';
 import '../models/shop_item.dart';
 import '../services/item_visuals.dart';
@@ -21,9 +17,6 @@ class ShopScreen extends StatefulWidget {
     required this.onShowPlus,
     this.diamonds = 0,
     this.onShowDiamonds,
-    this.onDebugMaxCoins,
-    this.onDebugUnlockAll,
-    this.onDebugGrantXp,
   });
 
   final ProgressionState progression;
@@ -43,38 +36,17 @@ class ShopScreen extends StatefulWidget {
   final int diamonds;
   final VoidCallback? onShowDiamonds;
 
-  /// Testing aids, only ever shown in debug builds (gated by [kDemoTools])
-  /// and only while the user switches debug mode on — never real
-  /// user-facing features.
-  final VoidCallback? onDebugMaxCoins;
-
-  /// Marks every catalog item as owned, bypassing price and level gates.
-  final VoidCallback? onDebugUnlockAll;
-
-  /// Debug: jump to the next level so the level-up moment can be rehearsed.
-  final VoidCallback? onDebugGrantXp;
-
   @override
   State<ShopScreen> createState() => _ShopScreenState();
 }
 
 class _ShopScreenState extends State<ShopScreen> {
-  /// Debug actions stay hidden until explicitly switched on, so a normal
-  /// play-through can't stumble into free coins.
-  bool _debugMode = false;
-
   @override
   Widget build(BuildContext context) {
     final shopService = ShopService();
     final progression = widget.progression;
     final shopState = widget.shopState;
     final onBack = widget.onBack;
-    final debugMaxCoins = widget.onDebugMaxCoins;
-    final debugUnlockAll = widget.onDebugUnlockAll;
-    final debugGrantXp = widget.onDebugGrantXp;
-    final hasDebugActions =
-        debugMaxCoins != null || debugUnlockAll != null || debugGrantXp != null;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Forest Shop'),
@@ -83,45 +55,6 @@ class _ShopScreenState extends State<ShopScreen> {
           onPressed: onBack,
           icon: const Icon(Icons.arrow_back),
         ),
-        actions: [
-          if (kDemoTools && hasDebugActions)
-            IconButton(
-              key: const Key('debug-mode-toggle'),
-              tooltip: _debugMode
-                  ? 'Turn debug mode off'
-                  : 'Turn debug mode on',
-              onPressed: () => setState(() => _debugMode = !_debugMode),
-              icon: Icon(
-                _debugMode
-                    ? Icons.developer_mode
-                    : Icons.developer_mode_outlined,
-                color: _debugMode ? const Color(0xffc79a33) : null,
-              ),
-            ),
-          if (kDemoTools && _debugMode && debugUnlockAll != null)
-            IconButton(
-              key: const Key('debug-unlock-all-button'),
-              tooltip: 'Debug: unlock all items',
-              onPressed: debugUnlockAll,
-              icon: const Icon(Icons.lock_open_outlined),
-            ),
-          if (kDemoTools && _debugMode && debugGrantXp != null)
-            OutlinedButton.icon(
-              key: const Key('debug-grant-xp'),
-              icon: const Icon(Icons.bolt),
-              label: const Text('Simulate a 7-day streak'),
-              onPressed: () async {
-                if (await DevGate.ensureUnlocked(context)) debugGrantXp();
-              },
-            ),
-          if (kDemoTools && _debugMode && debugMaxCoins != null)
-            IconButton(
-              key: const Key('debug-max-coins-button'),
-              tooltip: 'Debug: max coins',
-              onPressed: debugMaxCoins,
-              icon: const Icon(Icons.bug_report_outlined),
-            ),
-        ],
       ),
       body: SafeArea(
         child: Center(
