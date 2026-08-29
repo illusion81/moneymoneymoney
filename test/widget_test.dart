@@ -125,7 +125,7 @@ void main() {
   });
 
   Future<void> startPlan(WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboardingInitially: true));
 
     await tester.enterText(find.byKey(const Key('income-field')), '6000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
@@ -136,18 +136,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('first app screen shows the questionnaire', (tester) async {
+  testWidgets('first app screen earns trust before asking for numbers', (tester) async {
     await tester.pumpWidget(const MyApp());
 
-    expect(find.text('Money Profile'), findsOneWidget);
-    expect(find.text('Monthly income'), findsOneWidget);
-    expect(find.text('Generate Report'), findsOneWidget);
+    expect(find.text('Discover Your Money Style'), findsOneWidget);
+    expect(find.textContaining('2–3 minutes'), findsOneWidget);
+    expect(find.text('Monthly income'), findsNothing);
   });
 
   testWidgets('valid questionnaire submission shows generated report', (
     tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboardingInitially: true));
 
     await tester.enterText(find.byKey(const Key('income-field')), '6000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
@@ -191,7 +191,7 @@ void main() {
     await tester.tap(find.byKey(const Key('retake-questionnaire-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Money Profile'), findsOneWidget);
+    expect(find.text('Build an exact-number plan'), findsOneWidget);
     expect(find.text('Generate Report'), findsOneWidget);
   });
 

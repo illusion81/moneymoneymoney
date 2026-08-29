@@ -51,9 +51,10 @@ enum AppView {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, this.apiClient, this.moneyStyleStore});
+  const MyApp({super.key, this.apiClient, this.moneyStyleStore, this.showOnboardingInitially = false});
   final ApiClient? apiClient;
   final MoneyStyleStore? moneyStyleStore;
+  final bool showOnboardingInitially;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -83,13 +84,11 @@ class _MyAppState extends State<MyApp> {
   late ShopState _shopState;
   late HomeLayoutState _homeLayout;
   final List<RewardEvent> _spendEvents = [];
-  AppView _view = AppView.moneyStyleFlow;
+  late AppView _view;
   String? _lastEarnedSummary;
   bool _planStarted = false;
 
   _MyAppState() {
-    _apiClient = widget.apiClient ?? ApiClient();
-    _moneyStyleStore = widget.moneyStyleStore ?? SharedPreferencesMoneyStyleRepository();
     _shopState = _shopService.initialState();
     _homeLayout = _homeLayoutService.initialState();
     if (kDebugMode) {
@@ -110,6 +109,14 @@ class _MyAppState extends State<MyApp> {
       achievements: const [],
       spendEvents: _spendEvents,
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _apiClient = widget.apiClient ?? ApiClient();
+    _moneyStyleStore = widget.moneyStyleStore ?? SharedPreferencesMoneyStyleRepository();
+    _view = widget.showOnboardingInitially ? AppView.onboarding : AppView.moneyStyleFlow;
   }
 
   @override
@@ -185,7 +192,7 @@ class _MyAppState extends State<MyApp> {
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
           onRetakeQuestionnaire: () =>
-              setState(() => _view = AppView.onboarding),
+              setState(() => _view = widget.showOnboardingInitially ? AppView.onboarding : AppView.moneyStyleFlow),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
