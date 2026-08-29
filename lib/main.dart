@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'data/api_client.dart';
-import 'data/money_style_questions.dart';
 import 'data/models.dart';
 import 'data/survey_adapter.dart';
 import 'models/finance_profile.dart';
@@ -308,12 +307,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _syncMoneyStyle(MoneyStyleCompletion completion) {
-    final result = completion.result;
-    _apiClient.submitMoneyStyle(MoneyStyleSubmission(sessionId: completion.session.sessionId, questionVersion: 'money-style-v1', selectedAnswers: completion.session.answerIdsFor(moneyStyleQuestions), skippedQuestionIds: completion.session.skippedQuestions.toList(), answeredCount: completion.session.totalAnswered, confidenceTier: _confidenceName(result?.confidenceTier), archetypeId: _archetypeId(result?.archetype))).catchError((error) { debugPrint('Money Style not sent to backend: $error'); return MoneyStyleSubmission(sessionId: '', questionVersion: '', selectedAnswers: const {}, skippedQuestionIds: const [], answeredCount: 0); });
+    _apiClient.submitMoneyStyle(MoneyStyleSubmission.fromCompletion(completion)).catchError((error) { debugPrint('Money Style not sent to backend: $error'); return MoneyStyleSubmission(sessionId: '', questionVersion: '', selectedAnswers: const {}, skippedQuestionIds: const [], answeredCount: 0); });
   }
 
-  String? _confidenceName(ConfidenceTier? tier) => switch (tier) { ConfidenceTier.earlySnapshot => 'early_snapshot', ConfidenceTier.standard => 'standard', ConfidenceTier.fullClarity => 'full_clarity', null => null };
-  String? _archetypeId(ArchetypeInfo? archetype) => switch (archetype?.pattern) { 'Steady Pause Self-Directed' => 'steady_pause_self', 'Steady Pause Collaborative' => 'steady_pause_collaborative', 'Steady Momentum Self-Directed' => 'steady_momentum_self', 'Steady Momentum Collaborative' => 'steady_momentum_collaborative', 'Responsive Pause Self-Directed' => 'responsive_pause_self', 'Responsive Pause Collaborative' => 'responsive_pause_collaborative', 'Responsive Momentum Self-Directed' => 'responsive_momentum_self', 'Responsive Momentum Collaborative' => 'responsive_momentum_collaborative', _ => null };
 
   void _startPlan() {
     setState(() {
