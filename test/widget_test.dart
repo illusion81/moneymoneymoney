@@ -3,8 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moneymoneymoney/main.dart';
 
 void main() {
-  testWidgets('first app screen shows the questionnaire', (tester) async {
+  // The onboarding and report screens are taller than the 800x600 default test
+  // surface, so their buttons are never built and cannot be tapped.
+  Future<void> pumpApp(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const MyApp());
+  }
+
+  testWidgets('first app screen shows the questionnaire', (tester) async {
+    await pumpApp(tester);
 
     expect(find.text('Money Profile'), findsOneWidget);
     expect(find.text('Monthly income'), findsOneWidget);
@@ -14,7 +22,7 @@ void main() {
   testWidgets('valid questionnaire submission shows generated report', (
     tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await pumpApp(tester);
 
     await tester.enterText(find.byKey(const Key('income-field')), '6000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
@@ -28,7 +36,7 @@ void main() {
   });
 
   testWidgets('starting the plan shows the forest home screen', (tester) async {
-    await tester.pumpWidget(const MyApp());
+    await pumpApp(tester);
 
     await tester.enterText(find.byKey(const Key('income-field')), '6000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
@@ -46,7 +54,7 @@ void main() {
   testWidgets('successful check-in changes tree status to healthy', (
     tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await pumpApp(tester);
 
     await tester.enterText(find.byKey(const Key('income-field')), '6000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
@@ -64,7 +72,7 @@ void main() {
   });
 
   testWidgets('overspending changes tree status to withered', (tester) async {
-    await tester.pumpWidget(const MyApp());
+    await pumpApp(tester);
 
     await tester.enterText(find.byKey(const Key('income-field')), '6000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
