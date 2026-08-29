@@ -7,10 +7,12 @@ class OnboardingScreen extends StatefulWidget {
     super.key,
     required this.onProfileSubmitted,
     this.onStartMoneyStyleQuiz,
+    this.onCancel,
   });
 
   final ValueChanged<FinanceProfile> onProfileSubmitted;
   final VoidCallback? onStartMoneyStyleQuiz;
+  final VoidCallback? onCancel;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -152,7 +154,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _skip() {
-    Navigator.of(context).maybePop();
+    widget.onCancel?.call();
   }
 
   String _riskLabel(RiskPreference value) {

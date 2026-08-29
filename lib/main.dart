@@ -150,6 +150,7 @@ class _MyAppState extends State<MyApp> {
         return OnboardingScreen(
           onProfileSubmitted: _handleProfileSubmitted,
           onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          onCancel: () => setState(() => _view = _moneyStyleCompletion == null ? AppView.moneyStyleFlow : AppView.moneyStyleResult),
         );
       case AppView.moneyStyleFlow:
         return MoneyStyleFlow(
