@@ -30,4 +30,8 @@ void main() {
     expect(scores.selfCount, 1);
     expect(scores.collaborativeCount, 1);
   });
+  test('one answer from each dimension is eligible while a missing dimension is not', () {
+    expect(engine.generateResult(AnswerSession(userId: 'u', sessionId: 's', selectedAnswers: {1: 0, 2: 0, 4: 0}), moneyStyleQuestions), isNotNull);
+    expect(engine.generateResult(AnswerSession(userId: 'u', sessionId: 's', selectedAnswers: {1: 0, 3: 0}), moneyStyleQuestions), isNull);
+  });
 }
