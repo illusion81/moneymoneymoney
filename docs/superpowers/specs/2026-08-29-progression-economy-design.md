@@ -131,7 +131,7 @@ Restoration is the mechanic that replaces permanent withering. It clears the wit
 A day can be restored when all of the following hold:
 
 - Its status is `withered`.
-- Its date is within the last **7 days** inclusive of today.
+- Its age in whole days satisfies `0 <= ageInDays <= 6`, where age is measured from today's normalized date. That is **7 distinct days: today plus the 6 preceding days.** The earlier wording "within the last 7 days inclusive of today" was ambiguous and was read by the first implementation as `ageInDays <= 7`, which is an 8-day window. The bound above is authoritative.
 - It has not already been restored.
 - The user has fewer than **2 restorations** in the trailing 30 days.
 - The user supplies a non-empty recovery note.
@@ -329,6 +329,17 @@ New file `lib/screens/shop_screen.dart`.
 - `final List<RewardEvent> _spendEvents`
 
 After every check-in, restoration, or purchase, the shell recomputes progression from the full day list and the accumulated spend events, then recomputes the summary with progression and shop state supplied.
+
+## Convergence Requirement
+
+Progression and achievements are mutually dependent: Curator reads shop state, Seedling Scholar reads level, and achievement unlocks award XP that feeds back into level. The app shell resolves this by recomputing to a fixed point after every check-in, restoration, and purchase.
+
+This cycle is a known weakness of the interfaces as specified. Two constraints are mandatory:
+
+- The recompute loop **must not silently exit unconverged.** If it exhausts its pass budget while state is still changing, it must assert in debug builds and log in release, rather than rendering stale XP, coins, or level.
+- The pass budget must exceed the worst-case cascade depth with margin. With a single progression-dependent achievement the worst case is 4 passes, so a budget of exactly 4 leaves none. Use at least 6, and add a test that drives the deepest cascade — a check-in that unlocks a day-based achievement whose XP simultaneously crosses a level threshold that unlocks a progression-dependent achievement.
+
+Adding a second progression-dependent achievement increases the cascade depth. Prefer removing the cycle outright — by partitioning achievements into forest-derived and progression-derived sets evaluated in one fixed order — over raising the budget again.
 
 ## Error Handling
 
