@@ -1,4 +1,6 @@
 import '../models/forest_day.dart';
+import '../models/progression.dart';
+import '../models/shop_item.dart';
 import '../models/wealth_report.dart';
 
 class ForestEngine {
@@ -47,15 +49,14 @@ class ForestEngine {
       dailyBudget: day.dailyBudget,
       actionCompleted: day.actionCompleted,
       message: day.message,
+      restoredAt: day.restoredAt,
+      recoveryNote: day.recoveryNote,
     );
     final updatedDays = provisionalDays
         .map((day) => _isSameDate(day.date, normalizedDate) ? updatedDay : day)
         .toList();
 
-    return CheckInResult(
-      day: updatedDay,
-      summary: summarize(updatedDays),
-    );
+    return CheckInResult(day: updatedDay, summary: summarize(updatedDays));
   }
 
   List<ForestDay> _withMissedDays(
@@ -67,10 +68,10 @@ class ForestEngine {
       return existingDays;
     }
 
-    final orderedDays = [...existingDays]..sort((a, b) => a.date.compareTo(b.date));
-    final lastRecordedDate = orderedDays.last.date;
+    final orderedDays = [...existingDays]
+      ..sort((a, b) => a.date.compareTo(b.date));
     final missedDays = <ForestDay>[];
-    var missedDate = lastRecordedDate.add(const Duration(days: 1));
+    var missedDate = orderedDays.last.date.add(const Duration(days: 1));
 
     while (missedDate.isBefore(checkInDate)) {
       missedDays.add(
@@ -90,12 +91,21 @@ class ForestEngine {
     return [...orderedDays, ...missedDays];
   }
 
-  ForestSummary summarize(List<ForestDay> days) {
+  ForestSummary summarize(
+    List<ForestDay> days, {
+    ProgressionState? progression,
+    ShopState? shopState,
+  }) {
     final orderedDays = [...days]..sort((a, b) => a.date.compareTo(b.date));
-    final healthyTreeCount =
-        orderedDays.where((day) => day.status == TreeStatus.healthy).length;
-    final witheredTreeCount =
-        orderedDays.where((day) => day.status == TreeStatus.withered).length;
+    final healthyTreeCount = orderedDays
+        .where((day) => day.status == TreeStatus.healthy)
+        .length;
+    final witheredTreeCount = orderedDays
+        .where((day) => day.status == TreeStatus.withered)
+        .length;
+    final restoredTreeCount = orderedDays
+        .where((day) => day.status == TreeStatus.restored)
+        .length;
     final currentStreak = _currentStreak(orderedDays);
 
     return ForestSummary(
@@ -103,11 +113,152 @@ class ForestEngine {
       currentStreak: currentStreak,
       healthyTreeCount: healthyTreeCount,
       witheredTreeCount: witheredTreeCount,
+      restoredTreeCount: restoredTreeCount,
       achievements: _achievements(
         days: orderedDays,
         currentStreak: currentStreak,
         healthyTreeCount: healthyTreeCount,
+        progression: progression,
+        shopState: shopState,
       ),
+    );
+  }
+
+  RestorationQuote quoteRestoration({
+    required List<ForestDay> days,
+    required DateTime dayDate,
+    required DateTime now,
+  }) {
+    final normalizedDayDate = _normalize(dayDate);
+    final normalizedNow = _normalize(now);
+    final matches = days.where(
+      (day) => _isSameDate(day.date, normalizedDayDate),
+    );
+    if (matches.isEmpty) {
+      return const RestorationQuote(
+        eligible: false,
+        cost: 0,
+        blockedReason: 'There is no record for that day.',
+      );
+    }
+
+    final target = matches.first;
+    if (target.status == TreeStatus.restored) {
+      return const RestorationQuote(
+        eligible: false,
+        cost: 0,
+        blockedReason: 'This day has already been restored.',
+      );
+    }
+    if (target.status != TreeStatus.withered) {
+      return const RestorationQuote(
+        eligible: false,
+        cost: 0,
+        blockedReason: 'Only withered days can be restored.',
+      );
+    }
+
+    final ageInDays = normalizedNow.difference(normalizedDayDate).inDays;
+    if (ageInDays < 0 || ageInDays > 7) {
+      return const RestorationQuote(
+        eligible: false,
+        cost: 0,
+        blockedReason: 'This day is too old to restore.',
+      );
+    }
+
+    final priorRestorations = _restorationsInWindow(days, normalizedNow);
+    if (priorRestorations >= 2) {
+      return const RestorationQuote(
+        eligible: false,
+        cost: 0,
+        blockedReason:
+            'You have reached the restoration limit for the last 30 days.',
+      );
+    }
+
+    return RestorationQuote(
+      eligible: true,
+      cost: _restorationCost(priorRestorations),
+      blockedReason: null,
+    );
+  }
+
+  RestorationResult restoreDay({
+    required List<ForestDay> days,
+    required DateTime dayDate,
+    required DateTime now,
+    required String recoveryNote,
+    required int coinBalance,
+  }) {
+    final normalizedDayDate = _normalize(dayDate);
+    final normalizedNow = _normalize(now);
+    final trimmedNote = recoveryNote.trim();
+
+    if (trimmedNote.isEmpty) {
+      return RestorationResult(
+        success: false,
+        failureReason: 'Add a short recovery note to restore this day.',
+        summary: summarize(days),
+        spendEvent: null,
+      );
+    }
+
+    final quote = quoteRestoration(
+      days: days,
+      dayDate: normalizedDayDate,
+      now: normalizedNow,
+    );
+    if (!quote.eligible) {
+      return RestorationResult(
+        success: false,
+        failureReason: quote.blockedReason,
+        summary: summarize(days),
+        spendEvent: null,
+      );
+    }
+    if (coinBalance < quote.cost) {
+      return RestorationResult(
+        success: false,
+        failureReason:
+            'Not enough coins. Restoring this day costs ${quote.cost} coins.',
+        summary: summarize(days),
+        spendEvent: null,
+      );
+    }
+
+    final target = days.firstWhere(
+      (day) => _isSameDate(day.date, normalizedDayDate),
+    );
+    final restoredDay = ForestDay(
+      date: target.date,
+      status: TreeStatus.restored,
+      treeLevel: 1,
+      spending: target.spending,
+      dailyBudget: target.dailyBudget,
+      actionCompleted: target.actionCompleted,
+      message: target.message,
+      restoredAt: normalizedNow,
+      recoveryNote: trimmedNote,
+    );
+    final updatedDays = [
+      for (final day in days)
+        if (_isSameDate(day.date, normalizedDayDate)) restoredDay else day,
+    ]..sort((a, b) => a.date.compareTo(b.date));
+
+    final spendEvent = RewardEvent(
+      date: normalizedNow,
+      type: RewardEventType.restorationSpend,
+      xp: 0,
+      coins: -quote.cost,
+      description: 'Restored ${_formatDate(normalizedDayDate)}',
+    );
+
+    return RestorationResult(
+      success: true,
+      failureReason: null,
+      summary: summarize(updatedDays),
+      spendEvent: spendEvent,
     );
   }
 
@@ -137,7 +288,8 @@ class ForestEngine {
   int _currentStreak(List<ForestDay> days) {
     var streak = 0;
     for (final day in days.reversed) {
-      if (day.status == TreeStatus.healthy) {
+      if (day.status == TreeStatus.healthy ||
+          day.status == TreeStatus.restored) {
         streak++;
       } else {
         break;
@@ -150,6 +302,8 @@ class ForestEngine {
     required List<ForestDay> days,
     required int currentStreak,
     required int healthyTreeCount,
+    ProgressionState? progression,
+    ShopState? shopState,
   }) {
     final budgetGuardian = days.any(
       (day) =>
@@ -157,6 +311,11 @@ class ForestEngine {
           day.spending <= day.dailyBudget * 0.8,
     );
     final recoveryDay = _hasRecoveryDay(days);
+    final secondWind = days.any((day) => day.status == TreeStatus.restored);
+    final curator =
+        shopState != null &&
+        shopState.ownedItemIds.any((id) => !_isDefaultShopItem(id));
+    final seedlingScholar = progression != null && progression.level.level >= 5;
 
     return [
       Achievement(
@@ -189,17 +348,72 @@ class ForestEngine {
         description: 'Grow seven healthy trees.',
         unlocked: healthyTreeCount >= 7,
       ),
+      Achievement(
+        id: 'second-wind',
+        title: 'Second Wind',
+        description: 'Restore a withered day.',
+        unlocked: secondWind,
+      ),
+      Achievement(
+        id: 'curator',
+        title: 'Curator',
+        description: 'Own a non-default cosmetic item.',
+        unlocked: curator,
+      ),
+      Achievement(
+        id: 'seedling-scholar',
+        title: 'Seedling Scholar',
+        description: 'Reach level 5.',
+        unlocked: seedlingScholar,
+      ),
     ];
+  }
+
+  bool _isDefaultShopItem(String itemId) {
+    for (final item in kShopCatalog) {
+      if (item.id == itemId) {
+        return item.isDefault;
+      }
+    }
+    return true;
   }
 
   bool _hasRecoveryDay(List<ForestDay> days) {
     for (var index = 1; index < days.length; index++) {
-      if (days[index - 1].status == TreeStatus.withered &&
-          days[index].status == TreeStatus.healthy) {
+      final previousQualifies =
+          days[index - 1].status == TreeStatus.withered ||
+          days[index - 1].status == TreeStatus.restored;
+      if (previousQualifies && days[index].status == TreeStatus.healthy) {
         return true;
       }
     }
     return false;
+  }
+
+  int _restorationsInWindow(List<ForestDay> days, DateTime now) {
+    final windowStart = now.subtract(const Duration(days: 30));
+    return days
+        .where(
+          (day) =>
+              day.status == TreeStatus.restored &&
+              day.restoredAt != null &&
+              !day.restoredAt!.isBefore(windowStart) &&
+              !day.restoredAt!.isAfter(now),
+        )
+        .length;
+  }
+
+  int _restorationCost(int priorRestorationsInWindow) {
+    const costs = [60, 150];
+    return costs[priorRestorationsInWindow];
+  }
+
+  DateTime _normalize(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   bool _isSameDate(DateTime first, DateTime second) {

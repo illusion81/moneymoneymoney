@@ -1,4 +1,6 @@
-enum TreeStatus { pending, healthy, withered }
+import 'progression.dart';
+
+enum TreeStatus { pending, healthy, withered, restored }
 
 class ForestDay {
   const ForestDay({
@@ -9,6 +11,8 @@ class ForestDay {
     required this.dailyBudget,
     required this.actionCompleted,
     required this.message,
+    this.restoredAt,
+    this.recoveryNote,
   });
 
   final DateTime date;
@@ -18,6 +22,8 @@ class ForestDay {
   final double dailyBudget;
   final bool actionCompleted;
   final String message;
+  final DateTime? restoredAt;
+  final String? recoveryNote;
 }
 
 class Achievement {
@@ -41,12 +47,14 @@ class ForestSummary {
     required this.healthyTreeCount,
     required this.witheredTreeCount,
     required this.achievements,
+    this.restoredTreeCount = 0,
   });
 
   final List<ForestDay> days;
   final int currentStreak;
   final int healthyTreeCount;
   final int witheredTreeCount;
+  final int restoredTreeCount;
   final List<Achievement> achievements;
 }
 
@@ -58,4 +66,30 @@ class CheckInResult {
 
   final ForestDay day;
   final ForestSummary summary;
+}
+
+class RestorationQuote {
+  const RestorationQuote({
+    required this.eligible,
+    required this.cost,
+    this.blockedReason,
+  });
+
+  final bool eligible;
+  final int cost;
+  final String? blockedReason;
+}
+
+class RestorationResult {
+  const RestorationResult({
+    required this.success,
+    required this.summary,
+    this.failureReason,
+    this.spendEvent,
+  });
+
+  final bool success;
+  final String? failureReason;
+  final ForestSummary summary;
+  final RewardEvent? spendEvent;
 }

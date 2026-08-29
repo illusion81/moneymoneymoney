@@ -144,4 +144,210 @@ void main() {
       ]);
     });
   });
+
+  group('ForestEngine restoration', () {
+    List<ForestDay> witheredDayList(DateTime date) {
+      return [
+        ForestDay(
+          date: date,
+          status: TreeStatus.withered,
+          treeLevel: 0,
+          spending: 100,
+          dailyBudget: 50,
+          actionCompleted: false,
+          message: 'Today withered because spending exceeded the daily budget.',
+        ),
+      ];
+    }
+
+    test('a withered day within 7 days quotes a cost of 60 on the first restoration', () {
+      final engine = ForestEngine();
+      final witheredDate = DateTime(2026, 8, 25);
+      final now = DateTime(2026, 8, 29);
+
+      final quote = engine.quoteRestoration(
+        days: witheredDayList(witheredDate),
+        dayDate: witheredDate,
+        now: now,
+      );
+
+      expect(quote.eligible, isTrue);
+      expect(quote.cost, 60);
+    });
+
+    test('the second restoration in the window quotes 150', () {
+      final engine = ForestEngine();
+      final firstWitheredDate = DateTime(2026, 8, 1);
+      final secondWitheredDate = DateTime(2026, 8, 25);
+      final now = DateTime(2026, 8, 29);
+
+      final days = [
+        ForestDay(
+          date: firstWitheredDate,
+          status: TreeStatus.restored,
+          treeLevel: 1,
+          spending: 100,
+          dailyBudget: 50,
+          actionCompleted: false,
+          message: 'withered',
+          restoredAt: DateTime(2026, 8, 5),
+          recoveryNote: 'back on track',
+        ),
+        ForestDay(
+          date: secondWitheredDate,
+          status: TreeStatus.withered,
+          treeLevel: 0,
+          spending: 100,
+          dailyBudget: 50,
+          actionCompleted: false,
+          message: 'withered',
+        ),
+      ];
+
+      final quote = engine.quoteRestoration(
+        days: days,
+        dayDate: secondWitheredDate,
+        now: now,
+      );
+
+      expect(quote.eligible, isTrue);
+      expect(quote.cost, 150);
+    });
+
+    test('a third restoration in the window is refused', () {
+      final engine = ForestEngine();
+      final thirdWitheredDate = DateTime(2026, 8, 26);
+      final now = DateTime(2026, 8, 29);
+
+      final days = [
+        ForestDay(
+          date: DateTime(2026, 8, 5),
+          status: TreeStatus.restored,
+          treeLevel: 1,
+          spending: 100,
+          dailyBudget: 50,
+          actionCompleted: false,
+          message: 'withered',
+          restoredAt: DateTime(2026, 8, 6),
+          recoveryNote: 'back on track',
+        ),
+        ForestDay(
+          date: DateTime(2026, 8, 15),
+          status: TreeStatus.restored,
+          treeLevel: 1,
+          spending: 100,
+          dailyBudget: 50,
+          actionCompleted: false,
+          message: 'withered',
+          restoredAt: DateTime(2026, 8, 16),
+          recoveryNote: 'back on track',
+        ),
+        ForestDay(
+          date: thirdWitheredDate,
+          status: TreeStatus.withered,
+          treeLevel: 0,
+          spending: 100,
+          dailyBudget: 50,
+          actionCompleted: false,
+          message: 'withered',
+        ),
+      ];
+
+      final quote = engine.quoteRestoration(
+        days: days,
+        dayDate: thirdWitheredDate,
+        now: now,
+      );
+
+      expect(quote.eligible, isFalse);
+      expect(quote.blockedReason, isNotNull);
+    });
+
+    test('a withered day older than 7 days is refused', () {
+      final engine = ForestEngine();
+      final witheredDate = DateTime(2026, 8, 10);
+      final now = DateTime(2026, 8, 29);
+
+      final quote = engine.quoteRestoration(
+        days: witheredDayList(witheredDate),
+        dayDate: witheredDate,
+        now: now,
+      );
+
+      expect(quote.eligible, isFalse);
+      expect(quote.blockedReason, isNotNull);
+    });
+
+    test(
+        'restoration sets status to restored, repairs the streak, decrements the withered count, and does not increment the healthy count',
+        () {
+      final engine = ForestEngine();
+      final witheredDate = DateTime(2026, 8, 29);
+      final days = witheredDayList(witheredDate);
+
+      final result = engine.restoreDay(
+        days: days,
+        dayDate: witheredDate,
+        now: witheredDate,
+        recoveryNote: 'Spent within budget the next day',
+        coinBalance: 200,
+      );
+
+      expect(result.success, isTrue);
+      expect(result.summary.days.single.status, TreeStatus.restored);
+      expect(result.summary.days.single.treeLevel, 1);
+      expect(result.summary.currentStreak, 1);
+      expect(result.summary.witheredTreeCount, 0);
+      expect(result.summary.healthyTreeCount, 0);
+      expect(result.summary.restoredTreeCount, 1);
+      expect(result.spendEvent, isNotNull);
+      expect(result.spendEvent!.coins, -60);
+    });
+
+    test('restoration with an empty note is refused and leaves state unchanged', () {
+      final engine = ForestEngine();
+      final witheredDate = DateTime(2026, 8, 29);
+      final days = witheredDayList(witheredDate);
+
+      final result = engine.restoreDay(
+        days: days,
+        dayDate: witheredDate,
+        now: witheredDate,
+        recoveryNote: '   ',
+        coinBalance: 200,
+      );
+
+      expect(result.success, isFalse);
+      expect(result.failureReason, isNotNull);
+      expect(result.spendEvent, isNull);
+      expect(result.summary.days.single.status, TreeStatus.withered);
+    });
+
+    test('Recovery Day still unlocks for a healthy day following a restored day', () {
+      final engine = ForestEngine();
+      final witheredDate = DateTime(2026, 8, 28);
+      final days = witheredDayList(witheredDate);
+
+      final restoreResult = engine.restoreDay(
+        days: days,
+        dayDate: witheredDate,
+        now: witheredDate,
+        recoveryNote: 'Getting back on track',
+        coinBalance: 200,
+      );
+
+      final checkInResult = engine.checkIn(
+        existingDays: restoreResult.summary.days,
+        report: report,
+        date: DateTime(2026, 8, 29),
+        spending: 20,
+        actionCompleted: true,
+      );
+
+      final recoveryDay = checkInResult.summary.achievements
+          .firstWhere((achievement) => achievement.id == 'recovery-day');
+
+      expect(recoveryDay.unlocked, isTrue);
+    });
+  });
 }
