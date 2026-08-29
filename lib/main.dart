@@ -102,6 +102,8 @@ class _MyAppState extends State<MyApp> {
           onCheckIn: _handleCheckIn,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
+          onRetakeQuestionnaire: () =>
+              setState(() => _view = AppView.onboarding),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
@@ -124,15 +126,16 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleProfileSubmitted(FinanceProfile profile) {
+    final alreadyStarted = _planStarted;
     setState(() {
       _report = ReportGenerator().generate(profile);
       _summary = _forestEngine.summarize(
-        const [],
+        _summary.days,
         progression: _progression,
         shopState: _shopState,
       );
       _view = AppView.report;
-      _planStarted = false;
+      _planStarted = alreadyStarted;
     });
   }
 
