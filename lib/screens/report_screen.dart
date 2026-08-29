@@ -8,6 +8,7 @@ import '../models/models.dart';
 import '../state/hive_state.dart';
 import '../theme/hive_colors.dart';
 import '../theme/hive_shadows.dart';
+import '../widgets/honey_snack.dart';
 import '../widgets/primitives/primitives.dart';
 
 // ── Colour literals (design.md §1.1 alternates, used in their exact context) ─
@@ -117,6 +118,8 @@ class ReportScreen extends ConsumerWidget {
           _buildWhereItWent(),
           const SizedBox(height: 14),
           _buildSuggestions(state, notifier),
+          const SizedBox(height: 14),
+          const _QuizCta(),
           const SizedBox(height: 14),
           _buildRegenerate(notifier),
         ],
@@ -294,6 +297,71 @@ class ReportScreen extends ConsumerWidget {
 }
 
 /// One stat card: label, figure, 6-bar sparkline (README "Report").
+/// Demo dressing that closes the report: an invitation to the money quiz.
+///
+/// The quiz itself is not wired into this UI yet, so the tap announces itself
+/// through [showHoneySnack] rather than navigating somewhere empty.
+class _QuizCta extends StatelessWidget {
+  const _QuizCta();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: HiveColors.light.honeyTint,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: HiveShadows.summaryAmber,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'How do you really spend?',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: HiveColors.light.ink,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'Two minutes of questions sharpens what the hive can tell you.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+              color: HiveColors.light.inkMuted,
+            ),
+          ),
+          const SizedBox(height: 13),
+          GestureDetector(
+            onTap: () =>
+                showHoneySnack(context, 'The quiz is a demo placeholder.'),
+            child: Container(
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: HiveColors.light.honey,
+                borderRadius: BorderRadius.circular(13),
+                boxShadow: HiveShadows.pillHoney,
+              ),
+              child: Text(
+                'Take the quiz',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: HiveColors.light.brownDeep,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.label,

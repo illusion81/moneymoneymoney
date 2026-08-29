@@ -9,6 +9,7 @@ import '../models/models.dart';
 import '../state/hive_state.dart';
 import '../theme/hive_colors.dart';
 import '../theme/hive_shadows.dart';
+import '../widgets/honey_snack.dart';
 import '../widgets/primitives/primitives.dart';
 
 /// Screen 1 — Hive (home), per the handoff README "Screen 1 — Hive".
@@ -39,6 +40,8 @@ class HiveScreen extends ConsumerWidget {
           _buildHoneyPot(ref, state),
           const SizedBox(height: 16),
           _buildCheckIns(ref, state),
+          const SizedBox(height: 16),
+          const _SponsorAd(),
         ],
       ),
     );
@@ -768,6 +771,101 @@ const Map<String, String> _potCaptions = <String, String>{
   'debt': 'Debt \u00b7 \u2212\$4,120 leaking from the bottom. '
       'At \$410/mo it drains by next April.',
 };
+
+/// Demo dressing at the foot of the hive: a sponsored placement.
+///
+/// The backer is invented and the offer leads nowhere, so the card keeps its
+/// "Sponsored" label and [showHoneySnack] names itself a placeholder on tap —
+/// a mock rate should not be mistaken for a real financial promotion.
+class _SponsorAd extends StatelessWidget {
+  const _SponsorAd();
+
+  static const String _brand = 'Pollen Capital';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment(-0.5, -0.866),
+          end: Alignment(0.5, 0.866),
+          colors: <Color>[Color(0xFFFFF3D6), Color(0xFFFDE7B4)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: HiveShadows.summaryAmber,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              ClipPath(
+                clipper: const HexPointyClipper(),
+                child: Container(
+                  width: 11,
+                  height: 12.5,
+                  color: HiveColors.light.honeyDeep,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'Sponsored',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: HiveColors.light.inkFaint,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Text(
+            _brand,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: HiveColors.light.ink,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Park your honey at 4.8% p.a.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+              color: HiveColors.light.inkMuted,
+            ),
+          ),
+          const SizedBox(height: 13),
+          GestureDetector(
+            onTap: () =>
+                showHoneySnack(context, '$_brand is a demo placeholder.'),
+            child: Container(
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: HiveColors.light.honey,
+                borderRadius: BorderRadius.circular(13),
+                boxShadow: HiveShadows.pillHoney,
+              ),
+              child: Text(
+                'See the offer',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: HiveColors.light.brownDeep,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// "6240" -> "6,240"; "-4120" -> "−4,120" (no currency sign).
 String _comma(num value) {
