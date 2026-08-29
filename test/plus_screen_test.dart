@@ -18,12 +18,14 @@ void main() {
     bool isPlusMember = false,
     VoidCallback? onSubscribe,
     VoidCallback? onCancel,
+    VoidCallback? onBuyFreeze,
   }) {
     return MaterialApp(
       home: PlusScreen(
         isPlusMember: isPlusMember,
         onSubscribe: onSubscribe ?? () {},
         onCancelMembership: onCancel ?? () {},
+        onBuyFreezeTicket: onBuyFreeze ?? () {},
         onBack: () {},
       ),
     );
@@ -84,5 +86,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(cancelled, isTrue);
+  });
+
+  testWidgets('a freeze streak ticket is offered at 99 cents', (tester) async {
+    await tester.pumpWidget(harness());
+
+    expect(find.byKey(const Key('freeze-ticket-card')), findsOneWidget);
+    expect(find.textContaining('Freeze'), findsWidgets);
+    expect(find.text('\$0.99'), findsWidgets);
+  });
+
+  testWidgets('members can buy a ticket too', (tester) async {
+    await tester.pumpWidget(harness(isPlusMember: true));
+
+    expect(find.byKey(const Key('freeze-ticket-card')), findsOneWidget);
+  });
+
+  testWidgets('buying a ticket goes through the demo checkout first', (
+    tester,
+  ) async {
+    var bought = false;
+    await tester.pumpWidget(harness(onBuyFreeze: () => bought = true));
+
+    final card = find.byKey(const Key('freeze-ticket-card'));
+    await tester.ensureVisible(card);
+    await tester.pump();
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('plus-checkout-sheet')), findsOneWidget);
+    // Still a demo: never a card field anywhere.
+    expect(find.byType(TextField), findsNothing);
+    expect(bought, isFalse);
+
+    await tester.tap(find.byKey(const Key('plus-confirm-button')));
+    await tester.pumpAndSettle();
+
+    expect(bought, isTrue);
   });
 }
