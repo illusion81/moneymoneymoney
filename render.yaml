@@ -24,6 +24,12 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.6"
+      # BASIQ_API_KEY and BASIQ_USER_ID live in the "MMM" environment group so
+      # the secrets are never in this file. Creating a group does NOT apply it
+      # to anything — the service has to reference it, which is what this does.
+      # If the group is renamed or deleted, blueprint sync fails loudly rather
+      # than silently falling back to mock data.
+      - fromGroup: MMM
 
   # ------------------------------------------------------------------ web app
   # The Flutter build. Render has no Flutter SDK, so the build clones the
