@@ -124,4 +124,41 @@ void main() {
 
     expect(bought, isTrue);
   });
+
+  testWidgets('shows a partner investment offer', (tester) async {
+    await tester.pumpWidget(harness());
+
+    expect(find.byKey(const Key('partner-offer-card')), findsOneWidget);
+    expect(find.textContaining('Harbour Invest'), findsWidgets);
+    expect(find.textContaining('3 months'), findsWidgets);
+  });
+
+  testWidgets('the offer never claims to be a real bank or product', (
+    tester,
+  ) async {
+    await tester.pumpWidget(harness());
+
+    final card = find.byKey(const Key('partner-offer-card'));
+    await tester.ensureVisible(card);
+    await tester.pump();
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('partner-offer-dialog')), findsOneWidget);
+    // A fictional partner must say so — an investment offer that looks real
+    // is the exact shape of an investment scam.
+    expect(find.textContaining('fictional'), findsWidgets);
+    expect(find.textContaining('Demo'), findsWidgets);
+  });
+
+  testWidgets('the offer dialog can be dismissed', (tester) async {
+    await tester.pumpWidget(harness());
+
+    await tester.tap(find.byKey(const Key('partner-offer-card')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('partner-offer-close')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('partner-offer-dialog')), findsNothing);
+  });
 }

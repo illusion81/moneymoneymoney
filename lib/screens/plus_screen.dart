@@ -29,6 +29,7 @@ class PlusScreen extends StatelessWidget {
   /// A single streak freeze, sold outside the subscription. Offered to
   /// members too — three freezes still run out on a bad month.
   final VoidCallback onBuyFreezeTicket;
+
   final VoidCallback onBack;
 
   static const List<String> _benefits = [
@@ -77,6 +78,8 @@ class PlusScreen extends StatelessWidget {
                 ] else
                   _planCards(context),
                 const SizedBox(height: 24),
+                _PartnerOfferCard(onTap: () => _showPartnerOffer(context)),
+                const SizedBox(height: 16),
                 _FreezeTicketCard(
                   onTap: () => _openCheckout(
                     context,
@@ -163,6 +166,52 @@ class PlusScreen extends StatelessWidget {
     );
   }
 
+  /// Harbour Invest does not exist. The dialog says so because an in-app
+  /// investment promotion that looks real is indistinguishable from an
+  /// investment scam — and this lives beside the card rather than in the
+  /// caller so the offer can never be shown without its disclosure.
+  void _showPartnerOffer(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('partner-offer-dialog'),
+        title: const Text('Harbour Invest'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Open an investment account with Harbour Invest and get 3 '
+              'months of Plus at no cost.',
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Demo only. Harbour Invest is a fictional company invented for '
+              'this prototype — there is no account to open, no investment '
+              'product and no offer. The link below goes nowhere.',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'example.invalid/harbour-invest',
+              style: TextStyle(
+                color: Color(0xff1f4f7a),
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            key: const Key('partner-offer-close'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openCheckout(
     BuildContext context,
     String plan,
@@ -186,6 +235,92 @@ class PlusScreen extends StatelessWidget {
 /// A one-off streak freeze. Separate from the subscription on purpose: the
 /// person who needs it most is the one who just broke a streak and is not
 /// ready to commit to a monthly plan.
+/// A sponsored investment offer from a partner.
+///
+/// "Harbour Invest" is deliberately fictional. An in-app investment promotion
+/// carrying a real bank's name would be an unauthorised financial promotion,
+/// and "open an account, get a reward" is the standard shape of an investment
+/// scam — so the brand is invented and the dialog says so outright.
+class _PartnerOfferCard extends StatelessWidget {
+  const _PartnerOfferCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: const Key('partner-offer-card'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xff1f4f7a), Color(0xff2f7d9a)],
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'SPONSORED · DEMO',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Harbour Invest',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Open an investment account and get 3 months of Plus, free.',
+              style: TextStyle(color: Colors.white, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Text(
+                  'Learn more',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.arrow_forward, color: Colors.white, size: 16),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _FreezeTicketCard extends StatelessWidget {
   const _FreezeTicketCard({required this.onTap});
 
