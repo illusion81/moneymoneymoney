@@ -156,6 +156,7 @@ class _MyAppState extends State<MyApp> {
           userId: 'user-1', // TODO: Replace with actual user ID
           onComplete: _handleMoneyStyleComplete,
           existingCompletion: _moneyStyleCompletion,
+          onProgress: (session) => _moneyStyleStore.save(MoneyStyleCompletion(session: session, result: null)),
         );
       case AppView.moneyStyleResult:
         return MoneyStyleResultScreen(result: _moneyStyleCompletion!.result, onExploreIdeas: () => setState(() => _view = AppView.moneyStyleIdeas), onBuildRangePlan: () => setState(() => _view = AppView.rangePlan), onAnswerMore: () => setState(() => _view = AppView.moneyStyleFlow), onStartOver: () async { await _moneyStyleStore.clear(); if (mounted) setState(() { _moneyStyleCompletion = null; _view = AppView.moneyStyleFlow; }); });

@@ -12,12 +12,14 @@ class MoneyStyleQuizScreen extends StatefulWidget {
     required this.onComplete,
     this.answerOrderSeed,
     this.initialSession,
+    this.onProgress,
   });
 
   final String userId;
   final ValueChanged<MoneyStyleCompletion> onComplete;
   final int? answerOrderSeed;
   final AnswerSession? initialSession;
+  final ValueChanged<AnswerSession>? onProgress;
 
   @override
   State<MoneyStyleQuizScreen> createState() => _MoneyStyleQuizScreenState();
@@ -180,6 +182,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       final questionId = moneyStyleQuestions[_currentQuestionIndex].id;
       _session.selectedAnswers[questionId] = answerIndex;
       _session.skippedQuestions.remove(questionId);
+      widget.onProgress?.call(_session);
     });
   }
 
@@ -188,6 +191,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       final questionId = moneyStyleQuestions[_currentQuestionIndex].id;
       _session.skippedQuestions.add(questionId);
       _session.selectedAnswers.remove(questionId);
+      widget.onProgress?.call(_session);
       _moveToNextQuestion();
     });
   }

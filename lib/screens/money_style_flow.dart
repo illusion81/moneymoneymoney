@@ -9,11 +9,13 @@ class MoneyStyleFlow extends StatefulWidget {
     required this.userId,
     required this.onComplete,
     this.existingCompletion,
+    this.onProgress,
   });
 
   final String userId;
   final ValueChanged<MoneyStyleCompletion> onComplete;
   final MoneyStyleCompletion? existingCompletion;
+  final ValueChanged<AnswerSession>? onProgress;
 
   @override
   State<MoneyStyleFlow> createState() => _MoneyStyleFlowState();
@@ -29,6 +31,7 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
       return MoneyStyleQuizScreen(
         userId: widget.userId,
         initialSession: _startOver ? null : widget.existingCompletion?.session,
+        onProgress: widget.onProgress,
         onComplete: widget.onComplete,
       );
     }
