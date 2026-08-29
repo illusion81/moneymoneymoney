@@ -6,7 +6,7 @@ import '../models/shop_item.dart';
 import '../services/item_visuals.dart';
 import '../services/shop_service.dart';
 
-class ShopScreen extends StatelessWidget {
+class ShopScreen extends StatefulWidget {
   const ShopScreen({
     super.key,
     required this.progression,
@@ -24,18 +24,32 @@ class ShopScreen extends StatelessWidget {
   final void Function(String itemId) onEquip;
   final VoidCallback onBack;
 
-  /// Testing aids, only ever shown in debug builds (gated by [kDebugMode]) —
-  /// never real user-facing features.
+  /// Testing aids, only ever shown in debug builds (gated by [kDebugMode])
+  /// and only while the user switches debug mode on — never real
+  /// user-facing features.
   final VoidCallback? onDebugMaxCoins;
 
   /// Marks every catalog item as owned, bypassing price and level gates.
   final VoidCallback? onDebugUnlockAll;
 
   @override
+  State<ShopScreen> createState() => _ShopScreenState();
+}
+
+class _ShopScreenState extends State<ShopScreen> {
+  /// Debug actions stay hidden until explicitly switched on, so a normal
+  /// play-through can't stumble into free coins.
+  bool _debugMode = false;
+
+  @override
   Widget build(BuildContext context) {
     final shopService = ShopService();
-    final debugMaxCoins = onDebugMaxCoins;
-    final debugUnlockAll = onDebugUnlockAll;
+    final progression = widget.progression;
+    final shopState = widget.shopState;
+    final onBack = widget.onBack;
+    final debugMaxCoins = widget.onDebugMaxCoins;
+    final debugUnlockAll = widget.onDebugUnlockAll;
+    final hasDebugActions = debugMaxCoins != null || debugUnlockAll != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -46,14 +60,26 @@ class ShopScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
         ),
         actions: [
-          if (kDebugMode && debugUnlockAll != null)
+          if (kDebugMode && hasDebugActions)
+            IconButton(
+              key: const Key('debug-mode-toggle'),
+              tooltip: _debugMode ? 'Turn debug mode off' : 'Turn debug mode on',
+              onPressed: () => setState(() => _debugMode = !_debugMode),
+              icon: Icon(
+                _debugMode
+                    ? Icons.developer_mode
+                    : Icons.developer_mode_outlined,
+                color: _debugMode ? const Color(0xffc79a33) : null,
+              ),
+            ),
+          if (kDebugMode && _debugMode && debugUnlockAll != null)
             IconButton(
               key: const Key('debug-unlock-all-button'),
               tooltip: 'Debug: unlock all items',
               onPressed: debugUnlockAll,
               icon: const Icon(Icons.lock_open_outlined),
             ),
-          if (kDebugMode && debugMaxCoins != null)
+          if (kDebugMode && _debugMode && debugMaxCoins != null)
             IconButton(
               key: const Key('debug-max-coins-button'),
               tooltip: 'Debug: max coins',
@@ -112,8 +138,8 @@ class ShopScreen extends StatelessWidget {
                       equipped:
                           shopState.equippedItemIds[item.category] == item.id,
                       progression: progression,
-                      onPurchase: () => onPurchase(item.id),
-                      onEquip: () => onEquip(item.id),
+                      onPurchase: () => widget.onPurchase(item.id),
+                      onEquip: () => widget.onEquip(item.id),
                     ),
                   const SizedBox(height: 12),
                 ],
