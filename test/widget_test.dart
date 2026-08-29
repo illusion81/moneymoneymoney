@@ -176,8 +176,6 @@ void main() {
     await tester.enterText(find.byKey(const Key('savings-field')), '900');
     await tester.tap(find.text('Generate Report'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Start Plan'));
-    await tester.pumpAndSettle();
   }
 
   testWidgets('first app screen earns trust before asking for numbers', (
@@ -340,7 +338,7 @@ void main() {
     expect(find.text('1 of 12'), findsOneWidget);
   });
 
-  testWidgets('valid questionnaire submission shows generated report', (
+  testWidgets('Generate Report goes straight to the main screen', (
     tester,
   ) async {
     await tester.pumpWidget(const MyApp(showOnboardingInitially: true));
@@ -351,9 +349,22 @@ void main() {
     await tester.tap(find.text('Generate Report'));
     await tester.pumpAndSettle();
 
+    // No intermediate report step — the user lands on the Forest.
+    expect(find.text('Wealth Forest'), findsOneWidget);
+    expect(find.text('Check In'), findsOneWidget);
+    expect(find.text('Start Plan'), findsNothing);
+  });
+
+  testWidgets('the report is still reachable from the Forest app bar', (
+    tester,
+  ) async {
+    await startPlan(tester);
+
+    await tester.tap(find.byTooltip('Report'));
+    await tester.pumpAndSettle();
+
     expect(find.text('AI Wealth Report'), findsOneWidget);
     expect(find.textContaining('Daily flexible budget'), findsOneWidget);
-    expect(find.text('Start Plan'), findsOneWidget);
   });
 
   testWidgets('starting the plan shows the forest home screen', (tester) async {
@@ -450,10 +461,8 @@ void main() {
     await tester.tap(find.text('Generate Report'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Back to Forest'), findsOneWidget);
-
-    await tester.tap(find.text('Back to Forest'));
-    await tester.pumpAndSettle();
+    // Submitting lands straight on the Forest now, no report step in between.
+    expect(find.text('Wealth Forest'), findsOneWidget);
 
     await tester.tap(find.text('Calendar'));
     await tester.pumpAndSettle();

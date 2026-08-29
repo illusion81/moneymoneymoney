@@ -1,4 +1,4 @@
-enum RiskPreference { conservative, balanced, growth }
+import '../services/risk_assessment.dart';
 
 enum FinancialGoal {
   emergencyFund,
@@ -15,7 +15,7 @@ class FinanceProfile {
     required this.monthlyIncome,
     required this.fixedMonthlyExpenses,
     required this.monthlySavingsGoal,
-    required this.riskPreference,
+    required this.riskLevel,
     required this.financialGoal,
     required this.spendingPressure,
   });
@@ -23,7 +23,7 @@ class FinanceProfile {
   final double monthlyIncome;
   final double fixedMonthlyExpenses;
   final double monthlySavingsGoal;
-  final RiskPreference riskPreference;
+  final RiskLevel riskLevel;
   final FinancialGoal financialGoal;
   final SpendingPressure spendingPressure;
 }

@@ -221,7 +221,8 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
         _currentQuestionIndex++;
       });
     } else {
-      // Quiz complete
+      // Quiz complete. Navigation is owned by the app shell: onComplete
+      // switches the view to AppView.moneyStyleResult.
       final session = _session.snapshot();
       final result = _engine.generateResult(session, moneyStyleQuestions);
       widget.onComplete(MoneyStyleCompletion(session: session, result: result));
