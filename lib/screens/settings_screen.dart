@@ -99,7 +99,7 @@ class SettingsScreen extends ConsumerWidget {
                       linked: state.banks[bank.key] ?? false,
                       onToggle: () => notifier.toggleBank(bank.key),
                     ),
-                  _connectBankCard(),
+                  _connectBankCard(context),
                 ],
               ),
               const SizedBox(height: 16),
@@ -118,6 +118,11 @@ class SettingsScreen extends ConsumerWidget {
                       onToggle: () => notifier.toggleNudge(row.key),
                     ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              _group(
+                'Feedback',
+                children: <Widget>[_surveyRow(context)],
               ),
             ],
           ),
@@ -227,22 +232,26 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// The "Connect another bank" action card.
-  Widget _connectBankCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: HiveColors.light.surface,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: HiveShadows.card,
-      ),
-      child: Text(
-        'Connect another bank',
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          color: HiveColors.light.inkMuted,
+  /// The "Connect another bank" action card → mock Chase sign-in.
+  Widget _connectBankCard(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/chase-login'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: HiveColors.light.surface,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: HiveShadows.card,
+        ),
+        child: Text(
+          'Connect another bank',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: HiveColors.light.inkMuted,
+          ),
         ),
       ),
     );
@@ -319,6 +328,48 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(width: 12),
           Toggle(value: value, onChanged: (_) => onToggle()),
         ],
+      ),
+    );
+  }
+
+  /// The bee-skin picker has moved to the Market "Looks" tab — skins are now
+  /// purchasable there.
+
+  /// The "Quick survey" row → `/survey`.
+  Widget _surveyRow(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/survey'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: HiveColors.light.surface,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: HiveShadows.card,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                'Quick survey',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: HiveColors.light.ink,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '+50 honey',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: HiveColors.light.honeyText,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

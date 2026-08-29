@@ -28,6 +28,8 @@ class HiveState {
     this.reportCadence = 'Monthly',
     this.nudgedFriends = const <String>{},
     this.invites = 0,
+    this.beeSkinId = 'classic',
+    this.onboarded = false,
   });
 
   /// Which detail sheet is currently open, if any.
@@ -84,6 +86,12 @@ class HiveState {
   /// Number of friends invited.
   final int invites;
 
+  /// The selected bee-skin id (see `lib/data/bee_skins.dart`).
+  final String beeSkinId;
+
+  /// True once the first-run onboarding (survey + Chase) has been completed.
+  final bool onboarded;
+
   /// Sentinel so [copyWith] can distinguish "not provided" from "set to null".
   static const Object _unset = Object();
 
@@ -106,6 +114,8 @@ class HiveState {
     String? reportCadence,
     Set<String>? nudgedFriends,
     int? invites,
+    String? beeSkinId,
+    bool? onboarded,
   }) {
     return HiveState(
       sheet: identical(sheet, _unset) ? this.sheet : sheet as SheetKind?,
@@ -126,6 +136,8 @@ class HiveState {
       reportCadence: reportCadence ?? this.reportCadence,
       nudgedFriends: nudgedFriends ?? this.nudgedFriends,
       invites: invites ?? this.invites,
+      beeSkinId: beeSkinId ?? this.beeSkinId,
+      onboarded: onboarded ?? this.onboarded,
     );
   }
 }
@@ -173,6 +185,7 @@ class HiveNotifier extends Notifier<HiveState> {
         state = state.copyWith(
           honey: state.honey - honeyCost,
           ownedMarketIds: {...state.ownedMarketIds, id},
+          beeSkinId: item.beeSkinId ?? state.beeSkinId,
           flash: 'Unlocked. \u2212$honeyCost honey.',
         );
       } else {
@@ -265,6 +278,34 @@ class HiveNotifier extends Notifier<HiveState> {
   }
 
   void setMarketTab(MarketTab tab) => state = state.copyWith(marketTab: tab);
+
+  /// Marks the first-run onboarding complete.
+  void completeOnboarding() => state = state.copyWith(onboarded: true);
+
+  /// Re-applies an owned bee skin (its Market item's [MarketItem.beeSkinId]).
+  void activateSkin(String marketId) {
+    final MarketItem? item = _findItem(marketId);
+    final String? skinId = item?.beeSkinId;
+    if (item == null ||
+        skinId == null ||
+        !state.ownedMarketIds.contains(marketId)) {
+      return;
+    }
+    state = state.copyWith(
+      beeSkinId: skinId,
+      flash: '"${item.title}" applied \u2014 the swarm is flying it now.',
+    );
+    _clearFlashAfter();
+  }
+
+  /// Links a bank (mock Chase sign-in and the settings toggle both use this).
+  void linkBank(String key) {
+    state = state.copyWith(banks: {...state.banks, key: true});
+  }
+
+  /// Credits the honey balance (mock survey completion).
+  void addHoney(int amount) =>
+      state = state.copyWith(honey: state.honey + amount);
 
   MarketItem? _findItem(String id) {
     for (final MarketItem item in kMarketCatalog) {

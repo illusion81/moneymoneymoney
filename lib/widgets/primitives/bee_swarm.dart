@@ -2,35 +2,38 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Decorative bee flight, one bee per transaction, capped at 5 per direction
-/// (design.md §6 "BeeSwarm" + Motion appendix `beeIn` / `beeOut` / `flap`).
+import '../../models/models.dart';
+
+/// Decorative bee flight: a swarm of bees that wander randomly across the
+/// canvas rather than following scripted in/out paths.
 ///
-/// Amber in-bees (body `#4A3520`, stripe `#FFD972`, wing white @80%) fly in
-/// over the honey side; cream out-bees (body `#F0DFC4`, stripe `#6E4826`,
-/// wing white @55%) fly out under the brown side.
+/// [beesIn] bees are painted with the skin's inbound palette, [beesOut] with
+/// its outbound palette (design.md §1.1 `Bee literals`). Each bee drifts on a
+/// gently-jittering heading and bounces off the canvas edges, facing its
+/// direction of travel. [size] scales the authored 9×6 bee (default 9).
 ///
-/// Each bee is a tiny 9×6 rounded body + 2×4 stripe + 6×4 wing that flaps on a
-/// 0.28 s ease-in-out ALTERNATE loop. [size] scales the authored 9×6 bee and its
-/// flight path (default 9 = authored size).
-///
-/// All flight controllers are gated on `MediaQuery.disableAnimations` — when
-/// animations are disabled the bees are rendered statically at their start
-/// positions and every controller is stopped.
+/// Motion is driven by a single [Ticker] (no per-bee timers) and gated on
+/// `MediaQuery.disableAnimations`: when animations are disabled the bees are
+/// scattered statically and the ticker is stopped.
 class BeeSwarm extends StatefulWidget {
   const BeeSwarm({
     super.key,
     required this.beesIn,
     required this.beesOut,
+    required this.skin,
     this.size = 9,
   });
 
-  /// Number of amber bees flying in over the honey side (capped at 5).
+  /// Number of inbound-palette bees (capped at [_BeeSwarmState._cap]).
   final int beesIn;
 
-  /// Number of cream bees flying out under the brown side (capped at 5).
+  /// Number of outbound-palette bees (capped at [_BeeSwarmState._cap]).
   final int beesOut;
 
-  /// Scale of the authored 9×6 bee and its flight path (default 9).
+  /// The skin used to paint every bee.
+  final BeeSkin skin;
+
+  /// Scale of the authored 9×6 bee (default 9).
   final double size;
 
   @override
@@ -38,18 +41,45 @@ class BeeSwarm extends StatefulWidget {
 }
 
 class _BeeSwarmState extends State<BeeSwarm> with TickerProviderStateMixin {
-  final List<_BeeFlight> _flights = <_BeeFlight>[];
+  static const int _cap = 10;
 
-  static const int _cap = 5;
+  final List<_WanderBee> _bees = <_WanderBee>[];
+  final math.Random _rng = math.Random();
 
-  /// Last-known `MediaQuery.disableAnimations` value, so controllers are only
-  /// (re)started/stopped when the setting actually changes.
-  bool? _animationsEnabled;
+  late final Ticker _ticker;
+  late final AnimationController _flap;
+
+  Duration _last = Duration.zero;
+  Size _canvas = Size.zero;
+  bool _animationsEnabled = true;
 
   @override
   void initState() {
     super.initState();
-    _rebuildFlights();
+    _flap = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _ticker = createTicker(_onTick);
+    _rebuildBees();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bool enabled = !MediaQuery.disableAnimationsOf(context);
+    if (enabled == _animationsEnabled) {
+      return;
+    }
+    _animationsEnabled = enabled;
+    _last = Duration.zero;
+    if (enabled) {
+      _flap.repeat(reverse: true);
+      _ticker.start();
+    } else {
+      _flap.stop();
+      _ticker.stop();
+    }
   }
 
   @override
@@ -57,332 +87,153 @@ class _BeeSwarmState extends State<BeeSwarm> with TickerProviderStateMixin {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.beesIn != widget.beesIn ||
         oldWidget.beesOut != widget.beesOut) {
-      _rebuildFlights();
+      _rebuildBees();
     }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _syncAnimationsEnabled();
-  }
-
-  void _rebuildFlights() {
-    for (final _BeeFlight flight in _flights) {
-      flight.dispose();
-    }
-    _flights.clear();
-
+  void _rebuildBees() {
+    _bees.clear();
     final int inCount = widget.beesIn.clamp(0, _cap);
     final int outCount = widget.beesOut.clamp(0, _cap);
     for (int i = 0; i < inCount; i++) {
-      _flights.add(_BeeFlight.of(
-        vsync: this,
-        beeIndex: i,
-        direction: _BeeDirection.incoming,
-      ));
+      _bees.add(_WanderBee(_rng, incoming: true));
     }
     for (int i = 0; i < outCount; i++) {
-      _flights.add(_BeeFlight.of(
-        vsync: this,
-        beeIndex: i,
-        direction: _BeeDirection.outgoing,
-      ));
+      _bees.add(_WanderBee(_rng, incoming: false));
     }
-    _animationsEnabled = null; // force re-sync of running state
   }
 
-  void _syncAnimationsEnabled() {
-    final bool enabled = !MediaQuery.disableAnimationsOf(context);
-    if (_animationsEnabled == enabled) {
+  void _onTick(Duration elapsed) {
+    final double dt = (elapsed - _last).inMicroseconds / 1e6;
+    _last = elapsed;
+    if (dt <= 0 || _canvas.isEmpty) {
       return;
     }
-    _animationsEnabled = enabled;
-    for (final _BeeFlight flight in _flights) {
-      if (enabled) {
-        flight.start();
-      } else {
-        flight.stop();
-      }
+    for (final _WanderBee bee in _bees) {
+      bee.update(dt, _canvas);
     }
+    setState(() {});
   }
 
   @override
   void dispose() {
-    for (final _BeeFlight flight in _flights) {
-      flight.dispose();
-    }
-    _flights.clear();
+    _flap.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    _syncAnimationsEnabled();
-    final bool animated = _animationsEnabled ?? false;
-    final double scale = widget.size / 9;
-
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        final Size canvas =
+            Size(constraints.maxWidth, constraints.maxHeight);
+        if (canvas != _canvas) {
+          _canvas = canvas;
+          for (final _WanderBee bee in _bees) {
+            bee.ensurePositioned(canvas);
+          }
+        }
         return Stack(
           clipBehavior: Clip.none,
           children: <Widget>[
-            for (final _BeeFlight flight in _flights)
-              _buildBee(flight, constraints, animated, scale),
+            for (final _WanderBee bee in _bees) _buildBee(bee),
           ],
         );
       },
     );
   }
 
-  Widget _buildBee(
-    _BeeFlight flight,
-    BoxConstraints constraints,
-    bool animated,
-    double scale,
-  ) {
-    final bool incoming = flight.direction == _BeeDirection.incoming;
-
-    // Start position (percentages of the container). Out-bees are anchored
-    // from the bottom, so their top comes from the bottom edge.
-    final double leftPct = 4 + flight.beeIndex * 18;
-    final double topPct = incoming
-        ? 34 + (flight.beeIndex % 3) * 15
-        : 100 - (34 + (flight.beeIndex % 3) * 15);
-
-    final double left = constraints.maxWidth * leftPct / 100;
-    final double top = constraints.maxHeight * topPct / 100;
-
-    return AnimatedBuilder(
-      animation: flight,
-      builder: (BuildContext context, Widget? child) {
-        // When animations are disabled the controllers are stopped at 0, so
-        // these evaluate to the flight's start position.
-        final Offset translate = flight.translate * scale;
-        final double rotateDeg = flight.rotateDeg;
-        final double opacity = incoming ? flight.opacity : 1.0;
-
-        return Positioned(
-          left: left + translate.dx,
-          top: top + translate.dy,
-          child: Opacity(
-            opacity: opacity,
-            child: Transform.rotate(
-              angle: rotateDeg * math.pi / 180,
-              child: _BeeVisual(
-                incoming: incoming,
-                size: widget.size,
-                flap: flight.flap,
-                animateFlap: animated,
-              ),
-            ),
-          ),
-        );
-      },
+  Widget _buildBee(_WanderBee bee) {
+    return Positioned(
+      left: bee.position.dx,
+      top: bee.position.dy,
+      child: Transform.rotate(
+        angle: bee.heading,
+        child: _BeeVisual(
+          skin: widget.skin,
+          incoming: bee.incoming,
+          size: widget.size,
+          flap: _flap,
+          animateFlap: _animationsEnabled,
+        ),
+      ),
     );
   }
 }
 
-enum _BeeDirection { incoming, outgoing }
+/// One wandering bee: a position, a heading (radians) and a constant speed.
+/// `update` jitters the heading and bounces the bee off the canvas edges.
+class _WanderBee {
+  _WanderBee(this._rng, {required this.incoming})
+      : _heading = _rng.nextDouble() * 2 * math.pi,
+        _speed = 26 + _rng.nextDouble() * 30;
 
-/// One bee's repeating flight: a single flight controller (drives translate +
-/// rotate + opacity through a stagger [Interval]) plus an independent 0.28 s
-/// ALTERNATE flap controller. Exposed as a [Listenable] so one
-/// [AnimatedBuilder] rebuilds for both.
-class _BeeFlight extends ChangeNotifier {
-  _BeeFlight._({
-    required this.beeIndex,
-    required this.direction,
-    required AnimationController flightController,
-    required this.flap,
-    required CurvedAnimation pathProgress,
-  })  : _flight = flightController,
-        _pathProgress = pathProgress {
-    _flight.addListener(notifyListeners);
-    flap.addListener(notifyListeners);
-  }
+  final math.Random _rng;
+  final bool incoming;
 
-  factory _BeeFlight.of({
-    required TickerProvider vsync,
-    required int beeIndex,
-    required _BeeDirection direction,
-  }) {
-    final bool incoming = direction == _BeeDirection.incoming;
+  Offset position = Offset.zero;
+  double _heading;
+  final double _speed;
+  bool _positioned = false;
 
-    // Per-bee timing: duration 4.4 + 0.55*i s, delay 0.9*i s, linear, infinite.
-    final double flightDuration = 4.4 + 0.55 * beeIndex;
-    final double delay = 0.9 * beeIndex;
-    // Total controller period = delay + flight; the [Interval] below holds the
-    // bee at its start position during the delay (stagger).
-    final double total = flightDuration + delay;
+  double get heading => _heading;
 
-    final AnimationController flight = AnimationController(
-      vsync: vsync,
-      duration: Duration(milliseconds: (total * 1000).round()),
+  /// Scatters the bee to a random spot on first layout (or when the canvas
+  /// changes size).
+  void ensurePositioned(Size canvas) {
+    if (_positioned) {
+      return;
+    }
+    const double margin = 14;
+    final double w = math.max(0, canvas.width - 2 * margin);
+    final double h = math.max(0, canvas.height - 2 * margin);
+    position = Offset(
+      margin + _rng.nextDouble() * w,
+      margin + _rng.nextDouble() * h,
     );
-
-    // 0.28 s ease-in-out ALTERNATE wing flap.
-    final AnimationController flap = AnimationController(
-      vsync: vsync,
-      duration: const Duration(milliseconds: 280),
-    );
-
-    final double delayFrac = delay / total;
-    final CurvedAnimation pathProgress = CurvedAnimation(
-      parent: flight,
-      curve: Interval(delayFrac, 1.0, curve: Curves.linear),
-    );
-
-    return _BeeFlight._(
-      beeIndex: beeIndex,
-      direction: direction,
-      flightController: flight,
-      flap: flap,
-      pathProgress: pathProgress,
-    )
-      .._translateAnim = _translateTween(incoming).animate(pathProgress)
-      .._rotateAnim = _rotateTween(incoming).animate(pathProgress)
-      .._opacityAnim =
-          incoming ? _opacityTween().animate(pathProgress) : null;
+    _positioned = true;
   }
 
-  final int beeIndex;
-  final _BeeDirection direction;
-  final AnimationController _flight;
-  final CurvedAnimation _pathProgress;
-  late final Animation<Offset> _translateAnim;
-  late final Animation<double> _rotateAnim;
-  late final Animation<double>? _opacityAnim;
+  void update(double dt, Size canvas) {
+    // Gentle heading drift (±1.5 rad/s) so the bee wanders, not darts.
+    _heading += (_rng.nextDouble() - 0.5) * 3.0 * dt;
+    final Offset v =
+        Offset(math.cos(_heading) * _speed, math.sin(_heading) * _speed);
+    position = position + v * dt;
 
-  /// The 0.28 s ALTERNATE wing flap controller (value 0→1, reversing).
-  final AnimationController flap;
-
-  /// Current flight translate offset (start offset while stopped at 0).
-  Offset get translate => _translateAnim.value;
-
-  /// Current flight rotation in degrees.
-  double get rotateDeg => _rotateAnim.value;
-
-  /// Current in-bee opacity (1.0 for out-bees, which never fade).
-  double get opacity => _opacityAnim?.value ?? 1.0;
-
-  /// Starts both repeating loops (infinite; flap alternates).
-  void start() {
-    _flight.repeat();
-    flap.repeat(reverse: true);
+    const double margin = 10;
+    final double maxX = canvas.width - margin;
+    final double maxY = canvas.height - margin;
+    if (position.dx < margin) {
+      position = Offset(margin, position.dy);
+      _heading = math.pi - _heading;
+    } else if (position.dx > maxX) {
+      position = Offset(maxX, position.dy);
+      _heading = math.pi - _heading;
+    }
+    if (position.dy < margin) {
+      position = Offset(position.dx, margin);
+      _heading = -_heading;
+    } else if (position.dy > maxY) {
+      position = Offset(position.dx, maxY);
+      _heading = -_heading;
+    }
   }
-
-  /// Stops both loops and parks the flight at its start position.
-  void stop() {
-    _flight.stop();
-    flap.stop();
-    _flight.value = 0;
-    flap.value = 0;
-  }
-
-  @override
-  void dispose() {
-    _flight.removeListener(notifyListeners);
-    flap.removeListener(notifyListeners);
-    _pathProgress.dispose();
-    _flight.dispose();
-    flap.dispose();
-    super.dispose();
-  }
-}
-
-/// TweenSequence over the flight progress producing translate offsets.
-TweenSequence<Offset> _translateTween(bool incoming) {
-  return incoming
-      ? TweenSequence<Offset>(<TweenSequenceItem<Offset>>[
-          // (-26,34) → (26,10) @62% → (58,-10)
-          TweenSequenceItem<Offset>(
-            tween: Tween<Offset>(
-              begin: const Offset(-26, 34),
-              end: const Offset(26, 10),
-            ),
-            weight: 0.62,
-          ),
-          TweenSequenceItem<Offset>(
-            tween: Tween<Offset>(
-              begin: const Offset(26, 10),
-              end: const Offset(58, -10),
-            ),
-            weight: 0.38,
-          ),
-        ])
-      : TweenSequence<Offset>(<TweenSequenceItem<Offset>>[
-          // (34,-6) → (2,16) @58% → (-30,38)
-          TweenSequenceItem<Offset>(
-            tween: Tween<Offset>(
-              begin: const Offset(34, -6),
-              end: const Offset(2, 16),
-            ),
-            weight: 0.58,
-          ),
-          TweenSequenceItem<Offset>(
-            tween: Tween<Offset>(
-              begin: const Offset(2, 16),
-              end: const Offset(-30, 38),
-            ),
-            weight: 0.42,
-          ),
-        ]);
-}
-
-/// TweenSequence producing rotation degrees: in −14°→6°→10°, out 8°→−6°→−16°.
-TweenSequence<double> _rotateTween(bool incoming) {
-  return incoming
-      ? TweenSequence<double>(<TweenSequenceItem<double>>[
-          TweenSequenceItem<double>(
-            tween: Tween<double>(begin: -14, end: 6),
-            weight: 0.62,
-          ),
-          TweenSequenceItem<double>(
-            tween: Tween<double>(begin: 6, end: 10),
-            weight: 0.38,
-          ),
-        ])
-      : TweenSequence<double>(<TweenSequenceItem<double>>[
-          TweenSequenceItem<double>(
-            tween: Tween<double>(begin: 8, end: -6),
-            weight: 0.58,
-          ),
-          TweenSequenceItem<double>(
-            tween: Tween<double>(begin: -6, end: -16),
-            weight: 0.42,
-          ),
-        ]);
-}
-
-/// In-bee opacity: 0→1 @18%, hold, →fade from 86% (design.md Motion appendix).
-TweenSequence<double> _opacityTween() {
-  return TweenSequence<double>(<TweenSequenceItem<double>>[
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      weight: 0.18,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 1, end: 1),
-      weight: 0.68,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 1, end: 0),
-      weight: 0.14,
-    ),
-  ]);
 }
 
 /// The static bee artwork: 9×6 r4 body + 2×4 stripe + 6×4 flapping wing,
-/// scaled by [size]/9. Colours depend on [incoming] (amber vs cream).
+/// scaled by [size]/9 and painted from the active [skin].
 class _BeeVisual extends StatelessWidget {
   const _BeeVisual({
+    required this.skin,
     required this.incoming,
     required this.size,
     required this.flap,
     required this.animateFlap,
   });
 
+  final BeeSkin skin;
   final bool incoming;
   final double size;
   final Animation<double> flap;
@@ -391,13 +242,9 @@ class _BeeVisual extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double s = size / 9; // scale from authored 9-wide body
-    final Color body =
-        incoming ? const Color(0xFF4A3520) : const Color(0xFFF0DFC4);
-    final Color stripe =
-        incoming ? const Color(0xFFFFD972) : const Color(0xFF6E4826);
-    final Color wing = Colors.white.withValues(
-      alpha: incoming ? 0.80 : 0.55,
-    );
+    final Color body = incoming ? skin.body : skin.outBody;
+    final Color stripe = incoming ? skin.stripe : skin.outStripe;
+    final Color wing = incoming ? skin.wing : skin.outWing;
 
     final double bodyW = 9 * s;
     final double bodyH = 6 * s;

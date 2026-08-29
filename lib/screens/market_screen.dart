@@ -256,9 +256,31 @@ class MarketScreen extends ConsumerWidget {
       );
     }
 
+    // Purchasable bee skin: buy once, then switch anytime.
+    if (item.beeSkinId != null) {
+      final bool active = state.beeSkinId == item.beeSkinId;
+      if (owned) {
+        return _pillButton(
+          label: active ? 'Active' : 'Use',
+          background: active ? _ownedBg : HiveColors.light.ink,
+          foreground: active ? _ink50 : HiveColors.light.cream,
+          onTap: active ? null : () => notifier.activateSkin(item.id),
+        );
+      }
+      final int cost = item.honeyCost!;
+      final bool afford = state.honey >= cost;
+      return _pillButton(
+        label: _comma(cost),
+        background: afford ? HiveColors.light.ink : _ownedBg,
+        foreground: afford ? HiveColors.light.cream : _ink40,
+        jar: true,
+        onTap: () => notifier.buyItem(item.id),
+      );
+    }
+
     if (item.moneyCost != null) {
       final String dollars = item.moneyCost!.toStringAsFixed(2);
-      final bool isPro = item.title == 'Hivewise Pro';
+      final bool isPro = item.title == 'TallyHive Pro';
       return _pillButton(
         label: owned
             ? (isPro ? 'Active' : 'Owned')

@@ -11,13 +11,14 @@ import '../../core/hexagon.dart';
 ///
 /// Rows fill greedily: the first row holds 3 cells, then rows alternate 4 and
 /// 3 until [totalCells] are placed. Rows are centre-aligned horizontally, and
-/// every row after the first is shifted up by [rowOverlap] so rows interlock.
-/// A cell is *income* iff its horizontal centre in cell-units across the
-/// widest row — `(widestRow - rowCount) / 2 + colIndex + 0.5` — is less than
-/// `(incomeCells / totalCells) * widestRow` (a left/right split, never
-/// top/bottom). Income cells use a 158° `#FFD972 → #E8A11B` gradient; expense
-/// cells a 158° `#8B6039 → #553519` gradient. No ghost/dimmed cells and no
-/// text inside cells.
+/// consecutive rows are offset by exactly `cellHeight × 0.75 + gap` so the
+/// interlock is geometrically exact (no magic overlap), giving even, consistent
+/// gaps between every pair of cells. A cell is *income* iff its horizontal
+/// centre in cell-units across the widest row — `(widestRow - rowCount) / 2 +
+/// colIndex + 0.5` — is less than `(incomeCells / totalCells) * widestRow` (a
+/// left/right split, never top/bottom). Income cells use a 158° `#FFD972 →
+/// #E8A11B` gradient; expense cells a 158° `#8B6039 → #553519` gradient. No
+/// ghost/dimmed cells and no text inside cells.
 class HoneycombView extends StatelessWidget {
   const HoneycombView({
     super.key,
@@ -27,7 +28,6 @@ class HoneycombView extends StatelessWidget {
     required this.cellHeight,
     required this.onCellTap,
     this.gap = 1,
-    this.rowOverlap = 15,
   });
 
   /// Count of income cells (painted with the honey gradient).
@@ -46,12 +46,9 @@ class HoneycombView extends StatelessWidget {
   /// expense cell is tapped.
   final void Function(bool isIncome) onCellTap;
 
-  /// Horizontal gap between cells within a row (1 px at the authored size).
+  /// Gap between cells, applied consistently to both the horizontal pitch
+  /// (`cellWidth + gap`) and the vertical pitch (`cellHeight × 0.75 + gap`).
   final double gap;
-
-  /// Vertical overlap between consecutive rows (15 px at the authored size):
-  /// every row after the first is shifted up by this amount.
-  final double rowOverlap;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +61,6 @@ class HoneycombView extends StatelessWidget {
       cellWidth: cellWidth,
       cellHeight: cellHeight,
       gap: gap,
-      rowOverlap: rowOverlap,
     );
     return GestureDetector(
       // A bare CustomPaint does not hit-test itself (its painter's default
@@ -105,7 +101,6 @@ class _HoneycombLayout {
     required double cellWidth,
     required double cellHeight,
     required double gap,
-    required double rowOverlap,
   }) {
     // Row capacities: the first row holds 3, then rows alternate 4 and 3
     // (design.md §5); the final row may be partially filled.
@@ -122,8 +117,10 @@ class _HoneycombLayout {
 
     final int widestRow = rows.reduce((int a, int b) => a > b ? a : b);
     final double widestWidth = widestRow * cellWidth + (widestRow - 1) * gap;
-    final double rowStep = cellHeight - rowOverlap;
-    final double totalHeight = (rows.length - 1) * rowStep + cellHeight;
+    // Pointy-top hexagons interlock at exactly 3/4 of their height; the gap is
+    // added so vertical spacing matches the horizontal gap (design.md §5).
+    final double rowPitch = cellHeight * 0.75 + gap;
+    final double totalHeight = (rows.length - 1) * rowPitch + cellHeight;
     // Income threshold in cell-units across the widest row (design.md §5).
     final double incomeThreshold = (incomeCells / totalCells) * widestRow;
 
@@ -132,7 +129,7 @@ class _HoneycombLayout {
       final int rowCount = rows[i];
       final double rowWidth = rowCount * cellWidth + (rowCount - 1) * gap;
       final double xStart = (widestWidth - rowWidth) / 2;
-      final double yTop = i * rowStep;
+      final double yTop = i * rowPitch;
       for (int colIndex = 0; colIndex < rowCount; colIndex++) {
         // Horizontal centre in cell-units across the widest row: rows are
         // centre-aligned, cells are one cell-unit wide, and 0.5 lands on the
@@ -215,6 +212,15 @@ class _HoneycombPainter extends CustomPainter {
               : const <Color>[Color(0xFF8B6039), Color(0xFF553519)],
         ).createShader(cell.rect);
       canvas.drawPath(_hexPath(cell.rect), fill);
+
+      // A concentric inner hexagon adds a sensation of depth: honey cells get
+      // a recessed (darker) inner face, brown cells a raised (lighter) one.
+      final Rect innerRect = cell.rect.deflate(cell.rect.width * 0.16);
+      final Paint innerFill = Paint()
+        ..color = cell.isIncome
+            ? const Color(0x2E33251A) // ink @ 18 %
+            : const Color(0x26FFFFFF); // white @ 15 %
+      canvas.drawPath(_hexPath(innerRect), innerFill);
     }
   }
 

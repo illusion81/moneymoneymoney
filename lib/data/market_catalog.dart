@@ -23,6 +23,13 @@ const Color _clayDeep = Color(0xFFAE5641);
 const Color _surfaceWarm = Color(0xFFF8F3E6);
 const Color _lavender = Color(0xFFB9A7D9);
 const Color _lavenderLight = Color(0xFFD5C9EC);
+const Color _gold = Color(0xFFB8860B);
+const Color _goldLight = Color(0xFFFFE08A);
+const Color _royal = Color(0xFF5C4A8C);
+const Color _royalLight = Color(0xFFB9A7D9);
+const Color _midnight = Color(0xFF2A2A33);
+const Color _mint = Color(0xFF3F6E68);
+const Color _mintLight = Color(0xFF7FB0A8);
 
 /// Per-tab blurb lines (design.md §Market "Blurb line").
 const String kBoostsBlurb =
@@ -217,6 +224,73 @@ const List<MarketItem> kMarketCatalog = [
       shapes: [
         ArtShape(kind: 'rect', left: .22, top: .28, width: .56, height: .40, rotationDeg: 8, opacity: .8, color: _white),
         ArtShape(kind: 'rect', left: .30, top: .20, width: .56, height: .40, rotationDeg: 8, opacity: .5, color: _clay),
+      ],
+    ),
+  ),
+
+  // --- Bee skins (purchasable restyles for the swarm + queen) --------------
+  MarketItem(
+    id: 'bee-skin-gold',
+    title: 'Gold Bees',
+    description:
+        'Restyle the swarm and the queen in warm gold. They keep flying either way.',
+    tab: MarketTab.looks,
+    honeyCost: 400,
+    beeSkinId: 'gold',
+    art: ArtTile(
+      gradient: [_goldLight, _gold],
+      shapes: [
+        ArtShape(kind: 'rect', left: .28, top: .32, width: .44, height: .26, opacity: .9, color: _white),
+        ArtShape(kind: 'rect', left: .46, top: .36, width: .08, height: .18, opacity: .95, color: _gold),
+      ],
+    ),
+  ),
+  MarketItem(
+    id: 'bee-skin-royal',
+    title: 'Royal Bees',
+    description:
+        'Purple bees with a regal crown to match. For a noble hive.',
+    tab: MarketTab.looks,
+    honeyCost: 600,
+    beeSkinId: 'royal',
+    art: ArtTile(
+      gradient: [_royalLight, _royal],
+      shapes: [
+        ArtShape(kind: 'rect', left: .28, top: .32, width: .44, height: .26, opacity: .9, color: _white),
+        ArtShape(kind: 'rect', left: .46, top: .36, width: .08, height: .18, opacity: .95, color: _royal),
+      ],
+    ),
+  ),
+  MarketItem(
+    id: 'bee-skin-mint',
+    title: 'Mint Bees',
+    description:
+        'Cool teal bees for a slower month. The queen stays calm too.',
+    tab: MarketTab.looks,
+    honeyCost: 500,
+    beeSkinId: 'mint',
+    art: ArtTile(
+      gradient: [_mintLight, _mint],
+      shapes: [
+        ArtShape(kind: 'rect', left: .28, top: .32, width: .44, height: .26, opacity: .9, color: _white),
+        ArtShape(kind: 'rect', left: .46, top: .36, width: .08, height: .18, opacity: .95, color: _mint),
+      ],
+    ),
+  ),
+  MarketItem(
+    id: 'bee-skin-midnight',
+    title: 'Midnight Bees',
+    description:
+        'Near-black bees with a nectar glow. For late-night check-ins.',
+    tab: MarketTab.looks,
+    honeyCost: 700,
+    tag: 'NEW',
+    beeSkinId: 'midnight',
+    art: ArtTile(
+      gradient: [_midnight, _honeyDeep],
+      shapes: [
+        ArtShape(kind: 'rect', left: .28, top: .32, width: .44, height: .26, opacity: .9, color: _honey),
+        ArtShape(kind: 'rect', left: .46, top: .36, width: .08, height: .18, opacity: .95, color: _midnight),
       ],
     ),
   ),
@@ -426,8 +500,8 @@ const List<MarketItem> kMarketCatalog = [
     ),
   ),
   MarketItem(
-    id: 'hivewise-pro',
-    title: 'Hivewise Pro',
+    id: 'tallyhive-pro',
+    title: 'TallyHive Pro',
     description:
         'Weekly reports, unlimited looks, 2× earning. \$4.99/mo, billed monthly.',
     tab: MarketTab.honey,

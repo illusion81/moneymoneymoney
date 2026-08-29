@@ -10,6 +10,7 @@ export 'honey_jar.dart';
 export 'jar_glyph.dart';
 export 'market_art_tile.dart';
 export 'progress_bar.dart';
+export 'queen_bee.dart';
 export 'segmented_control.dart';
 export 'sparkline.dart';
 export 'tab_bar_icons.dart';

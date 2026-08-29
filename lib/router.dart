@@ -2,22 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'screens/chase_login_screen.dart';
 import 'screens/comb_screen.dart';
 import 'screens/detail_sheet.dart';
 import 'screens/hive_screen.dart';
 import 'screens/market_screen.dart';
 import 'screens/mates_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/survey_screen.dart';
 import 'state/hive_state.dart';
 import 'widgets/hive_tab_bar.dart';
 
-/// Builds the app's router: an indexed-stack shell for the five tabs plus a
-/// top-level `/settings` route reached from the home header gear button.
+/// Builds the app's router: first-run onboarding as the entry point, an
+/// indexed-stack shell for the five tabs, and top-level `/settings`, `/survey`
+/// and `/chase-login` routes pushed over the shell.
 GoRouter buildRouter() {
   return GoRouter(
-    initialLocation: '/hive',
+    initialLocation: '/onboarding',
     routes: <RouteBase>[
+      GoRoute(
+        path: '/onboarding',
+        builder: (BuildContext context, GoRouterState state) =>
+            const OnboardingScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (BuildContext context, GoRouterState state,
             StatefulNavigationShell navigationShell) {
@@ -75,6 +84,16 @@ GoRouter buildRouter() {
         path: '/settings',
         builder: (BuildContext context, GoRouterState state) =>
             const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/survey',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SurveyScreen(),
+      ),
+      GoRoute(
+        path: '/chase-login',
+        builder: (BuildContext context, GoRouterState state) =>
+            const ChaseLoginScreen(),
       ),
     ],
   );

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import '../widgets/primitives/market_art_tile.dart';
 
 /// The five Market tabs (design.md §Market / README "Market").
@@ -54,6 +56,7 @@ class MarketItem {
     this.isDream = false,
     this.tag,
     this.owned = false,
+    this.beeSkinId,
   });
 
   final String id;
@@ -77,6 +80,10 @@ class MarketItem {
   final ArtTile art;
 
   final bool owned;
+
+  /// When set, purchasing this item applies the matching [BeeSkin] to the
+  /// swarm + queen (a purchasable bee skin in the Looks tab).
+  final String? beeSkinId;
 }
 
 /// Comb badge categories (design.md §Comb — category colour map).
@@ -145,4 +152,41 @@ class Suggestion {
   final String taskTitle;
   final String taskSub;
   final int taskReward;
+}
+
+/// A bee "skin": the palette used to paint the wandering swarm bees and the
+/// queen bee. `body`/`stripe`/`wing` colour the inbound bees, the `out*`
+/// variants colour the outbound bees (design.md §1.1 `Bee literals`).
+class BeeSkin {
+  const BeeSkin({
+    required this.id,
+    required this.label,
+    required this.body,
+    required this.stripe,
+    required this.wing,
+    required this.outBody,
+    required this.outStripe,
+    required this.outWing,
+  });
+
+  final String id;
+  final String label;
+
+  /// Inbound-bee body colour.
+  final Color body;
+
+  /// Inbound-bee stripe colour.
+  final Color stripe;
+
+  /// Inbound-bee wing colour.
+  final Color wing;
+
+  /// Outbound-bee body colour.
+  final Color outBody;
+
+  /// Outbound-bee stripe colour.
+  final Color outStripe;
+
+  /// Outbound-bee wing colour.
+  final Color outWing;
 }

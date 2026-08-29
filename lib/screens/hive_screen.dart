@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/hexagon.dart';
+import '../data/bee_skins.dart';
 import '../data/pot_layers.dart';
 import '../models/models.dart';
 import '../state/hive_state.dart';
@@ -98,6 +99,7 @@ class HiveScreen extends ConsumerWidget {
 
   Widget _buildUnifiedHive(WidgetRef ref, HiveState state) {
     final HiveNotifier notifier = ref.read(hiveStateProvider.notifier);
+    final BeeSkin skin = beeSkinById(state.beeSkinId);
     return Column(
       children: <Widget>[
         Padding(
@@ -139,7 +141,11 @@ class HiveScreen extends ConsumerWidget {
                     .openSheet(isIncome ? SheetKind.income : SheetKind.expense),
               ),
               Positioned.fill(
-                child: BeeSwarm(beesIn: 4, beesOut: 6),
+                child: BeeSwarm(beesIn: 4, beesOut: 6, skin: skin),
+              ),
+              // The queen roams the hive along the hexagonal axes.
+              Positioned.fill(
+                child: QueenBee(skin: skin),
               ),
             ],
           ),

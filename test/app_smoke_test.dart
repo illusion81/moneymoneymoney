@@ -9,11 +9,21 @@ import 'package:moneymoneymoney/main.dart';
 /// Decorative animations are infinite, so we advance the clock with explicit
 /// `pump`s rather than `pumpAndSettle` (which would never settle).
 void main() {
-  testWidgets('HivewiseApp renders and every tab navigates', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: HivewiseApp()));
+  testWidgets('TallyHiveApp renders and every tab navigates', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: TallyHiveApp()));
     await tester.pump(const Duration(milliseconds: 120));
 
-    // Home (Hive) is the initial tab; the greeting + hive header render.
+    // First-run onboarding → skip through to the hive.
+    await tester.tap(find.text('Get started'));
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.tap(find.text('Skip for now'));
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.tap(find.text('Skip for now'));
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.tap(find.text('Enter the hive'));
+    await tester.pump(const Duration(milliseconds: 120));
+
+    // Home (Hive) is the current tab; the greeting + hive header render.
     expect(find.text('Morning, Sam'), findsOneWidget);
 
     // Visit each remaining tab and confirm its screen title renders.
