@@ -372,3 +372,55 @@ class ShopItem {
         description: j['description'] as String,
       );
 }
+
+
+/// A large planned expense — concert tickets, a flight, a laptop.
+/// Saving toward something is not the same as blowing a budget, so the backend
+/// reserves this money before it judges any bucket.
+class Goal {
+  final String id, name, targetDate, headline;
+  final double targetAmount, savedSoFar, remaining;
+  final double perWeekNeeded, perMonthNeeded, shareOfDiscretionary;
+  final int daysLeft;
+  final double weeksLeft;
+  final bool onTrack;
+  final String? warning;
+
+  const Goal({
+    required this.id,
+    required this.name,
+    required this.targetAmount,
+    required this.targetDate,
+    required this.savedSoFar,
+    required this.remaining,
+    required this.daysLeft,
+    required this.weeksLeft,
+    required this.perWeekNeeded,
+    required this.perMonthNeeded,
+    required this.onTrack,
+    required this.shareOfDiscretionary,
+    required this.headline,
+    this.warning,
+  });
+
+  double get progress =>
+      targetAmount == 0 ? 0 : (savedSoFar / targetAmount).clamp(0.0, 1.0);
+  bool get funded => remaining <= 0;
+
+  factory Goal.fromJson(Map<String, dynamic> j) => Goal(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        targetAmount: (j['target_amount'] as num).toDouble(),
+        targetDate: j['target_date'] as String,
+        savedSoFar: (j['saved_so_far'] as num).toDouble(),
+        remaining: (j['remaining'] as num).toDouble(),
+        daysLeft: j['days_left'] as int,
+        weeksLeft: (j['weeks_left'] as num).toDouble(),
+        perWeekNeeded: (j['per_week_needed'] as num).toDouble(),
+        perMonthNeeded: (j['per_month_needed'] as num).toDouble(),
+        onTrack: j['on_track'] as bool,
+        shareOfDiscretionary: (j['share_of_discretionary'] as num).toDouble(),
+        headline: j['headline'] as String,
+        warning: j['warning'] as String?,
+      );
+}

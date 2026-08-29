@@ -1,0 +1,22 @@
+# Deploy the Wealth Tower API on Render.
+#
+#   1. render.com -> New -> Blueprint -> connect this repo -> pick this file
+#   2. Add env vars in the dashboard if you want live bank data:
+#        BASIQ_API_KEY, BASIQ_USER_ID
+#      Leave them out and it serves the seeded mock data, which is fine.
+#
+# Free tier sleeps after ~15 min idle and takes 30-50s to wake. Good enough for
+# teammates to build against; do NOT rely on it during the pitch — run the
+# backend locally for that.
+services:
+  - type: web
+    name: wealth-tower-api
+    runtime: python
+    plan: free
+    rootDir: "backend,dataAPI"
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"

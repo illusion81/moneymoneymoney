@@ -23,7 +23,8 @@ def _mid(*parts: str) -> str:
     return hashlib.sha1("|".join(parts).encode()).hexdigest()[:10]
 
 
-def generate(profile: Profile, plan: Plan, txns: list[Transaction]) -> list[Mission]:
+def generate(profile: Profile, plan: Plan, txns: list[Transaction],
+             goals: list | None = None) -> list[Mission]:
     by_cat: dict[str, float] = defaultdict(float)
     count_by_cat: dict[str, int] = defaultdict(int)
     for t in txns:
@@ -32,6 +33,22 @@ def generate(profile: Profile, plan: Plan, txns: list[Transaction]) -> list[Miss
             count_by_cat[t.category] += 1
 
     missions: list[Mission] = []
+
+    # Goals first — a planned purchase is the thing they actually care about,
+    # so it should sit at the top of the list, not under a subscription nag.
+    for g in (goals or []):
+        if g.remaining <= 0:
+            continue
+        missions.append(Mission(
+            id=_mid("goal", g.id), title=f"Save for {g.name}",
+            detail=f"{g.headline}"
+                   + (f" {g.warning}" if g.warning else ""),
+            bucket="stable", kind="threshold",
+            target=round(g.target_amount, 2), progress=round(g.saved_so_far, 2),
+            complete=g.saved_so_far >= g.target_amount, claimed=False,
+            verified=False, xp=200, coins=80,
+            expires_in_days=max(g.days_left, 1),
+        ))
 
     # 1. Subscription audit — flagged by two of the team's interviewees.
     subs = by_cat.get("subscriptions", 0.0)
