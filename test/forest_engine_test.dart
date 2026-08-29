@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moneymoneymoney/models/forest_day.dart';
 import 'package:moneymoneymoney/models/wealth_report.dart';
 import 'package:moneymoneymoney/services/forest_engine.dart';
+import 'package:moneymoneymoney/services/progression_engine.dart';
 
 void main() {
   const report = WealthReport(
@@ -263,6 +264,36 @@ void main() {
       expect(quote.blockedReason, isNotNull);
     });
 
+    test('a withered day exactly 6 days old is eligible (boundary)', () {
+      final engine = ForestEngine();
+      final witheredDate = DateTime(2026, 8, 23);
+      final now = DateTime(2026, 8, 29);
+
+      final quote = engine.quoteRestoration(
+        days: witheredDayList(witheredDate),
+        dayDate: witheredDate,
+        now: now,
+      );
+
+      expect(quote.eligible, isTrue);
+      expect(quote.cost, 60);
+    });
+
+    test('a withered day exactly 7 days old is ineligible (boundary)', () {
+      final engine = ForestEngine();
+      final witheredDate = DateTime(2026, 8, 22);
+      final now = DateTime(2026, 8, 29);
+
+      final quote = engine.quoteRestoration(
+        days: witheredDayList(witheredDate),
+        dayDate: witheredDate,
+        now: now,
+      );
+
+      expect(quote.eligible, isFalse);
+      expect(quote.blockedReason, isNotNull);
+    });
+
     test('a withered day older than 7 days is refused', () {
       final engine = ForestEngine();
       final witheredDate = DateTime(2026, 8, 10);
@@ -350,4 +381,60 @@ void main() {
       expect(recoveryDay.unlocked, isTrue);
     });
   });
+
+  group('Progression/achievement convergence', () {
+    test(
+        'achievement unlock → level up → Seedling Scholar unlock → more XP converges within 6 passes',
+        () {
+      final engine = ForestEngine();
+      final progressionEngine = ProgressionEngine();
+
+      var days = <ForestDay>[];
+      var achievements = <Achievement>[];
+      var progression = progressionEngine.compute(
+        days: days,
+        achievements: achievements,
+        spendEvents: const [],
+      );
+
+      var stable = false;
+      var passCount = 0;
+      for (passCount = 0; passCount < 6; passCount++) {
+        final newProgression = progressionEngine.compute(
+          days: days,
+          achievements: achievements,
+          spendEvents: const [],
+        );
+        final newSummary = engine.summarize(
+          days,
+          progression: newProgression,
+          shopState: null,
+        );
+        stable = newProgression.totalXp == progression.totalXp &&
+            _sameUnlockState(newSummary.achievements, achievements);
+
+        progression = newProgression;
+        achievements = newSummary.achievements;
+
+        if (stable) {
+          break;
+        }
+      }
+
+      expect(stable, isTrue, reason: 'Should converge within 6 passes, took $passCount');
+      expect(passCount, lessThan(6), reason: 'Should converge before reaching pass budget');
+    });
+  });
+}
+
+bool _sameUnlockState(List<Achievement> a, List<Achievement> b) {
+  if (a.length != b.length) {
+    return false;
+  }
+  for (var i = 0; i < a.length; i++) {
+    if (a[i].unlocked != b[i].unlocked) {
+      return false;
+    }
+  }
+  return true;
 }

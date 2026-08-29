@@ -159,7 +159,7 @@ class ForestEngine {
     }
 
     final ageInDays = normalizedNow.difference(normalizedDayDate).inDays;
-    if (ageInDays < 0 || ageInDays > 7) {
+    if (ageInDays < 0 || ageInDays > 6) {
       return const RestorationQuote(
         eligible: false,
         cost: 0,
