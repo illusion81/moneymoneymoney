@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import 'data/api_client.dart';
+import 'data/models.dart';
+import 'data/survey_adapter.dart';
 import 'models/finance_profile.dart';
 import 'models/forest_day.dart';
 import 'models/home_layout.dart';
@@ -169,6 +171,7 @@ class _MyAppState extends State<MyApp> {
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
           onFetchTodaySpending: _fetchTodaySpending,
+          api: _apiClient,
         );
       case AppView.calendar:
         return CalendarScreen(
@@ -229,7 +232,18 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  /// Send the questionnaire to the backend as well as computing locally, so
+  /// the plan, missions and tower all come from the same answers. Fire and
+  /// forget: if the backend is down the app still works on local data.
+  void _pushProfileToBackend(FinanceProfile profile) {
+    _apiClient.submitSurvey(profile.toSurveyAnswers()).catchError((e) {
+      debugPrint('Survey not sent to backend: $e');
+      return Future<Profile>.error(e);
+    }).ignore();
+  }
+
   void _handleProfileSubmitted(FinanceProfile profile) {
+    _pushProfileToBackend(profile);
     final alreadyStarted = _planStarted;
     setState(() {
       _report = ReportGenerator().generate(profile);
