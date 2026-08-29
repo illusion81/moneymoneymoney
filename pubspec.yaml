@@ -35,18 +35,17 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
-  # Backend API client (lib/data/api_client.dart) — Lane A
-  http: ^1.2.0
+  # Hivewise state management.
+  flutter_riverpod: ^2.6.1
 
-  # Opens the bank consent page in a browser
-  url_launcher: ^6.3.0
+  # Hivewise navigation.
+  go_router: ^14.6.0
 
-  # Statement upload (CSV / PDF)
-  file_picker: ^8.1.2
-  shared_preferences: ^2.5.5
+  # Hivewise typography (Caveat / Plus Jakarta Sans / JetBrains Mono).
+  google_fonts: ^6.2.1
 
-  # FRPS report storage (lib/frps/storage)
-  sqflite: ^2.3.0
+  # Hivewise motion.
+  flutter_animate: ^4.5.0
 
 dev_dependencies:
   flutter_test:
@@ -59,9 +58,6 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
-  # Runs sqflite under `flutter test` (FFI shim, test-only)
-  sqflite_common_ffi: ^2.4.0+3
-
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -72,11 +68,6 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-
-  assets:
-    - assets/animals/
-    - assets/eggs/
-    - assets/icons/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
