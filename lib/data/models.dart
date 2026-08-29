@@ -197,6 +197,9 @@ class Mission {
   final String id, title, detail, bucket, kind;
   final double target, progress;
   final bool complete, claimed;
+  /// True = completion is derived from transaction data.
+  /// False = the user asserts it; label it "self-reported" in the UI.
+  final bool verified;
   final int xp, coins, expiresInDays;
 
   const Mission({
@@ -209,6 +212,7 @@ class Mission {
     required this.progress,
     required this.complete,
     required this.claimed,
+    required this.verified,
     required this.xp,
     required this.coins,
     required this.expiresInDays,
@@ -224,6 +228,7 @@ class Mission {
         progress: (j['progress'] as num).toDouble(),
         complete: j['complete'] as bool,
         claimed: j['claimed'] as bool,
+        verified: j['verified'] as bool? ?? true,
         xp: j['xp'] as int,
         coins: j['coins'] as int,
         expiresInDays: j['expires_in_days'] as int,

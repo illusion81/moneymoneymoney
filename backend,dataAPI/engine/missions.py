@@ -41,7 +41,7 @@ def generate(profile: Profile, plan: Plan, txns: list[Transaction]) -> list[Miss
             detail=f"You're paying ${subs:.0f}/month across {count_by_cat['subscriptions']} subscriptions. "
                    f"Cancel or pause one before the month ends.",
             bucket="reward", kind="one_off", target=1, progress=0, complete=False,
-            claimed=False, xp=120, coins=40, expires_in_days=14,
+            claimed=False, verified=False, xp=120, coins=40, expires_in_days=14,
         ))
 
     # 2. Eating-out streak — the top student spend line.
@@ -53,7 +53,8 @@ def generate(profile: Profile, plan: Plan, txns: list[Transaction]) -> list[Miss
             detail=f"Keep delivery + cafes under ${cap} this month (you're at ${eat:.0f}). "
                    f"Three no-spend days in a row counts as a streak bonus.",
             bucket="reward", kind="threshold", target=cap, progress=round(eat, 2),
-            complete=eat <= cap, claimed=False, xp=200, coins=80, expires_in_days=30,
+            complete=eat <= cap, claimed=False, verified=True,
+            xp=200, coins=80, expires_in_days=30,
         ))
 
     # 3. BNPL — the strongest real signal in Australian student spending.
@@ -67,7 +68,7 @@ def generate(profile: Profile, plan: Plan, txns: list[Transaction]) -> list[Miss
             detail=f"${bnpl:.0f} across {n} instalments. Clear the smallest one and "
                    f"don't open a new order for two weeks — that's the loop broken.",
             bucket="reward", kind="one_off", target=1, progress=0, complete=False,
-            claimed=False, xp=300, coins=120, expires_in_days=21,
+            claimed=False, verified=False, xp=300, coins=120, expires_in_days=21,
         ))
 
     # 3. Fill the bucket that is short — invest or stable.
@@ -80,8 +81,9 @@ def generate(profile: Profile, plan: Plan, txns: list[Transaction]) -> list[Miss
                 detail=f"Move ${short:.0f} into your {bp.bucket} bucket to hit "
                        f"{bp.target_pct*100:.0f}% of income.",
                 bucket=bp.bucket, kind="threshold", target=round(bp.target_amount, 2),
-                progress=round(bp.actual_amount, 2), complete=False, claimed=False,
-                xp=250, coins=100, expires_in_days=30,
+                progress=round(bp.actual_amount, 2),
+                complete=bp.actual_amount >= bp.target_amount,
+                claimed=False, verified=True, xp=250, coins=100, expires_in_days=30,
             ))
 
     # 4. Always-available habit mission so a new user is never staring at zero.
@@ -89,7 +91,7 @@ def generate(profile: Profile, plan: Plan, txns: list[Transaction]) -> list[Miss
         id=_mid("checkin", profile.user_id), title="Daily check-in",
         detail="Open the tower once a day. Seven days builds a floor.",
         bucket="stable", kind="streak", target=7, progress=1, complete=False,
-        claimed=False, xp=70, coins=25, expires_in_days=7,
+        claimed=False, verified=False, xp=70, coins=25, expires_in_days=7,
     ))
 
     # 5. Guardrail mission for users with no buffer.
@@ -97,12 +99,16 @@ def generate(profile: Profile, plan: Plan, txns: list[Transaction]) -> list[Miss
         pass
     if not any(m.bucket == "stable" and m.kind == "threshold" for m in missions):
         target = round(profile.monthly_income * 0.05)
+        stable_actual = next((b.actual_amount for b in plan.buckets
+                              if b.bucket == "stable"), 0.0)
         if target > 0:
             missions.append(Mission(
                 id=_mid("buffer", profile.user_id), title="First brick",
                 detail=f"Put ${target} aside this month. It's 5% — small enough that it happens.",
-                bucket="stable", kind="one_off", target=target, progress=0,
-                complete=False, claimed=False, xp=150, coins=60, expires_in_days=30,
+                bucket="stable", kind="one_off", target=target,
+                progress=round(stable_actual, 2),
+                complete=stable_actual >= target, claimed=False, verified=True,
+                xp=150, coins=60, expires_in_days=30,
             ))
 
     return missions

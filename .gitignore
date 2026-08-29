@@ -112,3 +112,7 @@ backend,dataAPI/__pycache__/
 .venv/
 lane-a.zip
 _laneA_tmp/
+
+# Bank exports - never commit real transaction data
+*.csv
+CSVData*.csv

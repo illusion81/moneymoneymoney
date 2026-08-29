@@ -23,6 +23,7 @@ def user(uid: str = DEFAULT_USER) -> dict[str, Any]:
             "skins": ["skin-default"],
             "active_skin": "skin-default",
             "claimed": set(),
+            "self_done": set(),
             "missions": [],
         }
     return _STATE[uid]
