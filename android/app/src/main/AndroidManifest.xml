@@ -1,8 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The app talks to the Wealth Tower backend over HTTP. Flutter adds this
+         automatically for debug builds only, so a release APK needs it here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="moneymoneymoney"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

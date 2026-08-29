@@ -5,10 +5,18 @@ import '../models/shop_item.dart';
 /// The single source of icon/color mapping for shop items, shared by the
 /// shop, forest, and homestead screens.
 class ShopItemVisual {
-  const ShopItemVisual({required this.icon, required this.color});
+  const ShopItemVisual({
+    required this.icon,
+    required this.color,
+    this.animalAsset,
+  });
 
   final IconData icon;
   final Color color;
+
+  /// File stem under assets/animals/. When set, screens draw the artwork
+  /// instead of the icon disc.
+  final String? animalAsset;
 }
 
 IconData treeSkinIcon({required String? equippedId, required int level}) {
@@ -71,7 +79,8 @@ const Map<String, ShopItemVisual> _decorationVisuals = {
     icon: Icons.water_drop,
     color: Color(0xff3f8f8a),
   ),
-  'deco-beehive': ShopItemVisual(icon: Icons.hive, color: Color(0xffc79a33)),
+  'deco-beehive': ShopItemVisual(icon: Icons.hive, color: Color(0xffc79a33),
+  ),
   'deco-garden-cabin': ShopItemVisual(
     icon: Icons.cabin,
     color: Color(0xff2f7d50),
@@ -97,5 +106,13 @@ ShopItemVisual shopItemVisual(ShopItem item) {
     case ShopItemCategory.decoration:
       return _decorationVisuals[item.id] ??
           const ShopItemVisual(icon: Icons.deck, color: Color(0xff8a6a4f));
+    case ShopItemCategory.animal:
+      // Animals carry their own artwork; the icon is only a fallback for
+      // places that have not been taught to draw the PNG yet.
+      return ShopItemVisual(
+        icon: Icons.pets,
+        color: const Color(0xffb4553f),
+        animalAsset: item.asset,
+      );
   }
 }

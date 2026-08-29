@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../models/forest_day.dart';
@@ -7,11 +8,13 @@ import '../models/wealth_report.dart';
 import '../services/forest_engine.dart';
 import '../data/api_client.dart';
 import '../services/item_visuals.dart';
+import '../widgets/dev_gate.dart';
+import '../widgets/farm_scene.dart';
+import '../widgets/tree_view.dart';
 import '../widgets/app_nav_bar.dart';
 import 'connect_bank_screen.dart';
 import 'circle_screen.dart';
 import 'goals_screen.dart';
-import 'spending_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -33,6 +36,8 @@ class HomeScreen extends StatefulWidget {
     required this.onFetchTodaySpending,
     this.lastEarnedSummary,
     this.api,
+    this.onDebugSimulate,
+    this.onShowDiamonds,
     this.onRetakeQuestionnaire,
   });
 
@@ -45,6 +50,13 @@ class HomeScreen extends StatefulWidget {
   /// When supplied, the screen can link a bank and pull real spending
   /// instead of asking the user to type it.
   final ApiClient? api;
+
+  /// Debug: add another week of on-budget days. Wired to a FAB so the demo
+  /// can be driven from this screen instead of via the shop.
+  final VoidCallback? onDebugSimulate;
+
+  /// Opens the diamond store (paid currency).
+  final VoidCallback? onShowDiamonds;
   final void Function({required double spending}) onCheckIn;
   final void Function(String recoveryNote) onRestore;
   final VoidCallback onShowReport;
@@ -69,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _recoveryNoteController = TextEditingController();
   String? _errorText;
   bool _bankConnected = false;
+  double? _adherence;
   _SpendingMode _spendingMode = _SpendingMode.manual;
   bool _bankLoading = false;
 
@@ -87,6 +100,12 @@ class _HomeScreenState extends State<HomeScreen> {
       final trusted = await api.dataTrusted();
       if (mounted) setState(() => _bankConnected = trusted);
     } catch (_) {}
+    try {
+      final plan = await api.plan();
+      if (mounted) setState(() => _adherence = plan.adherence);
+    } catch (_) {
+      // No profile yet, or backend down — fall back to streak-only growth.
+    }
   }
 
   Future<void> _openConnectBank() async {
@@ -117,6 +136,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final statusColor = _statusColor(latestDay);
 
     return Scaffold(
+      floatingActionButton: (kDebugMode && widget.onDebugSimulate != null)
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                // Gate it so nobody fast-forwards the farm mid-pitch.
+                if (await DevGate.ensureUnlocked(context)) {
+                  widget.onDebugSimulate!();
+                }
+              },
+              icon: Icon(DevGate.isUnlocked
+                  ? Icons.fast_forward
+                  : Icons.lock_outline),
+              label: const Text('Simulate a week'),
+            )
+          : null,
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
@@ -136,7 +169,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: const Icon(Icons.groups_outlined),
               tooltip: 'Your circle',
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => CircleScreen(api: widget.api!),
+                builder: (_) => CircleScreen(
+                  api: widget.api!,
+                  streak: widget.summary.currentStreak,
+                  level: widget.progression.level.level,
+                ),
               )),
             ),
           if (widget.api != null)
@@ -149,16 +186,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           if (widget.api != null)
             IconButton(
-              icon: const Icon(Icons.receipt_long_outlined),
-              tooltip: 'Where your money went',
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SpendingScreen(api: widget.api!),
-                ),
-              ),
-            ),
-          if (widget.api != null)
-            IconButton(
               icon: Icon(
                 _bankConnected
                     ? Icons.account_balance
@@ -166,6 +193,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               tooltip: _bankConnected ? 'Bank connected' : 'Connect your bank',
               onPressed: _openConnectBank,
+            ),
+          if (widget.onShowDiamonds != null)
+            IconButton(
+              tooltip: 'Diamonds',
+              onPressed: widget.onShowDiamonds,
+              icon: const Icon(Icons.diamond_outlined),
             ),
           IconButton(
             tooltip: 'Shop',
@@ -184,11 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: widget.onRetakeQuestionnaire,
               icon: const Icon(Icons.fact_check_outlined),
             ),
-          IconButton(
-            tooltip: 'Achievements',
-            onPressed: widget.onShowAchievements,
-            icon: const Icon(Icons.emoji_events_outlined),
-          ),
         ],
       ),
       bottomNavigationBar: AppNavBar(
@@ -219,18 +247,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Column(
                     children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: groundColor(widget.shopState),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          _treeIcon(latestDay, widget.shopState),
-                          size: 112,
-                          color: statusColor,
-                        ),
+                      FarmScene(
+                        // Growth is half streak, half plan adherence — the
+                        // tree must answer to the budget, not just to logins.
+                        growth: _farmGrowth(latestDay),
+                        health: _treeHealth(latestDay),
+                        skinId: widget.shopState
+                            .equippedItemIds[ShopItemCategory.treeSkin],
+                        skyColor: skyColor(widget.shopState),
+                        groundColor: groundColor(widget.shopState),
+                        // Animals are bought in the shop with coins you earn
+                        // by holding your plan — they do not appear for free.
+                        animals: widget.shopState.ownedItemIds
+                            .map((id) => kShopCatalog
+                                .where((i) => i.id == id)
+                                .firstOrNull)
+                            .whereType<ShopItem>()
+                            .where((i) => i.category == ShopItemCategory.animal)
+                            .map((i) => i.asset!)
+                            .toList(),
+                        seed: widget.summary.days.length + 7,
+                        height: 280,
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -438,6 +475,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// 0..1. Half of it is the check-in streak, half is how closely they are
+  /// holding their actual budget. Streak alone would mean the tree rewards
+  /// opening the app, which is not the product's claim.
+  double _farmGrowth(ForestDay? day) {
+    // Three inputs so the farm keeps visibly growing well past the first week:
+    //   streak    — caps at 7 days, gets you started
+    //   adherence — how closely the real budget is being held
+    //   level     — long-run progress, keeps climbing after the streak maxes
+    final streakPart = (widget.summary.currentStreak / 7).clamp(0.0, 1.0);
+    final adherencePart = _adherence ?? streakPart;
+    final levelPart = (widget.progression.level.level / 10).clamp(0.0, 1.0);
+    return (streakPart * 0.35 + adherencePart * 0.3 + levelPart * 0.35)
+        .clamp(0.0, 1.0);
+  }
+
+  TreeHealth _treeHealth(ForestDay? day) => switch (day?.status) {
+        TreeStatus.withered => TreeHealth.withered,
+        TreeStatus.restored => TreeHealth.restored,
+        TreeStatus.healthy => TreeHealth.healthy,
+        _ => TreeHealth.pending,
+      };
+
+  // Kept for the shop preview, which still shows icons.
+  // ignore: unused_element
   IconData _treeIcon(ForestDay? day, ShopState shopState) {
     if (day?.status == TreeStatus.withered) {
       return Icons.energy_savings_leaf_outlined;
