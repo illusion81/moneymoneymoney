@@ -29,7 +29,15 @@ void main() {
   runApp(const MyApp());
 }
 
-enum AppView { onboarding, report, forest, calendar, homestead, achievements, shop }
+enum AppView {
+  onboarding,
+  report,
+  forest,
+  calendar,
+  homestead,
+  achievements,
+  shop,
+}
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -159,6 +167,7 @@ class _MyAppState extends State<MyApp> {
         return HomesteadScreen(
           shopState: _shopState,
           layout: _homeLayout,
+          days: _summary.days,
           onPlace: _handlePlaceDecoration,
           onRemove: _handleRemoveDecoration,
           onShowForest: () => setState(() => _view = AppView.forest),
@@ -289,20 +298,23 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _handlePlaceDecoration(String itemId, double dx, double dy) {
+  void _handlePlaceDecoration(String itemId, int row, int col) {
     setState(() {
       _homeLayout = _homeLayoutService.place(
         state: _homeLayout,
         itemId: itemId,
-        dx: dx,
-        dy: dy,
+        row: row,
+        col: col,
       );
     });
   }
 
   void _handleRemoveDecoration(String itemId) {
     setState(() {
-      _homeLayout = _homeLayoutService.remove(state: _homeLayout, itemId: itemId);
+      _homeLayout = _homeLayoutService.remove(
+        state: _homeLayout,
+        itemId: itemId,
+      );
     });
   }
 
@@ -382,7 +394,10 @@ class _MyAppState extends State<MyApp> {
         break;
       }
     }
-    assert(stable, 'Progression/achievement convergence did not reach fixed point within 6 passes');
+    assert(
+      stable,
+      'Progression/achievement convergence did not reach fixed point within 6 passes',
+    );
   }
 
   bool _sameUnlockState(List<Achievement> a, List<Achievement> b) {

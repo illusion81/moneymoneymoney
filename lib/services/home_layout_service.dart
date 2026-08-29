@@ -3,13 +3,13 @@ import '../models/home_layout.dart';
 class HomeLayoutService {
   HomeLayoutState initialState() => const HomeLayoutState(placements: []);
 
-  /// Places [itemId] at ([dx], [dy]), clamped to [0, 1]. If the item is
-  /// already placed, its position is replaced rather than duplicated.
+  /// Places [itemId] at ([row], [col]), clamped to the grid bounds. If the
+  /// item is already placed, its cell is replaced rather than duplicated.
   HomeLayoutState place({
     required HomeLayoutState state,
     required String itemId,
-    required double dx,
-    required double dy,
+    required int row,
+    required int col,
   }) {
     final remaining = state.placements
         .where((placement) => placement.itemId != itemId)
@@ -17,8 +17,8 @@ class HomeLayoutService {
     remaining.add(
       DecorationPlacement(
         itemId: itemId,
-        dx: dx.clamp(0.0, 1.0),
-        dy: dy.clamp(0.0, 1.0),
+        row: row.clamp(0, kHomeGridSize - 1),
+        col: col.clamp(0, kHomeGridSize - 1),
       ),
     );
     return HomeLayoutState(placements: remaining);
