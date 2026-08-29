@@ -43,6 +43,7 @@ dependencies:
 
   # Statement upload (CSV / PDF)
   file_picker: ^8.1.2
+  shared_preferences: ^2.5.5
 
   # FRPS report storage (lib/frps/storage)
   sqflite: ^2.3.0

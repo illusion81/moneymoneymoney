@@ -5,20 +5,48 @@ import '../models/money_style.dart';
 class MoneyStyleResultScreen extends StatelessWidget {
   const MoneyStyleResultScreen({
     super.key,
-    required this.result,
-    this.onExplore,
-    this.onBuildPlan,
+    required this.completion,
+    this.onExploreIdeas,
+    this.onBuildRangePlan,
+    this.onAnswerMore,
+    this.onStartOver,
   });
 
-  final MoneyStyleResult result;
-
-  /// Where the two buttons go. Left null they fall back to a snackbar, so the
-  /// screen still works standalone (e.g. in a widget test).
-  final VoidCallback? onExplore;
-  final VoidCallback? onBuildPlan;
+  final MoneyStyleCompletion completion;
+  MoneyStyleResult? get result => completion.result;
+  final VoidCallback? onExploreIdeas, onBuildRangePlan;
+  final VoidCallback? onAnswerMore, onStartOver;
 
   @override
   Widget build(BuildContext context) {
+    if (this.result == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Not enough to name a style yet'),
+              Text(
+                '${completion.session.totalAnswered} of 12 questions answered',
+              ),
+              const Text(
+                'Answer at least one question in each area to name a style.',
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: onAnswerMore,
+                child: const Text('Answer a few more'),
+              ),
+              TextButton(
+                onPressed: onStartOver,
+                child: const Text('Start over'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final result = this.result!;
     return Scaffold(
       appBar: AppBar(title: const Text('Your Money Style'), elevation: 0),
       body: SafeArea(
@@ -38,6 +66,16 @@ class MoneyStyleResultScreen extends StatelessWidget {
                 ),
 
               // Archetype name (large)
+              if (result.confidenceTier != ConfidenceTier.fullClarity)
+                const Text('Based on what you shared today'),
+              if (result.confidenceTier == ConfidenceTier.earlySnapshot)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: onAnswerMore,
+                    child: const Text('Answer a few more'),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
@@ -170,21 +208,13 @@ class MoneyStyleResultScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     FilledButton.icon(
-                      onPressed: onExplore ??
-                          () => ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Nothing wired here yet')),
-                              ),
+                      onPressed: onExploreIdeas,
                       icon: const Icon(Icons.lightbulb_outline),
                       label: const Text('Explore ideas that fit my style'),
                     ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
-                      onPressed: onBuildPlan ??
-                          () => ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Nothing wired here yet')),
-                              ),
+                      onPressed: onBuildRangePlan,
                       icon: const Icon(Icons.edit_note),
                       label: const Text('Build a practical plan with ranges'),
                     ),

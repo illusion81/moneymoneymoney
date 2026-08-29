@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'data/api_client.dart';
 import 'data/models.dart';
+import 'data/money_style_questions.dart';
 import 'data/survey_adapter.dart';
 import 'models/finance_profile.dart';
 import 'models/forest_day.dart';
@@ -19,6 +21,8 @@ import 'screens/home_screen.dart';
 import 'screens/homestead_screen.dart';
 import 'screens/money_style_flow.dart';
 import 'screens/money_style_result_screen.dart';
+import 'screens/money_style_ideas_screen.dart';
+import 'screens/plan_range_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/plus_screen.dart';
@@ -30,6 +34,7 @@ import 'services/home_layout_service.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
+import 'services/money_style_repository.dart';
 import 'widgets/level_up_overlay.dart';
 import 'widgets/celebration_dialog.dart';
 
@@ -41,6 +46,8 @@ enum AppView {
   onboarding,
   moneyStyleFlow,
   moneyStyleResult,
+  moneyStyleIdeas,
+  rangePlan,
   report,
   forest,
   calendar,
@@ -52,7 +59,15 @@ enum AppView {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({
+    super.key,
+    this.apiClient,
+    this.moneyStyleStore,
+    this.showOnboardingInitially = false,
+  });
+  final ApiClient? apiClient;
+  final MoneyStyleStore? moneyStyleStore;
+  final bool showOnboardingInitially;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -63,7 +78,9 @@ class _MyAppState extends State<MyApp> {
   final ProgressionEngine _progressionEngine = ProgressionEngine();
   final ShopService _shopService = ShopService();
   final HomeLayoutService _homeLayoutService = HomeLayoutService();
-  final ApiClient _apiClient = ApiClient();
+  late final ApiClient _apiClient;
+  late final MoneyStyleStore _moneyStyleStore;
+  Future<void> _moneyStyleWrites = Future<void>.value();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
   // The messenger's context sits above the Navigator, so dialogs need their
@@ -71,7 +88,7 @@ class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   WealthReport? _report;
-  MoneyStyleResult? _moneyStyleResult;
+  MoneyStyleCompletion? _moneyStyleCompletion;
   ForestSummary _summary = const ForestSummary(
     days: [],
     currentStreak: 0,
@@ -84,7 +101,7 @@ class _MyAppState extends State<MyApp> {
   late ShopState _shopState;
   late HomeLayoutState _homeLayout;
   final List<RewardEvent> _spendEvents = [];
-  AppView _view = AppView.onboarding;
+  late AppView _view;
   String? _lastEarnedSummary;
   bool _planStarted = false;
 
@@ -101,6 +118,18 @@ class _MyAppState extends State<MyApp> {
       achievements: const [],
       spendEvents: _spendEvents,
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _apiClient = widget.apiClient ?? ApiClient();
+    _moneyStyleStore =
+        widget.moneyStyleStore ?? SharedPreferencesMoneyStyleRepository();
+    _view = widget.showOnboardingInitially
+        ? AppView.onboarding
+        : AppView.moneyStyleFlow;
+    unawaited(_loadMoneyStyle());
   }
 
   @override
@@ -133,21 +162,47 @@ class _MyAppState extends State<MyApp> {
         return OnboardingScreen(
           onProfileSubmitted: _handleProfileSubmitted,
           onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          onCancel: () => setState(
+            () => _view = _moneyStyleCompletion == null
+                ? AppView.moneyStyleFlow
+                : AppView.moneyStyleResult,
+          ),
         );
       case AppView.moneyStyleFlow:
         return MoneyStyleFlow(
           userId: 'user-1', // TODO: Replace with actual user ID
           onComplete: _handleMoneyStyleComplete,
+          existingCompletion: _moneyStyleCompletion,
+          onProgress: _handleMoneyStyleProgress,
+          onStartOver: _clearMoneyStyle,
         );
       case AppView.moneyStyleResult:
         return MoneyStyleResultScreen(
-          result: _moneyStyleResult!,
-          // The quiz tells them who they are; these are the two ways out of it.
-          // "Explore ideas" goes to the forest if they already have a plan,
-          // otherwise there is nothing to explore yet and they need the numbers.
-          onExplore: () => setState(() =>
-              _view = _report == null ? AppView.onboarding : AppView.forest),
-          onBuildPlan: () => setState(() => _view = AppView.onboarding),
+          completion: _moneyStyleCompletion!,
+          onExploreIdeas: () => setState(() => _view = AppView.moneyStyleIdeas),
+          onBuildRangePlan: () => setState(() => _view = AppView.rangePlan),
+          onAnswerMore: () => setState(() => _view = AppView.moneyStyleFlow),
+          onStartOver: () async {
+            await _clearMoneyStyle();
+            if (mounted) {
+              setState(() {
+                _view = AppView.moneyStyleFlow;
+              });
+            }
+          },
+        );
+      case AppView.moneyStyleIdeas:
+        final result = _moneyStyleCompletion!.result;
+        return result == null
+            ? _buildCurrentView()
+            : MoneyStyleIdeasScreen(
+                result: result,
+                onBack: () => setState(() => _view = AppView.moneyStyleResult),
+              );
+      case AppView.rangePlan:
+        return PlanRangeScreen(
+          onKeep: () => setState(() => _view = AppView.moneyStyleResult),
+          onExact: () => setState(() => _view = AppView.onboarding),
         );
       case AppView.report:
         if (report == null) {
@@ -179,8 +234,11 @@ class _MyAppState extends State<MyApp> {
           onCheckIn: _handleCheckIn,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
-          onRetakeQuestionnaire: () =>
-              setState(() => _view = AppView.onboarding),
+          onRetakeQuestionnaire: () => setState(
+            () => _view = widget.showOnboardingInitially
+                ? AppView.onboarding
+                : AppView.moneyStyleFlow,
+          ),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
@@ -304,11 +362,86 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _handleMoneyStyleComplete(MoneyStyleResult result) {
+  Future<void> _loadMoneyStyle() async {
+    MoneyStyleCompletion? completion;
+    try {
+      completion = await _moneyStyleStore.load();
+    } catch (error) {
+      debugPrint('Money Style progress could not be loaded: $error');
+    }
+    if (!mounted || completion == null) {
+      return;
+    }
+    final showResult =
+        completion.result != null ||
+        completion.session.isCompleteFor(moneyStyleQuestions);
     setState(() {
-      _moneyStyleResult = result;
+      _moneyStyleCompletion = completion;
+      _view = showResult ? AppView.moneyStyleResult : AppView.moneyStyleFlow;
+    });
+  }
+
+  void _handleMoneyStyleProgress(AnswerSession session) {
+    unawaited(
+      _saveMoneyStyle(
+        MoneyStyleCompletion(session: session.snapshot(), result: null),
+      ),
+    );
+  }
+
+  Future<void> _saveMoneyStyle(MoneyStyleCompletion completion) {
+    final snapshot = MoneyStyleCompletion(
+      session: completion.session.snapshot(),
+      result: completion.result,
+    );
+    _moneyStyleWrites = _moneyStyleWrites.then((_) async {
+      try {
+        await _moneyStyleStore.save(snapshot);
+      } catch (error) {
+        debugPrint('Money Style progress could not be saved: $error');
+      }
+    });
+    return _moneyStyleWrites;
+  }
+
+  Future<void> _clearMoneyStyle() async {
+    await _moneyStyleWrites;
+    try {
+      await _moneyStyleStore.clear();
+    } catch (error) {
+      debugPrint('Money Style progress could not be cleared: $error');
+    }
+    if (mounted) {
+      setState(() => _moneyStyleCompletion = null);
+    }
+  }
+
+  Future<void> _handleMoneyStyleComplete(
+    MoneyStyleCompletion completion,
+  ) async {
+    final snapshot = MoneyStyleCompletion(
+      session: completion.session.snapshot(),
+      result: completion.result,
+    );
+    await _saveMoneyStyle(snapshot);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _moneyStyleCompletion = snapshot;
       _view = AppView.moneyStyleResult;
     });
+    unawaited(_syncMoneyStyle(snapshot));
+  }
+
+  Future<void> _syncMoneyStyle(MoneyStyleCompletion completion) async {
+    try {
+      await _apiClient.submitMoneyStyle(
+        MoneyStyleSubmission.fromCompletion(completion),
+      );
+    } catch (error) {
+      debugPrint('Money Style not sent to backend: $error');
+    }
   }
 
   void _startPlan() {
