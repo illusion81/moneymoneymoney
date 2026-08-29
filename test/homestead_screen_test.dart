@@ -77,6 +77,41 @@ void main() {
     },
   );
 
+  testWidgets('fake social and investment icon links show demo messages', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomesteadScreen(
+          shopState: ShopService().initialState(),
+          days: const [],
+          layout: const HomeLayoutState(placements: []),
+          onPlace: (_, _, _) {},
+          onRemove: (_) {},
+          onShowForest: () {},
+          onShowSpending: () {},
+          onShowCalendar: () {},
+          onShowReport: () {},
+          onShowAchievements: () {},
+          onShowShop: () {},
+          onExportImage: (_) async {},
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Share to Instagram'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Instagram demo link'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Share to TikTok'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('TikTok demo link'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('CommBank investment link'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('CommBank investing demo link'), findsOneWidget);
+  });
+
   testWidgets('an owned, unplaced decoration appears in the inventory tray', (
     tester,
   ) async {

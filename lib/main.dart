@@ -253,9 +253,6 @@ class _MyAppState extends State<MyApp> {
           summary: _summary,
           progression: _progression,
           onShowForest: () => setState(() => _view = AppView.forest),
-          onShowSpending: () => setState(() => _view = AppView.spending),
-          onShowCalendar: () => setState(() => _view = AppView.calendar),
-          onShowHomestead: () => setState(() => _view = AppView.homestead),
         );
       case AppView.shop:
         if (report == null) {

@@ -64,13 +64,56 @@ void main() {
     addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
   });
 
-  testWidgets('spending field starts editable in manual mode', (tester) async {
-    await tester.pumpWidget(_harness(onFetchTodaySpending: () async => 0));
+  testWidgets('bank mode is the default and pulls the figure on open', (
+    tester,
+  ) async {
+    var fetched = false;
+    await tester.pumpWidget(
+      _harness(
+        onFetchTodaySpending: () async {
+          fetched = true;
+          return 19.75;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(fetched, isTrue);
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('spending-field')),
+    );
+    expect(field.readOnly, isTrue);
+    expect(find.text('19.75'), findsOneWidget);
+  });
+
+  testWidgets('switching to manual makes the field editable again', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_harness(onFetchTodaySpending: () async => 19.75));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('spending-mode-manual')));
+    await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(
       find.byKey(const Key('spending-field')),
     );
     expect(field.readOnly, isFalse);
+  });
+
+  testWidgets('a bank failure on open falls back to an editable manual field', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _harness(onFetchTodaySpending: () async => throw Exception('offline')),
+    );
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('spending-field')),
+    );
+    expect(field.readOnly, isFalse);
+    expect(find.textContaining('Could not load bank data'), findsOneWidget);
   });
 
   testWidgets('switching to bank mode fetches and fills the spending field', (

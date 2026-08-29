@@ -43,6 +43,23 @@ void main() {
     expect(find.byKey(const Key('plus-cancel-button')), findsNothing);
   });
 
+  testWidgets('a non-member can open the freeze streak ticket demo checkout', (
+    tester,
+  ) async {
+    await tester.pumpWidget(harness());
+
+    expect(find.byKey(const Key('freeze-streak-ticket-card')), findsOneWidget);
+    expect(find.text('Freeze Streak Ticket'), findsOneWidget);
+    expect(find.text('\$0.99'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('freeze-streak-ticket-card')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('plus-checkout-sheet')), findsOneWidget);
+    expect(find.text('Freeze Streak Ticket'), findsWidgets);
+    expect(find.text('\$0.99'), findsWidgets);
+  });
+
   testWidgets('the checkout sheet never asks for card details', (tester) async {
     await tester.pumpWidget(harness());
 

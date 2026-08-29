@@ -56,7 +56,6 @@ class CalendarScreen extends StatelessWidget {
         onShowSpending: onShowSpending,
         onShowCalendar: () {},
         onShowHomestead: onShowHomestead,
-        onShowAchievements: onShowAchievements,
       ),
       body: SafeArea(
         child: Center(

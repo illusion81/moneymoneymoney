@@ -56,16 +56,16 @@ class _CircleScreenState extends State<CircleScreen> {
   }
 
   IconData _trendIcon(String t) => switch (t) {
-        'up' => Icons.trending_up,
-        'down' => Icons.trending_down,
-        _ => Icons.trending_flat,
-      };
+    'up' => Icons.trending_up,
+    'down' => Icons.trending_down,
+    _ => Icons.trending_flat,
+  };
 
   Color _trendColour(String t) => switch (t) {
-        'up' => const Color(0xff2f7d50),
-        'down' => const Color(0xffb4553f),
-        _ => Colors.grey,
-      };
+    'up' => const Color(0xff2f7d50),
+    'down' => const Color(0xffb4553f),
+    _ => Colors.grey,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -81,66 +81,98 @@ class _CircleScreenState extends State<CircleScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(_error!, textAlign: TextAlign.center),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(_error!, textAlign: TextAlign.center),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                children: [
+                  Text(c!.name, style: t.titleLarge),
+                  Text(
+                    '${c.memberCount} people · code ${c.code}',
+                    style: t.bodySmall,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                    children: [
-                      Text(c!.name, style: t.titleLarge),
-                      Text('${c.memberCount} people · code ${c.code}',
-                          style: t.bodySmall),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer
-                              .withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(10),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xfffff4d7),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.savings_outlined, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Daily saving race', style: t.titleSmall),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Compete on daily saving targets and a streak battle with your circle.',
+                                style: t.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Text(c.headline, style: t.bodyMedium),
-                      ),
-                      const SizedBox(height: 20),
-                      for (final e in c.entries) _row(e),
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              color: Theme.of(context).dividerColor),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(c.headline, style: t.bodyMedium),
+                  ),
+                  const SizedBox(height: 20),
+                  for (final e in c.entries) _row(e),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Row(children: [
-                              const Icon(Icons.balance, size: 18),
-                              const SizedBox(width: 8),
-                              Text('Why there are no dollar amounts here',
-                                  style: t.titleSmall),
-                            ]),
-                            const SizedBox(height: 8),
+                            const Icon(Icons.balance, size: 18),
+                            const SizedBox(width: 8),
                             Text(
-                              'Ranking people by how much they save just ranks who '
-                              'earns more. Everyone here is measured against their own '
-                              'plan, built from their own income and fixed costs — so '
-                              'someone on a small budget can top this table. Nobody in '
-                              'your circle can see what you earn, hold or spend.',
-                              style: t.bodySmall,
+                              'Why there are no dollar amounts here',
+                              style: t.titleSmall,
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          'Ranking people by how much they save just ranks who '
+                          'earns more. Everyone here is measured against their own '
+                          'plan, built from their own income and fixed costs — so '
+                          'someone on a small budget can top this table. Nobody in '
+                          'your circle can see what you earn, hold or spend.',
+                          style: t.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -157,50 +189,71 @@ class _CircleScreenState extends State<CircleScreen> {
         borderRadius: BorderRadius.circular(10),
         border: e.isYou ? Border.all(color: scheme.primary, width: 1.5) : null,
       ),
-      child: Row(children: [
-        SizedBox(
-          width: 26,
-          child: Text('${e.rank}',
+      child: Row(
+        children: [
+          SizedBox(
+            width: 26,
+            child: Text(
+              '${e.rank}',
               style: t.titleMedium?.copyWith(
-                  fontWeight: e.isYou ? FontWeight.w700 : FontWeight.w400)),
-        ),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Text(e.displayName,
-                  style: t.titleSmall?.copyWith(
-                      fontWeight: e.isYou ? FontWeight.w700 : FontWeight.w500)),
-              if (e.isYou) ...[
-                const SizedBox(width: 6),
-                Text('you', style: t.bodySmall),
-              ],
-            ]),
-            const SizedBox(height: 2),
-            Text('Level ${e.level} · tower stage ${e.towerStage} · '
-                '${e.streakDays}d streak',
-                style: t.bodySmall),
-            if (e.badge != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(e.badge!,
-                    style: t.bodySmall?.copyWith(color: scheme.primary)),
+                fontWeight: e.isYou ? FontWeight.w700 : FontWeight.w400,
               ),
-          ]),
-        ),
-        Column(children: [
-          Text('${(e.adherence * 100).round()}%',
-              style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-          Text('plan kept', style: t.bodySmall),
-        ]),
-        const SizedBox(width: 8),
-        Icon(_trendIcon(e.trend), size: 18, color: _trendColour(e.trend)),
-        if (!e.isYou)
-          IconButton(
-            tooltip: 'Send encouragement',
-            icon: const Icon(Icons.favorite_border, size: 18),
-            onPressed: () => _cheer(e),
+            ),
           ),
-      ]),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      e.displayName,
+                      style: t.titleSmall?.copyWith(
+                        fontWeight: e.isYou ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    if (e.isYou) ...[
+                      const SizedBox(width: 6),
+                      Text('you', style: t.bodySmall),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Level ${e.level} · tower stage ${e.towerStage} · '
+                  '${e.streakDays}d streak',
+                  style: t.bodySmall,
+                ),
+                if (e.badge != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      e.badge!,
+                      style: t.bodySmall?.copyWith(color: scheme.primary),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              Text(
+                '${(e.adherence * 100).round()}%',
+                style: t.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              Text('daily saved', style: t.bodySmall),
+            ],
+          ),
+          const SizedBox(width: 8),
+          Icon(_trendIcon(e.trend), size: 18, color: _trendColour(e.trend)),
+          if (!e.isYou)
+            IconButton(
+              tooltip: 'Send encouragement',
+              icon: const Icon(Icons.favorite_border, size: 18),
+              onPressed: () => _cheer(e),
+            ),
+        ],
+      ),
     );
   }
 }

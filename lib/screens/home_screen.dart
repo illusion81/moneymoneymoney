@@ -69,13 +69,16 @@ class _HomeScreenState extends State<HomeScreen> {
   final _recoveryNoteController = TextEditingController();
   String? _errorText;
   bool _bankConnected = false;
-  _SpendingMode _spendingMode = _SpendingMode.manual;
+  // Bank is the default: the whole point is not making people type numbers
+  // they have to remember. _selectBankMode falls back to manual on failure.
+  _SpendingMode _spendingMode = _SpendingMode.bank;
   bool _bankLoading = false;
 
   @override
   void initState() {
     super.initState();
     _checkBank();
+    _selectBankMode();
   }
 
   /// Only a live bank connection counts as trusted — a CSV or PDF the user
@@ -135,17 +138,21 @@ class _HomeScreenState extends State<HomeScreen> {
             IconButton(
               icon: const Icon(Icons.groups_outlined),
               tooltip: 'Your circle',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => CircleScreen(api: widget.api!),
-              )),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CircleScreen(api: widget.api!),
+                ),
+              ),
             ),
           if (widget.api != null)
             IconButton(
               icon: const Icon(Icons.savings_outlined),
               tooltip: 'Saving for something',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => GoalsScreen(api: widget.api!),
-              )),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => GoalsScreen(api: widget.api!),
+                ),
+              ),
             ),
           if (widget.api != null)
             IconButton(
@@ -197,7 +204,6 @@ class _HomeScreenState extends State<HomeScreen> {
         onShowSpending: widget.onShowSpending,
         onShowCalendar: widget.onShowCalendar,
         onShowHomestead: widget.onShowHomestead,
-        onShowAchievements: widget.onShowAchievements,
       ),
       body: SafeArea(
         child: Center(
@@ -307,17 +313,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     ChoiceChip(
-                      key: const Key('spending-mode-manual'),
-                      label: const Text('Manual'),
-                      selected: _spendingMode == _SpendingMode.manual,
-                      onSelected: (_) => _selectManualMode(),
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
                       key: const Key('spending-mode-bank'),
                       label: const Text('From bank'),
                       selected: _spendingMode == _SpendingMode.bank,
                       onSelected: (_) => _selectBankMode(),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      key: const Key('spending-mode-manual'),
+                      label: const Text('Manual'),
+                      selected: _spendingMode == _SpendingMode.manual,
+                      onSelected: (_) => _selectManualMode(),
                     ),
                     if (_bankLoading) ...[
                       const SizedBox(width: 10),
@@ -349,12 +355,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: _checkIn,
                   icon: const Icon(Icons.check),
                   label: const Text('Check In'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: widget.onShowAchievements,
-                  icon: const Icon(Icons.emoji_events_outlined),
-                  label: const Text('Achievements'),
                 ),
               ],
             ),

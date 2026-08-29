@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/forest_day.dart';
 import '../models/progression.dart';
-import '../widgets/app_nav_bar.dart';
 
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({
@@ -10,17 +9,11 @@ class AchievementsScreen extends StatefulWidget {
     required this.summary,
     required this.progression,
     required this.onShowForest,
-    required this.onShowSpending,
-    required this.onShowCalendar,
-    required this.onShowHomestead,
   });
 
   final ForestSummary summary;
   final ProgressionState progression;
   final VoidCallback onShowForest;
-  final VoidCallback onShowSpending;
-  final VoidCallback onShowCalendar;
-  final VoidCallback onShowHomestead;
 
   @override
   State<AchievementsScreen> createState() => _AchievementsScreenState();
@@ -37,14 +30,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Achievements')),
-      bottomNavigationBar: AppNavBar(
-        selectedIndex: 4,
-        onShowForest: widget.onShowForest,
-        onShowSpending: widget.onShowSpending,
-        onShowCalendar: widget.onShowCalendar,
-        onShowHomestead: widget.onShowHomestead,
-        onShowAchievements: () {},
-      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(

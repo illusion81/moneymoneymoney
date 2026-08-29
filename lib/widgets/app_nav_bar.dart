@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// The persistent bottom navigation shared by the five main tabs:
-/// Forest, Spending, Calendar, Home, and Awards.
+/// The persistent bottom navigation shared by the four main tabs:
+/// Forest, Spending, Calendar, and Home.
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
     super.key,
@@ -10,7 +10,6 @@ class AppNavBar extends StatelessWidget {
     required this.onShowSpending,
     required this.onShowCalendar,
     required this.onShowHomestead,
-    required this.onShowAchievements,
   });
 
   final int selectedIndex;
@@ -18,7 +17,6 @@ class AppNavBar extends StatelessWidget {
   final VoidCallback onShowSpending;
   final VoidCallback onShowCalendar;
   final VoidCallback onShowHomestead;
-  final VoidCallback onShowAchievements;
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +35,6 @@ class AppNavBar extends StatelessWidget {
             break;
           case 3:
             onShowHomestead();
-            break;
-          case 4:
-            onShowAchievements();
             break;
         }
       },
@@ -63,11 +58,6 @@ class AppNavBar extends StatelessWidget {
           icon: Icon(Icons.cottage_outlined),
           selectedIcon: Icon(Icons.cottage),
           label: 'Home',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.emoji_events_outlined),
-          selectedIcon: Icon(Icons.emoji_events),
-          label: 'Awards',
         ),
       ],
     );

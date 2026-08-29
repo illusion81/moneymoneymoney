@@ -100,6 +100,23 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
         title: const Text('Homestead'),
         actions: [
           IconButton(
+            tooltip: 'Share to Instagram',
+            onPressed: () => _showFakeLink('Instagram demo link'),
+            icon: const Icon(Icons.camera_alt_outlined),
+          ),
+          IconButton(
+            tooltip: 'Share to TikTok',
+            onPressed: () => _showFakeLink('TikTok demo link'),
+            icon: const Icon(Icons.music_note),
+          ),
+          IconButton(
+            tooltip: 'CommBank investment link',
+            onPressed: () => _showFakeLink(
+              'CommBank investing demo link - not financial advice.',
+            ),
+            icon: const Icon(Icons.trending_up),
+          ),
+          IconButton(
             key: const Key('export-image-button'),
             tooltip: 'Export image',
             onPressed: _exportImage,
@@ -128,7 +145,6 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
         onShowSpending: widget.onShowSpending,
         onShowCalendar: widget.onShowCalendar,
         onShowHomestead: () {},
-        onShowAchievements: widget.onShowAchievements,
       ),
       body: SafeArea(
         child: Center(
@@ -275,6 +291,12 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
       return;
     }
     await widget.onExportImage(bytes);
+  }
+
+  void _showFakeLink(String message) {
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

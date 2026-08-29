@@ -30,6 +30,7 @@ class PlusScreen extends StatelessWidget {
     'Unlock every Plus-exclusive item in the shop',
     'Earn double coins on each healthy day',
     'Level up 1.5x faster',
+    'Buy Freeze Streak Tickets for missed days',
     'A Plus badge on your profile',
   ];
 
@@ -134,6 +135,14 @@ class PlusScreen extends StatelessWidget {
           highlighted: true,
           onTap: () => _openCheckout(context, 'Yearly', '\$39.99'),
         ),
+        const SizedBox(height: 12),
+        _PlanCard(
+          key: const Key('freeze-streak-ticket-card'),
+          title: 'Freeze Streak Ticket',
+          price: '\$0.99',
+          period: 'each',
+          onTap: () => _openTicketCheckout(context),
+        ),
         const SizedBox(height: 20),
         FilledButton.icon(
           key: const Key('plus-subscribe-button'),
@@ -154,6 +163,27 @@ class PlusScreen extends StatelessWidget {
         onConfirm: () {
           Navigator.of(sheetContext).pop();
           onSubscribe();
+        },
+      ),
+    );
+  }
+
+  void _openTicketCheckout(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => _CheckoutSheet(
+        plan: 'Freeze Streak Ticket',
+        price: '\$0.99',
+        lineItem: 'Freeze Streak Ticket',
+        onConfirm: () {
+          Navigator.of(sheetContext).pop();
+          ScaffoldMessenger.of(context)
+            ..removeCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('Freeze Streak Ticket demo purchase'),
+              ),
+            );
         },
       ),
     );
@@ -222,6 +252,7 @@ class _ActiveBadge extends StatelessWidget {
 
 class _PlanCard extends StatelessWidget {
   const _PlanCard({
+    super.key,
     required this.title,
     required this.price,
     required this.period,
@@ -283,11 +314,13 @@ class _CheckoutSheet extends StatelessWidget {
   const _CheckoutSheet({
     required this.plan,
     required this.price,
+    String? lineItem,
     required this.onConfirm,
-  });
+  }) : lineItem = lineItem ?? '$plan plan';
 
   final String plan;
   final String price;
+  final String lineItem;
   final VoidCallback onConfirm;
 
   @override
@@ -310,7 +343,7 @@ class _CheckoutSheet extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: Text('$plan plan')),
+              Expanded(child: Text(lineItem)),
               Text(price, style: const TextStyle(fontWeight: FontWeight.w700)),
             ],
           ),

@@ -10,9 +10,11 @@ import 'package:flutter/material.dart';
 import '../data/api_client.dart';
 import '../data/models.dart';
 import '../services/category_breakdown.dart';
+import '../services/daily_saving_plan.dart';
 import '../services/money_format.dart';
 import '../widgets/app_nav_bar.dart';
 import '../widgets/category_pie_chart.dart';
+import '../widgets/saving_plan_card.dart';
 import 'connect_bank_screen.dart';
 
 class SpendingScreen extends StatefulWidget {
@@ -123,25 +125,6 @@ class _SpendingScreenState extends State<SpendingScreen> {
     'reward': Color(0xffb4553f),
   };
 
-  static const _categoryBucket = {
-    'groceries': 'living',
-    'housing': 'living',
-    'utilities': 'living',
-    'transport': 'living',
-    'health': 'living',
-    'education': 'living',
-    'fees': 'living',
-    'cash': 'living',
-    'debt': 'living',
-    'other': 'living',
-    'eating-out': 'reward',
-    'subscriptions': 'reward',
-    'lifestyle': 'reward',
-    'bnpl': 'reward',
-    'savings': 'stable',
-    'investment': 'invest',
-  };
-
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
@@ -182,7 +165,6 @@ class _SpendingScreenState extends State<SpendingScreen> {
               onShowSpending: () {},
               onShowCalendar: widget.onShowCalendar!,
               onShowHomestead: widget.onShowHomestead!,
-              onShowAchievements: widget.onShowAchievements!,
             ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -194,30 +176,13 @@ class _SpendingScreenState extends State<SpendingScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
                 children: [
                   _sourceBanner(context),
-                  const SizedBox(height: 16),
-                  if (_accounts.isNotEmpty) ...[
-                    Text('Accounts', style: t.titleMedium),
-                    const SizedBox(height: 8),
-                    for (final a in _accounts) _accountTile(a),
-                    const SizedBox(height: 24),
-                  ],
-                  _summaryRow(context),
+                  const SizedBox(height: 20),
+                  _hero(context),
                   const SizedBox(height: 24),
-                  if (_plan != null) ...[
-                    Text('Against your plan', style: t.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(_plan!.headline, style: t.bodySmall),
-                    const SizedBox(height: 12),
-                    for (final b in _plan!.buckets) _bucketRow(context, b),
-                    const SizedBox(height: 24),
-                  ],
-                  Text('By category', style: t.titleMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Transfers between your own accounts are excluded.',
-                    style: t.bodySmall,
+                  SavingPlanCard(
+                    plan: buildDailySavingPlan(_txns, days: _days),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   CategoryPieChart(
                     slices: topCategorySlices({
                       for (final e in _byCategory.entries)
@@ -225,29 +190,43 @@ class _SpendingScreenState extends State<SpendingScreen> {
                     }),
                     total: _outflow,
                   ),
-                  const SizedBox(height: 20),
-                  if (_byCategory.isEmpty)
-                    const Text('No spending in this period.')
-                  else
-                    for (final e in _byCategory.entries)
-                      _categoryRow(
-                        context,
-                        e.key,
-                        e.value.amount,
-                        e.value.count,
-                      ),
-                  const SizedBox(height: 24),
-                  Text('Transactions', style: t.titleMedium),
                   const SizedBox(height: 8),
-                  for (final tx in _txns.take(40)) _txnTile(context, tx),
-                  if (_txns.length > 40)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        '+ ${_txns.length - 40} more',
-                        style: t.bodySmall,
-                      ),
+                  Text(
+                    'Transfers between your own accounts are excluded.',
+                    style: t.bodySmall,
+                  ),
+                  const SizedBox(height: 24),
+                  // Detail lives behind a tap: the numbers above answer the
+                  // question, these answer the follow-up.
+                  if (_accounts.isNotEmpty)
+                    _Collapsible(
+                      title: 'Accounts',
+                      children: [for (final a in _accounts) _accountTile(a)],
                     ),
+                  if (_plan != null)
+                    _Collapsible(
+                      title: 'Against your plan',
+                      children: [
+                        Text(_plan!.headline, style: t.bodySmall),
+                        const SizedBox(height: 12),
+                        for (final b in _plan!.buckets) _bucketRow(context, b),
+                      ],
+                    ),
+                  _Collapsible(
+                    title: 'Recent transactions',
+                    initiallyExpanded: true,
+                    children: [
+                      for (final tx in _txns.take(5)) _txnTile(context, tx),
+                      if (_txns.length > 5)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            '+ ${_txns.length - 5} more in this period',
+                            style: t.bodySmall,
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -319,26 +298,45 @@ class _SpendingScreenState extends State<SpendingScreen> {
     ),
   );
 
-  Widget _summaryRow(BuildContext context) {
-    Widget cell(String label, String value, {Color? c}) => Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: c,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
-    );
-    return Row(
+  /// The headline: what left the account, at a size you cannot miss, with
+  /// the supporting figures kept deliberately small beneath it.
+  Widget _hero(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    Widget small(String label, double value, Color colour) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        cell('In', formatMoney(_income), c: const Color(0xff2f7d50)),
-        cell('Spent', formatMoney(_outflow), c: const Color(0xffb4553f)),
-        cell('Moved', formatMoney(_moved)),
+        Text(
+          formatMoney(value),
+          style: t.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colour,
+          ),
+        ),
+        Text(label, style: t.bodySmall),
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Spent in the last $_days days', style: t.bodyMedium),
+        const SizedBox(height: 4),
+        Text(
+          formatMoney(_outflow),
+          key: const Key('spending-hero-amount'),
+          style: const TextStyle(
+            fontSize: 48,
+            fontWeight: FontWeight.w800,
+            color: Color(0xff173b2f),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: small('In', _income, const Color(0xff2f7d50))),
+            Expanded(child: small('Moved', _moved, const Color(0xff5f6f68))),
+          ],
+        ),
       ],
     );
   }
@@ -384,52 +382,6 @@ class _SpendingScreenState extends State<SpendingScreen> {
     );
   }
 
-  Widget _categoryRow(BuildContext c, String cat, double amt, int n) {
-    final share = _outflow == 0 ? 0.0 : amt / _outflow;
-    final colour = _bucketColor[_categoryBucket[cat] ?? 'living']!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(cat)),
-              Text('$n', style: Theme.of(c).textTheme.bodySmall),
-              const SizedBox(width: 12),
-              SizedBox(
-                width: 74,
-                child: Text(
-                  formatMoney(amt),
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              SizedBox(
-                width: 46,
-                child: Text(
-                  '${(share * 100).round()}%',
-                  textAlign: TextAlign.right,
-                  style: Theme.of(c).textTheme.bodySmall,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 3),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: share,
-              minHeight: 5,
-              backgroundColor: colour.withValues(alpha: 0.12),
-              valueColor: AlwaysStoppedAnimation(colour),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _txnTile(BuildContext c, Txn tx) {
     final out = tx.amount < 0;
     return Padding(
@@ -462,6 +414,41 @@ class _SpendingScreenState extends State<SpendingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A section that stays out of the way until asked for. Keeps the screen to
+/// one screenful of answers, with the supporting detail one tap away.
+class _Collapsible extends StatelessWidget {
+  const _Collapsible({
+    required this.title,
+    required this.children,
+    this.initiallyExpanded = false,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final bool initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: Key('section-$title'),
+        title: Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        initiallyExpanded: initiallyExpanded,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 12),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
       ),
     );
   }

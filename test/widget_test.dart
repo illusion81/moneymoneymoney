@@ -185,6 +185,42 @@ void main() {
     expect(find.byKey(const Key('action-complete-checkbox')), findsNothing);
   });
 
+  testWidgets(
+    'bottom navigation omits Awards while app bar Achievements remains available',
+    (tester) async {
+      await startPlan(tester);
+
+      expect(find.text('Awards'), findsNothing);
+      expect(find.byTooltip('Achievements'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'bank mode appears before manual mode and no achievement button follows check in',
+    (tester) async {
+      await startPlan(tester);
+
+      expect(
+        tester.getTopLeft(find.byKey(const Key('spending-mode-bank'))).dx,
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('spending-mode-manual'))).dx,
+        ),
+      );
+      expect(find.widgetWithText(OutlinedButton, 'Achievements'), findsNothing);
+    },
+  );
+
+  testWidgets('Your circle is reachable from the Forest app bar', (
+    tester,
+  ) async {
+    await startPlan(tester);
+
+    await tester.tap(find.byTooltip('Your circle'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your circle'), findsWidgets);
+  });
+
   testWidgets('a within-budget check-in is healthy with no checkbox to tick', (
     tester,
   ) async {
