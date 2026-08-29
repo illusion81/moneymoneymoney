@@ -1,0 +1,181 @@
+// The ONLY place the Flutter app talks to the backend.
+// Owner: Lane A (data). UI code calls these methods; it never builds URLs.
+//
+// Setup:
+//   1. add to pubspec.yaml dependencies:   http: ^1.2.0
+//   2. flutter pub get
+//   3. run the backend:  cd "backend,dataAPI" && uvicorn main:app --port 8000
+//
+// Base URL by platform (see _defaultBase below):
+//   Android emulator -> 10.0.2.2   (localhost on the host machine)
+//   iOS sim / desktop / web -> localhost
+//   Physical phone -> pass your laptop's LAN IP explicitly:
+//       ApiClient(baseUrl: 'http://192.168.1.42:8000')
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
+
+import 'models.dart';
+
+class ApiException implements Exception {
+  final int? statusCode;
+  final String message;
+  ApiException(this.message, {this.statusCode});
+
+  /// True when the backend has no profile yet — send the user to the survey.
+  bool get needsSurvey => statusCode == 409;
+
+  @override
+  String toString() => 'ApiException($statusCode): $message';
+}
+
+String _defaultBase() {
+  if (kIsWeb) return 'http://localhost:8000';
+  try {
+    if (Platform.isAndroid) return 'http://10.0.2.2:8000';
+  } catch (_) {
+    // Platform is unavailable on some targets; localhost is the safe default.
+  }
+  return 'http://localhost:8000';
+}
+
+class ApiClient {
+  final String baseUrl;
+  final Duration timeout;
+  final http.Client _http;
+
+  ApiClient({String? baseUrl, http.Client? client, this.timeout = const Duration(seconds: 15)})
+      : baseUrl = baseUrl ?? _defaultBase(),
+        _http = client ?? http.Client();
+
+  void close() => _http.close();
+
+  // ---------------------------------------------------------------- core
+
+  Uri _uri(String path, [Map<String, dynamic>? query]) => Uri.parse('$baseUrl$path').replace(
+        queryParameters: query?.map((k, v) => MapEntry(k, '$v')),
+      );
+
+  Future<dynamic> _send(String method, String path,
+      {Map<String, dynamic>? query, Object? body}) async {
+    late http.Response r;
+    try {
+      final uri = _uri(path, query);
+      final headers = {'Accept': 'application/json', if (body != null) 'Content-Type': 'application/json'};
+      final encoded = body == null ? null : jsonEncode(body);
+      r = await (method == 'POST'
+              ? _http.post(uri, headers: headers, body: encoded)
+              : _http.get(uri, headers: headers))
+          .timeout(timeout);
+    } on TimeoutException {
+      throw ApiException('The backend did not respond. Is uvicorn running on $baseUrl?');
+    } catch (e) {
+      throw ApiException('Could not reach the backend at $baseUrl. $e');
+    }
+
+    if (r.statusCode >= 400) {
+      String msg = r.reasonPhrase ?? 'Request failed';
+      try {
+        final d = jsonDecode(r.body);
+        if (d is Map && d['detail'] != null) msg = '${d['detail']}';
+      } catch (_) {}
+      throw ApiException(msg, statusCode: r.statusCode);
+    }
+    if (r.body.isEmpty) return null;
+    return jsonDecode(r.body);
+  }
+
+  Future<Map<String, dynamic>> _getObj(String p, [Map<String, dynamic>? q]) async =>
+      (await _send('GET', p, query: q)) as Map<String, dynamic>;
+
+  Future<List<dynamic>> _getList(String p, [Map<String, dynamic>? q]) async =>
+      (await _send('GET', p, query: q)) as List<dynamic>;
+
+  // ---------------------------------------------------------------- survey
+
+  Future<Profile> submitSurvey(SurveyAnswers a) async =>
+      Profile.fromJson((await _send('POST', '/api/survey', body: a.toJson())) as Map<String, dynamic>);
+
+  /// Throws ApiException with needsSurvey == true if the user hasn't done the survey.
+  Future<Profile> profile() async => Profile.fromJson(await _getObj('/api/profile'));
+
+  // ---------------------------------------------------------------- bank
+
+  Future<ConnectionStatus> connectBank({String persona = 'Whistler'}) async =>
+      ConnectionStatus.fromJson(
+          (await _send('POST', '/api/bank/connect', body: {'persona': persona}))
+              as Map<String, dynamic>);
+
+  Future<List<Account>> accounts() async =>
+      (await _getList('/api/bank/accounts')).map((e) => Account.fromJson(e)).toList();
+
+  Future<List<Txn>> transactions({int days = 30}) async =>
+      (await _getList('/api/bank/transactions', {'days': days}))
+          .map((e) => Txn.fromJson(e))
+          .toList();
+
+  // ---------------------------------------------------------------- plan + game
+
+  Future<Plan> plan({int days = 30}) async =>
+      Plan.fromJson(await _getObj('/api/plan', {'days': days}));
+
+  Future<List<Mission>> missions() async =>
+      (await _getList('/api/missions')).map((e) => Mission.fromJson(e)).toList();
+
+  Future<ClaimResult> claim(String missionId) async => ClaimResult.fromJson(
+      (await _send('POST', '/api/missions/$missionId/claim')) as Map<String, dynamic>);
+
+  Future<Progression> progression() async =>
+      Progression.fromJson(await _getObj('/api/progression'));
+
+  Future<TowerState> tower() async => TowerState.fromJson(await _getObj('/api/tower'));
+
+  Future<List<ShopItem>> shop() async =>
+      (await _getList('/api/shop')).map((e) => ShopItem.fromJson(e)).toList();
+
+  Future<Progression> buy(String itemId) async => Progression.fromJson(
+      (await _send('POST', '/api/shop/buy', body: {'item_id': itemId})) as Map<String, dynamic>);
+
+  // ---------------------------------------------------------------- demo
+
+  Future<void> resetDemo() => _send('POST', '/api/demo/reset');
+
+  /// Returns 'basiq' or 'mock'. Check this before you walk on stage.
+  Future<String> providerName() async =>
+      (await _getObj('/api/health'))['provider'] as String;
+
+  // ---------------------------------------------------------------- convenience
+
+  /// One round trip per screen is wasteful — the home screen needs all four.
+  Future<HomeData> home({int days = 30}) async {
+    final results = await Future.wait([
+      plan(days: days),
+      tower(),
+      missions(),
+      progression(),
+    ]);
+    return HomeData(
+      plan: results[0] as Plan,
+      tower: results[1] as TowerState,
+      missions: results[2] as List<Mission>,
+      progression: results[3] as Progression,
+    );
+  }
+}
+
+class HomeData {
+  final Plan plan;
+  final TowerState tower;
+  final List<Mission> missions;
+  final Progression progression;
+  const HomeData({
+    required this.plan,
+    required this.tower,
+    required this.missions,
+    required this.progression,
+  });
+}
