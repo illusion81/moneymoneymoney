@@ -6,9 +6,12 @@ class MoneyStyleResultScreen extends StatelessWidget {
   const MoneyStyleResultScreen({
     super.key,
     required this.result,
+    this.onExploreIdeas,
+    this.onBuildRangePlan,
   });
 
   final MoneyStyleResult? result;
+  final VoidCallback? onExploreIdeas, onBuildRangePlan;
 
   @override
   Widget build(BuildContext context) {
@@ -167,23 +170,13 @@ class MoneyStyleResultScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     FilledButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to ideas page
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Explore ideas - coming soon')),
-                        );
-                      },
+                      onPressed: onExploreIdeas,
                       icon: const Icon(Icons.lightbulb_outline),
                       label: const Text('Explore ideas that fit my style'),
                     ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to plan builder
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Build a plan - coming soon')),
-                        );
-                      },
+                      onPressed: onBuildRangePlan,
                       icon: const Icon(Icons.edit_note),
                       label: const Text('Build a practical plan with ranges'),
                     ),

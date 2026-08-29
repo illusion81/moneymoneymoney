@@ -19,6 +19,8 @@ import 'screens/home_screen.dart';
 import 'screens/homestead_screen.dart';
 import 'screens/money_style_flow.dart';
 import 'screens/money_style_result_screen.dart';
+import 'screens/money_style_ideas_screen.dart';
+import 'screens/plan_range_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/shop_screen.dart';
@@ -38,6 +40,8 @@ enum AppView {
   onboarding,
   moneyStyleFlow,
   moneyStyleResult,
+  moneyStyleIdeas,
+  rangePlan,
   report,
   forest,
   calendar,
@@ -144,7 +148,12 @@ class _MyAppState extends State<MyApp> {
           onComplete: _handleMoneyStyleComplete,
         );
       case AppView.moneyStyleResult:
-        return MoneyStyleResultScreen(result: _moneyStyleCompletion!.result);
+        return MoneyStyleResultScreen(result: _moneyStyleCompletion!.result, onExploreIdeas: () => setState(() => _view = AppView.moneyStyleIdeas), onBuildRangePlan: () => setState(() => _view = AppView.rangePlan));
+      case AppView.moneyStyleIdeas:
+        final result = _moneyStyleCompletion!.result;
+        return result == null ? _buildCurrentView() : MoneyStyleIdeasScreen(archetype: result.archetype);
+      case AppView.rangePlan:
+        return PlanRangeScreen(onKeep: () => setState(() => _view = AppView.moneyStyleResult), onExact: () => setState(() => _view = AppView.onboarding));
       case AppView.report:
         if (report == null) {
           return OnboardingScreen(
