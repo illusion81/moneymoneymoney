@@ -102,11 +102,6 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
         title: const Text('Homestead'),
         actions: [
           IconButton(
-            tooltip: 'Share to Instagram or TikTok',
-            onPressed: () => _showFakeLink('Instagram or TikTok demo share'),
-            icon: const Icon(Icons.camera_alt_outlined),
-          ),
-          IconButton(
             key: const Key('export-image-button'),
             tooltip: 'Export image',
             onPressed: _exportImage,
@@ -282,12 +277,6 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
       return;
     }
     await widget.onExportImage(bytes);
-  }
-
-  void _showFakeLink(String message) {
-    ScaffoldMessenger.of(context)
-      ..removeCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -502,6 +491,20 @@ class _EmptyDecorationState extends StatelessWidget {
             onPressed: onShowShop,
             icon: const Icon(Icons.store_outlined),
             label: const Text('Go to Shop'),
+          ),
+          const SizedBox(height: 8),
+          IconButton(
+            tooltip: 'Share to Instagram or TikTok',
+            onPressed: () {
+              ScaffoldMessenger.of(context)
+                ..removeCurrentSnackBar()
+                ..showSnackBar(
+                  const SnackBar(
+                    content: Text('Instagram or TikTok demo share'),
+                  ),
+                );
+            },
+            icon: const Icon(Icons.camera_alt_outlined),
           ),
         ],
       ),

@@ -102,6 +102,10 @@ void main() {
     await tester.tap(find.byTooltip('Share to Instagram or TikTok'));
     await tester.pumpAndSettle();
     expect(
+      tester.getTopLeft(find.byTooltip('Share to Instagram or TikTok')).dy,
+      greaterThan(tester.getBottomLeft(find.text('Go to Shop')).dy),
+    );
+    expect(
       find.textContaining('Instagram or TikTok demo share'),
       findsOneWidget,
     );
