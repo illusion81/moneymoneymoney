@@ -1,17 +1,17 @@
+/// Homestead yard grid is a square [kHomeGridSize] x [kHomeGridSize] of
+/// isometric cells, indexed 0..kHomeGridSize - 1 on each axis.
+const int kHomeGridSize = 6;
+
 class DecorationPlacement {
   const DecorationPlacement({
     required this.itemId,
-    required this.dx,
-    required this.dy,
+    required this.row,
+    required this.col,
   });
 
   final String itemId;
-
-  /// Fraction of the homestead canvas width, in [0, 1].
-  final double dx;
-
-  /// Fraction of the homestead canvas height, in [0, 1].
-  final double dy;
+  final int row;
+  final int col;
 }
 
 class HomeLayoutState {
