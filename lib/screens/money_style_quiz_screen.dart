@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../data/money_style_questions.dart';
@@ -10,10 +11,12 @@ class MoneyStyleQuizScreen extends StatefulWidget {
     super.key,
     required this.userId,
     required this.onComplete,
+    this.answerOrderSeed,
   });
 
   final String userId;
   final ValueChanged<MoneyStyleResult> onComplete;
+  final int? answerOrderSeed;
 
   @override
   State<MoneyStyleQuizScreen> createState() => _MoneyStyleQuizScreenState();
@@ -21,6 +24,7 @@ class MoneyStyleQuizScreen extends StatefulWidget {
 
 class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
   late AnswerSession _session;
+  late Map<int, List<int>> _answerOrder;
   int _currentQuestionIndex = 0;
   final MoneyStyleEngine _engine = MoneyStyleEngine();
 
@@ -31,6 +35,11 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       userId: widget.userId,
       sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
     );
+    final random = Random(widget.answerOrderSeed ?? _session.sessionId.hashCode);
+    _answerOrder = {
+      for (final question in moneyStyleQuestions)
+        question.id: (List<int>.generate(question.answers.length, (i) => i)..shuffle(random)),
+    };
   }
 
   @override
@@ -107,8 +116,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
                       ),
 
                       // Answer buttons
-                      ...List.generate(
-                        currentQuestion.answers.length,
+                      ..._answerOrder[currentQuestion.id]!.map(
                         (index) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: _AnswerButton(
@@ -197,6 +205,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
     } else {
       // Quiz complete
       final result = _engine.generateResult(_session, moneyStyleQuestions);
+      if (result == null) return;
       widget.onComplete(result);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
