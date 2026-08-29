@@ -17,7 +17,7 @@ class MoneyStyleFlow extends StatefulWidget {
   final ValueChanged<MoneyStyleCompletion> onComplete;
   final MoneyStyleCompletion? existingCompletion;
   final ValueChanged<AnswerSession>? onProgress;
-  final VoidCallback? onStartOver;
+  final Future<void> Function()? onStartOver;
 
   @override
   State<MoneyStyleFlow> createState() => _MoneyStyleFlowState();
@@ -52,39 +52,49 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                   Text(
                     'Discover Your Money Style',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xff173b2f),
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xff173b2f),
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Twelve everyday choices. No dollar amounts. No judgement.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   const Text('About 2–3 minutes', textAlign: TextAlign.center),
                   const SizedBox(height: 16),
-                  const Text('A light reflection on your current habits — not financial, mental-health, or clinical advice.', textAlign: TextAlign.center),
+                  const Text(
+                    'A light reflection on your current habits — not financial, mental-health, or clinical advice.',
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'Notice the patterns that feel closest today. Your result can change as life changes.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          height: 1.6,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(height: 1.6),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 60),
                   FilledButton.icon(
                     onPressed: _startQuiz,
                     icon: const Icon(Icons.auto_awesome),
-                    label: Text(widget.existingCompletion == null ? 'Find My Style' : 'Resume'),
+                    label: Text(
+                      widget.existingCompletion == null
+                          ? 'Find My Style'
+                          : 'Resume',
+                    ),
                   ),
                   if (widget.existingCompletion != null)
-                    OutlinedButton(onPressed: () { widget.onStartOver?.call(); setState(() { _startOver = true; _quizStarted = true; }); }, child: const Text('Start over')),
+                    OutlinedButton(
+                      onPressed: _startOverQuiz,
+                      child: const Text('Start over'),
+                    ),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -97,6 +107,17 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
 
   void _startQuiz() {
     setState(() {
+      _quizStarted = true;
+    });
+  }
+
+  Future<void> _startOverQuiz() async {
+    await widget.onStartOver?.call();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _startOver = true;
       _quizStarted = true;
     });
   }

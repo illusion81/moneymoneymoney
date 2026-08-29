@@ -34,16 +34,25 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
   @override
   void initState() {
     super.initState();
-    _session = widget.initialSession ?? AnswerSession(
-      userId: widget.userId,
-      sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+    _session =
+        widget.initialSession ??
+        AnswerSession(
+          userId: widget.userId,
+          sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+        );
+    final resumedIndex = moneyStyleQuestions.indexWhere(
+      (q) =>
+          !_session.selectedAnswers.containsKey(q.id) &&
+          !_session.skippedQuestions.contains(q.id),
     );
-    final resumedIndex = moneyStyleQuestions.indexWhere((q) => !_session.selectedAnswers.containsKey(q.id) && !_session.skippedQuestions.contains(q.id));
     if (resumedIndex >= 0) _currentQuestionIndex = resumedIndex;
-    final random = Random(widget.answerOrderSeed ?? _session.sessionId.hashCode);
+    final random = Random(
+      widget.answerOrderSeed ?? _session.sessionId.hashCode,
+    );
     _answerOrder = {
       for (final question in moneyStyleQuestions)
-        question.id: (List<int>.generate(question.answers.length, (i) => i)..shuffle(random)),
+        question.id: (List<int>.generate(question.answers.length, (i) => i)
+          ..shuffle(random)),
     };
   }
 
@@ -102,9 +111,8 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
                             ),
                             child: Text(
                               currentQuestion.scenario,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontStyle: FontStyle.italic),
                             ),
                           ),
                         ),
@@ -114,9 +122,8 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
                         padding: const EdgeInsets.only(bottom: 24),
                         child: Text(
                           currentQuestion.prompt,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
 
@@ -127,7 +134,9 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
                           child: _AnswerButton(
                             answer: currentQuestion.answers[index],
                             onPressed: () => _selectAnswer(index),
-                            isSelected: _session.selectedAnswers[currentQuestion.id] == index,
+                            isSelected:
+                                _session.selectedAnswers[currentQuestion.id] ==
+                                index,
                           ),
                         ),
                       ),
@@ -176,7 +185,9 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
   }
 
   bool _isAnswerSelected() {
-    return _session.selectedAnswers.containsKey(moneyStyleQuestions[_currentQuestionIndex].id);
+    return _session.selectedAnswers.containsKey(
+      moneyStyleQuestions[_currentQuestionIndex].id,
+    );
   }
 
   void _selectAnswer(int answerIndex) {
@@ -184,7 +195,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       final questionId = moneyStyleQuestions[_currentQuestionIndex].id;
       _session.selectedAnswers[questionId] = answerIndex;
       _session.skippedQuestions.remove(questionId);
-      widget.onProgress?.call(_session);
+      widget.onProgress?.call(_session.snapshot());
     });
   }
 
@@ -193,7 +204,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       final questionId = moneyStyleQuestions[_currentQuestionIndex].id;
       _session.skippedQuestions.add(questionId);
       _session.selectedAnswers.remove(questionId);
-      widget.onProgress?.call(_session);
+      widget.onProgress?.call(_session.snapshot());
       _moveToNextQuestion();
     });
   }
@@ -211,8 +222,9 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       });
     } else {
       // Quiz complete
-      final result = _engine.generateResult(_session, moneyStyleQuestions);
-      widget.onComplete(MoneyStyleCompletion(session: _session, result: result));
+      final session = _session.snapshot();
+      final result = _engine.generateResult(session, moneyStyleQuestions);
+      widget.onComplete(MoneyStyleCompletion(session: session, result: result));
     }
   }
 
@@ -255,11 +267,11 @@ class _AnswerButton extends StatelessWidget {
       child: Text(
         answer.text,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.black87,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            ),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.black87,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+        ),
       ),
     );
   }

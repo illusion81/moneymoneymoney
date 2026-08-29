@@ -11,7 +11,10 @@ void main() {
     setUp(() {
       completedResult = null;
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
-      binding.platformDispatcher.views.first.physicalSize = const Size(1000, 2200);
+      binding.platformDispatcher.views.first.physicalSize = const Size(
+        1000,
+        2200,
+      );
       binding.platformDispatcher.views.first.devicePixelRatio = 1;
       addTearDown(binding.platformDispatcher.views.first.resetPhysicalSize);
       addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
@@ -49,7 +52,9 @@ void main() {
       expect(find.text(moneyStyleQuestions[0].scenario), findsOneWidget);
     });
 
-    testWidgets('displays all three answer options', (WidgetTester tester) async {
+    testWidgets('displays all three answer options', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MoneyStyleQuizScreen(
@@ -65,7 +70,9 @@ void main() {
       expect(find.text(q1.answers[2].text), findsOneWidget);
     });
 
-    testWidgets('next button is disabled when no answer selected', (WidgetTester tester) async {
+    testWidgets('next button is disabled when no answer selected', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MoneyStyleQuizScreen(
@@ -81,7 +88,9 @@ void main() {
       expect(nextButton, findsOneWidget);
     });
 
-    testWidgets('next button is enabled when answer selected', (WidgetTester tester) async {
+    testWidgets('next button is enabled when answer selected', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MoneyStyleQuizScreen(
@@ -97,12 +106,17 @@ void main() {
       await tester.tap(answer);
       await tester.pump();
 
-      expect(find.byWidgetPredicate(
-        (widget) => widget is FilledButton && widget.onPressed != null,
-      ), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is FilledButton && widget.onPressed != null,
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('selected answer button is highlighted', (WidgetTester tester) async {
+    testWidgets('selected answer button is highlighted', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MoneyStyleQuizScreen(
@@ -123,7 +137,9 @@ void main() {
       expect(selectedButton, findsOneWidget);
     });
 
-    testWidgets('skip button navigates to next question', (WidgetTester tester) async {
+    testWidgets('skip button navigates to next question', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MoneyStyleQuizScreen(
@@ -144,7 +160,9 @@ void main() {
       expect(find.text(moneyStyleQuestions[1].prompt), findsOneWidget);
     });
 
-    testWidgets('navigates to next question when next button tapped', (WidgetTester tester) async {
+    testWidgets('navigates to next question when next button tapped', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MoneyStyleQuizScreen(
@@ -202,7 +220,38 @@ void main() {
       expect(find.text('3 of 12'), findsOneWidget);
     });
 
-    testWidgets('back button appears after first question', (WidgetTester tester) async {
+    testWidgets('progress callbacks receive immutable session snapshots', (
+      WidgetTester tester,
+    ) async {
+      final progress = <AnswerSession>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MoneyStyleQuizScreen(
+            userId: 'test-user',
+            answerOrderSeed: 1,
+            onProgress: progress.add,
+            onComplete: (_) {},
+          ),
+        ),
+      );
+
+      await tester.tap(find.text(moneyStyleQuestions[0].answers[0].text));
+      await tester.pump();
+      final firstSnapshot = progress.single;
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(moneyStyleQuestions[1].answers[0].text));
+      await tester.pump();
+
+      expect(firstSnapshot.selectedAnswers, {1: 0});
+      expect(progress.last.selectedAnswers, {1: 0, 2: 0});
+      expect(identical(firstSnapshot, progress.last), isFalse);
+    });
+
+    testWidgets('back button appears after first question', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MoneyStyleQuizScreen(
@@ -226,7 +275,9 @@ void main() {
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     });
 
-    testWidgets('quiz completion calls onComplete callback', (WidgetTester tester) async {
+    testWidgets('quiz completion calls onComplete callback', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MoneyStyleQuizScreen(

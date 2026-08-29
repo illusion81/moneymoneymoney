@@ -59,12 +59,12 @@ class DimensionScores {
     int momentumCount = 0,
     int selfCount = 0,
     int collaborativeCount = 0,
-  })  : _steadyCount = steadyCount,
-        _responsiveCount = responsiveCount,
-        _pauseCount = pauseCount,
-        _momentumCount = momentumCount,
-        _selfCount = selfCount,
-        _collaborativeCount = collaborativeCount;
+  }) : _steadyCount = steadyCount,
+       _responsiveCount = responsiveCount,
+       _pauseCount = pauseCount,
+       _momentumCount = momentumCount,
+       _selfCount = selfCount,
+       _collaborativeCount = collaborativeCount;
 
   int _steadyCount;
   int _responsiveCount;
@@ -123,9 +123,9 @@ class AnswerSession {
     Map<int, int>? selectedAnswers,
     Set<int>? skippedQuestions,
     DateTime? timestamp,
-  })  : selectedAnswers = selectedAnswers ?? {},
-        skippedQuestions = skippedQuestions ?? {},
-        timestamp = timestamp ?? DateTime.now();
+  }) : selectedAnswers = selectedAnswers ?? {},
+       skippedQuestions = skippedQuestions ?? {},
+       timestamp = timestamp ?? DateTime.now();
 
   final String userId;
   final String sessionId;
@@ -136,14 +136,38 @@ class AnswerSession {
   int get totalAnswered => selectedAnswers.length;
   int get totalSkipped => skippedQuestions.length;
 
+  AnswerSession snapshot() => AnswerSession(
+    userId: userId,
+    sessionId: sessionId,
+    selectedAnswers: Map<int, int>.from(selectedAnswers),
+    skippedQuestions: Set<int>.from(skippedQuestions),
+    timestamp: timestamp,
+  );
+
+  bool isCompleteFor(List<MoneyStyleQuestion> questions) {
+    if (selectedAnswers.keys.any(skippedQuestions.contains)) {
+      return false;
+    }
+    return questions.every(
+      (question) =>
+          selectedAnswers.containsKey(question.id) ||
+          skippedQuestions.contains(question.id),
+    );
+  }
+
   Map<String, String> answerIdsFor(List<MoneyStyleQuestion> questions) {
     final values = <String, String>{};
     for (final entry in selectedAnswers.entries) {
       MoneyStyleQuestion? question;
       for (final candidate in questions) {
-        if (candidate.id == entry.key) { question = candidate; break; }
+        if (candidate.id == entry.key) {
+          question = candidate;
+          break;
+        }
       }
-      if (question != null && entry.value >= 0 && entry.value < question.answers.length) {
+      if (question != null &&
+          entry.value >= 0 &&
+          entry.value < question.answers.length) {
         values['${entry.key}'] = question.answers[entry.value].id;
       }
     }
@@ -165,7 +189,8 @@ class ArchetypeInfo {
   final String playfulDescriptor; // e.g., "The thoughtful steward"
   final List<String> strengths; // 3 bullet points
   final String interpretation; // Paragraph explaining the archetype
-  final String pattern; // "Steady Pause Self" / "Steady Pause Collaborative" / etc
+  final String
+  pattern; // "Steady Pause Self" / "Steady Pause Collaborative" / etc
 
   @override
   String toString() => name;
