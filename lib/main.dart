@@ -27,6 +27,7 @@ import 'screens/spending_screen.dart';
 import 'services/bank_spending_service.dart';
 import 'services/forest_engine.dart';
 import 'services/home_layout_service.dart';
+import 'services/profile_suggestions.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
@@ -133,6 +134,7 @@ class _MyAppState extends State<MyApp> {
         return OnboardingScreen(
           onProfileSubmitted: _handleProfileSubmitted,
           onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          onFetchSuggestion: _fetchProfileSuggestion,
         );
       case AppView.moneyStyleFlow:
         return MoneyStyleFlow(
@@ -145,8 +147,9 @@ class _MyAppState extends State<MyApp> {
           // The quiz tells them who they are; these are the two ways out of it.
           // "Explore ideas" goes to the forest if they already have a plan,
           // otherwise there is nothing to explore yet and they need the numbers.
-          onExplore: () => setState(() =>
-              _view = _report == null ? AppView.onboarding : AppView.forest),
+          onExplore: () => setState(
+            () => _view = _report == null ? AppView.onboarding : AppView.forest,
+          ),
           onBuildPlan: () => setState(() => _view = AppView.onboarding),
         );
       case AppView.report:
@@ -154,6 +157,7 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return ReportScreen(
@@ -168,6 +172,7 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return HomeScreen(
@@ -241,6 +246,7 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return AchievementsScreen(
@@ -256,6 +262,7 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return ShopScreen(
@@ -285,16 +292,24 @@ class _MyAppState extends State<MyApp> {
 
   void _handleProfileSubmitted(FinanceProfile profile) {
     _pushProfileToBackend(profile);
-    final alreadyStarted = _planStarted;
     setState(() {
-      _report = ReportGenerator().generate(profile);
+      // The Money Style quiz, when taken, adds a daily action tailored to
+      // how this person actually decides — so it changes something they
+      // see every day, not just a one-off result screen.
+      _report = ReportGenerator().generate(
+        profile,
+        style: styleActionForResult(_moneyStyleResult),
+      );
       _summary = _forestEngine.summarize(
         _summary.days,
         progression: _progression,
         shopState: _shopState,
       );
-      _view = AppView.report;
-      _planStarted = alreadyStarted;
+      // Submitting the questionnaire drops the user straight into the app.
+      // The report is still one tap away from the Forest app bar, so nothing
+      // is lost by skipping it as a mandatory step.
+      _view = AppView.forest;
+      _planStarted = true;
     });
   }
 
@@ -447,6 +462,14 @@ class _MyAppState extends State<MyApp> {
     _showMessage('Saved to ${file.path}');
   }
 
+  /// Suggests income and fixed expenses from the last 90 days of bank
+  /// activity, so onboarding asks the user to confirm rather than recall.
+  Future<ProfileSuggestion?> _fetchProfileSuggestion() async {
+    const days = 90;
+    final transactions = await _apiClient.transactions(days: days);
+    return suggestProfileFromTransactions(transactions, days: days);
+  }
+
   Future<double> _fetchTodaySpending() async {
     final transactions = await _apiClient.transactions(days: 7);
     return sumTodaySpending(transactions);
@@ -454,7 +477,11 @@ class _MyAppState extends State<MyApp> {
 
   /// Fires the level-up overlay when the level number actually increased.
   /// Called after any action that can award XP.
-  void _celebrateIfLevelled(int beforeLevel, {required int xp, required int coins}) {
+  void _celebrateIfLevelled(
+    int beforeLevel, {
+    required int xp,
+    required int coins,
+  }) {
     final after = _progression.level.level;
     if (after <= beforeLevel) return;
     final ctx = _messengerKey.currentContext;
@@ -480,16 +507,21 @@ class _MyAppState extends State<MyApp> {
         RewardEvent(
           date: DateTime.now(),
           type: RewardEventType.debugGrant,
-          xp: _progression.level.xpForNextLevel - _progression.level.xpIntoLevel + 5,
+          xp:
+              _progression.level.xpForNextLevel -
+              _progression.level.xpIntoLevel +
+              5,
           coins: 40,
           description: 'Debug: grant XP to next level',
         ),
       );
       _recomputeProgression();
     });
-    _celebrateIfLevelled(beforeLevel,
-        xp: _progression.totalXp - beforeXp,
-        coins: _progression.coinBalance - beforeCoins);
+    _celebrateIfLevelled(
+      beforeLevel,
+      xp: _progression.totalXp - beforeXp,
+      coins: _progression.coinBalance - beforeCoins,
+    );
   }
 
   void _handleDebugMaxCoins() {

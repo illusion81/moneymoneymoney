@@ -201,6 +201,9 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       // buttons wired up. Pushing our own copy here shadowed that one with a
       // callback-less version, which is why both buttons did nothing.
       final result = _engine.generateResult(_session, moneyStyleQuestions);
+      // Navigation is owned by the app shell: onComplete switches the view.
+      // Pushing a route here as well stacked a second result screen on top,
+      // so its "continue" button changed the view invisibly underneath.
       widget.onComplete(result);
     }
   }
