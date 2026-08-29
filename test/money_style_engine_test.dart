@@ -34,4 +34,12 @@ void main() {
     expect(engine.generateResult(AnswerSession(userId: 'u', sessionId: 's', selectedAnswers: {1: 0, 2: 0, 4: 0}), moneyStyleQuestions), isNotNull);
     expect(engine.generateResult(AnswerSession(userId: 'u', sessionId: 's', selectedAnswers: {1: 0, 3: 0}), moneyStyleQuestions), isNull);
   });
+  test('money rhythm tie breaker only applies when its question is answered', () {
+    final withBreaker = AnswerSession(userId: 'u', sessionId: 's', selectedAnswers: {1: 0, 3: 1});
+    final tied = engine.calculateDimensionScores(withBreaker, moneyStyleQuestions);
+    expect(engine.applyTieBreakers(tied, withBreaker, moneyStyleQuestions).steadyCount, 2);
+    final skippedBreaker = AnswerSession(userId: 'u', sessionId: 's', selectedAnswers: {3: 1});
+    final skipped = engine.calculateDimensionScores(skippedBreaker, moneyStyleQuestions);
+    expect(engine.applyTieBreakers(skipped, skippedBreaker, moneyStyleQuestions).responsiveCount, 1);
+  });
 }
