@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
 import '../data/models.dart';
+import '../services/bank_spending_service.dart';
 import '../services/category_breakdown.dart';
 import '../services/money_format.dart';
 import '../widgets/app_nav_bar.dart';
@@ -96,6 +97,10 @@ class _SpendingScreenState extends State<SpendingScreen> {
       _txns.where((t) => t.isSpend && !_isTransfer(t)).toList();
 
   double get _outflow => _spend.fold(0.0, (s, t) => s + -t.amount);
+
+  /// What has gone out today. The 30-day totals below are context; this is
+  /// the number that decides whether today's tree lives, so it leads.
+  double get _todaySpend => sumTodaySpending(_txns);
 
   double get _income => _txns
       .where((t) => t.amount > 0 && t.category == 'income')
@@ -336,11 +341,55 @@ class _SpendingScreenState extends State<SpendingScreen> {
         ],
       ),
     );
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        cell('In', formatMoney(_income), c: const Color(0xff2f7d50)),
-        cell('Spent', formatMoney(_outflow), c: const Color(0xffb4553f)),
-        cell('Moved', formatMoney(_moved)),
+        // Today first. A 30-day total tells you how the month went; this
+        // tells you what to do in the next hour, which is the whole point of
+        // a daily habit app.
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xffedf4ee),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(children: [
+            const Icon(Icons.today_outlined, color: Color(0xff2f7d50)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Spent today',
+                      style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    formatMoney(_todaySpend),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xff173b2f),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            if (_todaySpend == 0)
+              Flexible(
+                child: Text(
+                  'Nothing recorded yet today.',
+                  textAlign: TextAlign.right,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            cell('In', formatMoney(_income), c: const Color(0xff2f7d50)),
+            cell('Spent', formatMoney(_outflow), c: const Color(0xffb4553f)),
+            cell('Moved', formatMoney(_moved)),
+          ],
+        ),
       ],
     );
   }
