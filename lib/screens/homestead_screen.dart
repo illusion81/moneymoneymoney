@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../widgets/decoration_view.dart';
+
 import '../models/forest_day.dart';
 import '../models/home_layout.dart';
 import '../models/shop_item.dart';
@@ -371,15 +373,16 @@ class _PlacedDecoration extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onLongPress: onRemove,
-      child: _DecorationIcon(visual: shopItemVisual(item)),
+      child: _DecorationIcon(visual: shopItemVisual(item), itemId: item.id),
     );
   }
 }
 
 class _DecorationIcon extends StatelessWidget {
-  const _DecorationIcon({required this.visual});
+  const _DecorationIcon({required this.visual, this.itemId});
 
   final ShopItemVisual visual;
+  final String? itemId;
 
   @override
   Widget build(BuildContext context) {
@@ -395,6 +398,10 @@ class _DecorationIcon extends StatelessWidget {
         filterQuality: FilterQuality.medium,
         errorBuilder: (_, _, _) => _disc(),
       );
+    }
+    // Decorations are painted, not icon badges — see decoration_view.dart.
+    if (itemId != null && itemId!.startsWith('deco-')) {
+      return DecorationView(itemId: itemId!, size: 58);
     }
     return _disc();
   }
