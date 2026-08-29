@@ -1,6 +1,6 @@
 import 'progression.dart';
 
-enum ShopItemCategory { treeSkin, ground, sky }
+enum ShopItemCategory { treeSkin, ground, sky, decoration }
 
 class ShopItem {
   const ShopItem({
@@ -149,6 +149,63 @@ const List<ShopItem> kShopCatalog = [
     description: 'An aurora dancing above your forest.',
     category: ShopItemCategory.sky,
     price: 400,
+    requiredLevel: 6,
+    isDefault: false,
+  ),
+
+  // Decorations are placed in the homestead rather than equipped, so
+  // several owned items can be in use at the same time.
+  ShopItem(
+    id: 'deco-garden-lantern',
+    name: 'Garden Lantern',
+    description: 'A warm lantern to light up your homestead.',
+    category: ShopItemCategory.decoration,
+    price: 80,
+    requiredLevel: 1,
+    isDefault: false,
+  ),
+  ShopItem(
+    id: 'deco-flower-bed',
+    name: 'Flower Bed',
+    description: 'A bed of bright flowers.',
+    category: ShopItemCategory.decoration,
+    price: 100,
+    requiredLevel: 1,
+    isDefault: false,
+  ),
+  ShopItem(
+    id: 'deco-garden-bench',
+    name: 'Garden Bench',
+    description: 'A place to sit and admire your progress.',
+    category: ShopItemCategory.decoration,
+    price: 160,
+    requiredLevel: 2,
+    isDefault: false,
+  ),
+  ShopItem(
+    id: 'deco-bird-bath',
+    name: 'Bird Bath',
+    description: 'Draws birds to your homestead.',
+    category: ShopItemCategory.decoration,
+    price: 220,
+    requiredLevel: 3,
+    isDefault: false,
+  ),
+  ShopItem(
+    id: 'deco-beehive',
+    name: 'Beehive',
+    description: 'A buzzing beehive for the garden.',
+    category: ShopItemCategory.decoration,
+    price: 280,
+    requiredLevel: 4,
+    isDefault: false,
+  ),
+  ShopItem(
+    id: 'deco-garden-cabin',
+    name: 'Garden Cabin',
+    description: 'A cozy little cabin for the homestead.',
+    category: ShopItemCategory.decoration,
+    price: 450,
     requiredLevel: 6,
     isDefault: false,
   ),

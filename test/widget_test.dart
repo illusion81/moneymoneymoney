@@ -102,6 +102,8 @@ class _RestoreHarnessState extends State<_RestoreHarness> {
         onShowReport: () {},
         onShowAchievements: () {},
         onShowShop: () {},
+        onShowCalendar: () {},
+        onShowHomestead: () {},
       ),
     );
   }
@@ -161,95 +163,20 @@ void main() {
     await startPlan(tester);
 
     expect(find.text('Wealth Forest'), findsOneWidget);
-    expect(find.byKey(const Key('forest-calendar-grid')), findsOneWidget);
     expect(find.text('Today\'s money action'), findsOneWidget);
     expect(find.text('Check In'), findsOneWidget);
   });
 
-  testWidgets('home screen renders current month forest calendar statuses', (
+  testWidgets('the Calendar tab navigates to the calendar screen', (
     tester,
   ) async {
-    final now = DateTime.now();
-    final monthStart = DateTime(now.year, now.month);
-    final witheredDate = monthStart;
-    final healthyDate = monthStart.add(const Duration(days: 1));
-    final summary = ForestEngine().summarize([
-      ForestDay(
-        date: witheredDate,
-        status: TreeStatus.withered,
-        treeLevel: 0,
-        spending: 80,
-        dailyBudget: 50,
-        actionCompleted: false,
-        message: 'Today withered because the money action was not completed.',
-      ),
-      ForestDay(
-        date: healthyDate,
-        status: TreeStatus.healthy,
-        treeLevel: 1,
-        spending: 20,
-        dailyBudget: 50,
-        actionCompleted: true,
-        message:
-            'Healthy growth: action complete and spending stayed within budget.',
-      ),
-    ]);
+    await startPlan(tester);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: HomeScreen(
-          report: _testReport,
-          summary: summary,
-          progression: const ProgressionState(
-            totalXp: 0,
-            level: LevelProgress(
-              level: 1,
-              xpIntoLevel: 0,
-              xpForNextLevel: 100,
-              fraction: 0,
-            ),
-            coinBalance: 0,
-            lifetimeCoinsEarned: 0,
-            lifetimeCoinsSpent: 0,
-            ledger: [],
-          ),
-          shopState: ShopService().initialState(),
-          onCheckIn: ({required spending, required actionCompleted}) {},
-          onRestore: (_) {},
-          onShowReport: () {},
-          onShowAchievements: () {},
-          onShowShop: () {},
-        ),
-      ),
-    );
+    await tester.tap(find.text('Calendar'));
+    await tester.pumpAndSettle();
 
+    expect(find.text('Calendar'), findsWidgets);
     expect(find.byKey(const Key('forest-calendar-grid')), findsOneWidget);
-
-    final witheredCell = find.byKey(
-      Key('forest-day-${_dateKey(witheredDate)}'),
-    );
-    final healthyCell = find.byKey(Key('forest-day-${_dateKey(healthyDate)}'));
-
-    expect(witheredCell, findsOneWidget);
-    expect(healthyCell, findsOneWidget);
-    expect(
-      find.descendant(
-        of: witheredCell,
-        matching: find.byKey(
-          Key('forest-tree-withered-${_dateKey(witheredDate)}'),
-        ),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: healthyCell,
-        matching: find.byKey(
-          Key('forest-tree-healthy-${_dateKey(healthyDate)}'),
-        ),
-      ),
-      findsOneWidget,
-    );
   });
 
   testWidgets('the home screen can reopen the questionnaire after onboarding', (
@@ -289,6 +216,9 @@ void main() {
     expect(find.text('Back to Forest'), findsOneWidget);
 
     await tester.tap(find.text('Back to Forest'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Calendar'));
     await tester.pumpAndSettle();
 
     final todayCell = find.byKey(Key('forest-day-${_dateKey(today)}'));

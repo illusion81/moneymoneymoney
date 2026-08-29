@@ -98,6 +98,37 @@ void main() {
       expect(result.progression.coinBalance, 500);
     });
 
+    test('decoration items purchase like any other category, without an equip slot', () {
+      final state = service.initialState();
+      final progression = _progressionAt(level: 1, coinBalance: 200);
+
+      final result = service.purchase(
+        itemId: 'deco-garden-lantern',
+        state: state,
+        progression: progression,
+      );
+
+      expect(result.success, isTrue);
+      expect(result.state.ownedItemIds, contains('deco-garden-lantern'));
+      expect(result.progression.coinBalance, 200 - 80);
+      expect(
+        result.state.equippedItemIds.containsKey(ShopItemCategory.decoration),
+        isFalse,
+      );
+    });
+
+    test('no decoration item is owned by default', () {
+      final state = service.initialState();
+
+      final ownedDecorations = state.ownedItemIds.where(
+        (id) => kShopCatalog
+            .firstWhere((item) => item.id == id)
+            .category == ShopItemCategory.decoration,
+      );
+
+      expect(ownedDecorations, isEmpty);
+    });
+
     test('equipping replaces the previous item in the same category only', () {
       var state = service.initialState();
       state = ShopState(
