@@ -37,6 +37,13 @@ dependencies:
 
   # Backend API client (lib/data/api_client.dart) — Lane A
   http: ^1.2.0
+
+  # Opens the bank consent page in a browser
+  url_launcher: ^6.3.0
+
+  # Statement upload (CSV / PDF)
+  file_picker: ^8.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
