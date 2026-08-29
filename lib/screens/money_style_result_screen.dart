@@ -8,15 +8,18 @@ class MoneyStyleResultScreen extends StatelessWidget {
     required this.result,
     this.onExploreIdeas,
     this.onBuildRangePlan,
+    this.onAnswerMore,
+    this.onStartOver,
   });
 
   final MoneyStyleResult? result;
   final VoidCallback? onExploreIdeas, onBuildRangePlan;
+  final VoidCallback? onAnswerMore, onStartOver;
 
   @override
   Widget build(BuildContext context) {
     if (this.result == null) {
-      return Scaffold(body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: const [Text('Not enough to name a style yet'), SizedBox(height: 12), Text('Answer a few more')])));
+      return Scaffold(body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Text('Not enough to name a style yet'), const SizedBox(height: 12), FilledButton(onPressed: onAnswerMore, child: const Text('Answer a few more')), TextButton(onPressed: onStartOver, child: const Text('Start over'))])));
     }
     final result = this.result!;
     return Scaffold(

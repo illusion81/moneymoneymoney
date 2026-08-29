@@ -151,20 +151,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  /// Skips the questionnaire with a reasonable default profile. The user can
-  /// fill in real numbers later via "retake questionnaire" on the Forest
-  /// screen.
   void _skip() {
-    widget.onProfileSubmitted(
-      const FinanceProfile(
-        monthlyIncome: 3000,
-        fixedMonthlyExpenses: 1500,
-        monthlySavingsGoal: 300,
-        riskPreference: RiskPreference.balanced,
-        financialGoal: FinancialGoal.emergencyFund,
-        spendingPressure: SpendingPressure.medium,
-      ),
-    );
+    Navigator.of(context).maybePop();
   }
 
   String _riskLabel(RiskPreference value) {
