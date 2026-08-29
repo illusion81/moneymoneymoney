@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:moneymoneymoney/data/api_client.dart';
 import 'package:moneymoneymoney/data/money_style_questions.dart';
-import 'package:moneymoneymoney/main.dart';
+import 'package:moneymoneymoney/legacy_app.dart';
 import 'package:moneymoneymoney/models/forest_day.dart';
 import 'package:moneymoneymoney/models/money_style.dart';
 import 'package:moneymoneymoney/models/progression.dart';
