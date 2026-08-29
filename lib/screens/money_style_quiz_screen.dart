@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../data/money_style_questions.dart';
 import '../models/money_style.dart';
 import '../services/money_style_engine.dart';
-import 'money_style_result_screen.dart';
 
 class MoneyStyleQuizScreen extends StatefulWidget {
   const MoneyStyleQuizScreen({
@@ -197,14 +196,12 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
         _currentQuestionIndex++;
       });
     } else {
-      // Quiz complete
+      // Quiz complete. onComplete tells main.dart to switch to
+      // AppView.moneyStyleResult, which renders the result screen WITH its two
+      // buttons wired up. Pushing our own copy here shadowed that one with a
+      // callback-less version, which is why both buttons did nothing.
       final result = _engine.generateResult(_session, moneyStyleQuestions);
       widget.onComplete(result);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => MoneyStyleResultScreen(result: result),
-        ),
-      );
     }
   }
 

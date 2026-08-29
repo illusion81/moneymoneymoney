@@ -125,6 +125,79 @@ class Plan(BaseModel):
     headline: str
 
 
+# ---------- Social ----------
+
+class JoinCircle(BaseModel):
+    display_name: str
+    code: str = "UQ2026"        # circles are joined by a short code, no accounts
+
+
+class LeaderboardEntry(BaseModel):
+    """Deliberately contains no dollar figures.
+
+    Ranking students by how much they save rewards whoever has the wealthiest
+    parents. We rank by adherence to your OWN plan — a percentage of a target
+    the app set for you — so someone on $400 a month can beat someone on $4,000.
+    """
+    rank: int
+    display_name: str
+    is_you: bool
+    adherence: float            # 0..1 against their own plan
+    level: int
+    tower_stage: int
+    streak_days: int
+    trend: Literal["up", "flat", "down"]
+    badge: Optional[str] = None
+
+
+class Circle(BaseModel):
+    code: str
+    name: str
+    member_count: int
+    your_rank: Optional[int] = None
+    headline: str
+    entries: list[LeaderboardEntry]
+
+
+class Cheer(BaseModel):
+    from_name: str
+    to_name: str
+    message: str
+    sent_at: str
+
+
+# ---------- Goals ----------
+
+class GoalCreate(BaseModel):
+    """A large planned expense: concert tickets, a flight, a laptop.
+
+    The point is that it changes the plan. Without this, a one-off $400 purchase
+    looks like overspending and cracks the tower, when actually they saved for
+    it deliberately. Saving toward something is not the same as blowing a budget.
+    """
+    name: str
+    target_amount: float = Field(..., gt=0)
+    target_date: str            # ISO date, when they need the money
+    saved_so_far: float = 0.0
+
+
+class Goal(BaseModel):
+    id: str
+    name: str
+    target_amount: float
+    target_date: str
+    saved_so_far: float
+    remaining: float
+    days_left: int
+    weeks_left: float
+    per_week_needed: float      # what they must set aside from here
+    per_month_needed: float
+    on_track: bool
+    share_of_discretionary: float   # 0..1 — how much of their spare cash this eats
+    headline: str
+    warning: Optional[str] = None
+
+
 # ---------- Missions ----------
 
 class Mission(BaseModel):
