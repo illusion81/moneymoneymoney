@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'models/finance_profile.dart';
 import 'models/forest_day.dart';
+import 'models/money_style.dart';
 import 'models/progression.dart';
 import 'models/shop_item.dart';
 import 'models/wealth_report.dart';
 import 'screens/achievements_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/money_style_flow.dart';
+import 'screens/money_style_result_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/shop_screen.dart';
@@ -19,7 +22,7 @@ void main() {
   runApp(const MyApp());
 }
 
-enum AppView { onboarding, report, home, achievements, shop }
+enum AppView { onboarding, moneyStyleFlow, moneyStyleResult, report, home, achievements, shop }
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -36,6 +39,7 @@ class _MyAppState extends State<MyApp> {
       GlobalKey<ScaffoldMessengerState>();
 
   WealthReport? _report;
+  MoneyStyleResult? _moneyStyleResult;
   ForestSummary _summary = const ForestSummary(
     days: [],
     currentStreak: 0,
@@ -77,14 +81,27 @@ class _MyAppState extends State<MyApp> {
 
   Widget _buildCurrentView() {
     final report = _report;
-    if (report == null || _view == AppView.onboarding) {
-      return OnboardingScreen(onProfileSubmitted: _handleProfileSubmitted);
-    }
 
     switch (_view) {
       case AppView.onboarding:
-        return OnboardingScreen(onProfileSubmitted: _handleProfileSubmitted);
+        return OnboardingScreen(
+          onProfileSubmitted: _handleProfileSubmitted,
+          onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+        );
+      case AppView.moneyStyleFlow:
+        return MoneyStyleFlow(
+          userId: 'user-1', // TODO: Replace with actual user ID
+          onComplete: _handleMoneyStyleComplete,
+        );
+      case AppView.moneyStyleResult:
+        return MoneyStyleResultScreen(result: _moneyStyleResult!);
       case AppView.report:
+        if (report == null) {
+          return OnboardingScreen(
+            onProfileSubmitted: _handleProfileSubmitted,
+            onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          );
+        }
         return ReportScreen(
           report: report,
           onStartPlan: _startPlan,
@@ -93,6 +110,12 @@ class _MyAppState extends State<MyApp> {
               : null,
         );
       case AppView.home:
+        if (report == null) {
+          return OnboardingScreen(
+            onProfileSubmitted: _handleProfileSubmitted,
+            onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          );
+        }
         return HomeScreen(
           report: report,
           summary: _summary,
@@ -107,12 +130,24 @@ class _MyAppState extends State<MyApp> {
           onShowShop: () => setState(() => _view = AppView.shop),
         );
       case AppView.achievements:
+        if (report == null) {
+          return OnboardingScreen(
+            onProfileSubmitted: _handleProfileSubmitted,
+            onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          );
+        }
         return AchievementsScreen(
           summary: _summary,
           progression: _progression,
           onBack: () => setState(() => _view = AppView.home),
         );
       case AppView.shop:
+        if (report == null) {
+          return OnboardingScreen(
+            onProfileSubmitted: _handleProfileSubmitted,
+            onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          );
+        }
         return ShopScreen(
           progression: _progression,
           shopState: _shopState,
@@ -133,6 +168,19 @@ class _MyAppState extends State<MyApp> {
       );
       _view = AppView.report;
       _planStarted = false;
+    });
+  }
+
+  void _startMoneyStyleQuiz() {
+    setState(() {
+      _view = AppView.moneyStyleFlow;
+    });
+  }
+
+  void _handleMoneyStyleComplete(MoneyStyleResult result) {
+    setState(() {
+      _moneyStyleResult = result;
+      _view = AppView.moneyStyleResult;
     });
   }
 
