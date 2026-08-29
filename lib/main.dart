@@ -106,6 +106,10 @@ class _MyAppState extends State<MyApp> {
   String? _lastEarnedSummary;
   bool _planStarted = false;
 
+  /// True while the user has skipped the Money Style questionnaire and has
+  /// neither completed it nor dismissed the "do it later" reminder.
+  bool _moneyStyleDeferred = false;
+
   /// Demo-only membership flag — see PlusScreen; no real payment exists.
   bool _isPlusMember = false;
 
@@ -164,11 +168,13 @@ class _MyAppState extends State<MyApp> {
           onProfileSubmitted: _handleProfileSubmitted,
           onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
           onCancel: () => setState(
-            () => _view = _moneyStyleCompletion == null
+            () => _view = _moneyStyleCompletion?.result == null
                 ? AppView.moneyStyleFlow
                 : AppView.moneyStyleResult,
           ),
           onFetchSuggestion: _fetchProfileSuggestion,
+          showMoneyStyleReminder: _moneyStyleDeferred,
+          onDismissMoneyStyleReminder: _dismissMoneyStyleReminder,
         );
       case AppView.moneyStyleFlow:
         return MoneyStyleFlow(
@@ -177,6 +183,7 @@ class _MyAppState extends State<MyApp> {
           existingCompletion: _moneyStyleCompletion,
           onProgress: _handleMoneyStyleProgress,
           onStartOver: _clearMoneyStyle,
+          onSkipAll: _skipMoneyStyleQuestionnaire,
         );
       case AppView.moneyStyleResult:
         return MoneyStyleResultScreen(
@@ -253,6 +260,9 @@ class _MyAppState extends State<MyApp> {
           onShowHomestead: () => setState(() => _view = AppView.homestead),
           onFetchTodaySpending: _fetchTodaySpending,
           api: _apiClient,
+          showMoneyStyleReminder: _moneyStyleDeferred,
+          onResumeMoneyStyle: _startMoneyStyleQuiz,
+          onDismissMoneyStyleReminder: _dismissMoneyStyleReminder,
         );
       case AppView.calendar:
         return CalendarScreen(
@@ -376,20 +386,65 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  /// Leaving the questionnaire entirely, from the entry screen or any page.
+  /// The user is handed to the manual exact-number form — the app's existing
+  /// alternative route to a plan — rather than being left with nowhere to go,
+  /// and the decision is persisted so the offer can be picked up later.
+  void _skipMoneyStyleQuestionnaire() {
+    setState(() {
+      _moneyStyleDeferred = true;
+      _view = AppView.onboarding;
+    });
+    unawaited(_deferMoneyStyle());
+  }
+
+  Future<void> _deferMoneyStyle() async {
+    try {
+      await _moneyStyleStore.deferQuestionnaire();
+    } catch (error) {
+      debugPrint('Money Style deferral could not be saved: $error');
+    }
+  }
+
+  void _dismissMoneyStyleReminder() {
+    setState(() => _moneyStyleDeferred = false);
+    unawaited(_clearMoneyStyleDeferral());
+  }
+
+  Future<void> _clearMoneyStyleDeferral() async {
+    try {
+      await _moneyStyleStore.clearDeferral();
+    } catch (error) {
+      debugPrint('Money Style deferral could not be cleared: $error');
+    }
+  }
+
   Future<void> _loadMoneyStyle() async {
     MoneyStyleCompletion? completion;
+    var deferred = false;
     try {
       completion = await _moneyStyleStore.load();
+      deferred = await _moneyStyleStore.isQuestionnaireDeferred();
     } catch (error) {
       debugPrint('Money Style progress could not be loaded: $error');
     }
-    if (!mounted || completion == null) {
+    if (!mounted) {
+      return;
+    }
+    if (completion == null) {
+      if (deferred) {
+        setState(() {
+          _moneyStyleDeferred = true;
+          _view = AppView.onboarding;
+        });
+      }
       return;
     }
     final showResult =
         completion.result != null ||
-        completion.session.isCompleteFor(moneyStyleQuestions);
+        completion.session.isCompleteFor(moneyStyleQuestionPool);
     setState(() {
+      _moneyStyleDeferred = deferred;
       _moneyStyleCompletion = completion;
       _view = showResult ? AppView.moneyStyleResult : AppView.moneyStyleFlow;
     });
@@ -438,10 +493,13 @@ class _MyAppState extends State<MyApp> {
       result: completion.result,
     );
     await _saveMoneyStyle(snapshot);
+    // Finishing the quiz retires the "complete it later" reminder.
+    await _clearMoneyStyleDeferral();
     if (!mounted) {
       return;
     }
     setState(() {
+      _moneyStyleDeferred = false;
       _moneyStyleCompletion = snapshot;
       _view = AppView.moneyStyleResult;
     });

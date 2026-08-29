@@ -27,7 +27,7 @@ class MoneyStyleResultScreen extends StatelessWidget {
             children: [
               const Text('Not enough to name a style yet'),
               Text(
-                '${completion.session.totalAnswered} of 12 questions answered',
+                '${completion.session.totalAnswered} of $kQuestionsPerSession questions answered',
               ),
               const Text(
                 'Answer at least one question in each area to name a style.',
@@ -191,11 +191,27 @@ class MoneyStyleResultScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${result.totalAnswered} of 12 questions answered',
+                        '${result.totalAnswered} of $kQuestionsPerSession questions answered',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[600],
                         ),
                       ),
+                      if (result.mostCriticalDimension != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Most worth a look: '
+                          '${dimensionLabel(result.mostCriticalDimension!)}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                      if (result.strongestDimension != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Already working: '
+                          '${dimensionLabel(result.strongestDimension!)}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
                     ],
                   ),
                 ),

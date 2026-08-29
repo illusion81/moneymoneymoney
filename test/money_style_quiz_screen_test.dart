@@ -4,6 +4,21 @@ import 'package:moneymoneymoney/data/money_style_questions.dart';
 import 'package:moneymoneymoney/models/money_style.dart';
 import 'package:moneymoneymoney/screens/money_style_quiz_screen.dart';
 
+/// The question currently rendered — the screen picks it adaptively, so tests
+/// read it off the widget tree rather than assuming a fixed order.
+MoneyStyleQuestion currentQuestion() => moneyStyleQuestionPool.firstWhere(
+  (q) => find.text(q.prompt).evaluate().isNotEmpty,
+  orElse: () => throw StateError('no question is on screen'),
+);
+
+/// Taps the option with the given band on whatever question is on screen.
+Future<void> answerCurrent(WidgetTester tester, PoleBand band) async {
+  final answer = currentQuestion().answers.firstWhere((a) => a.band == band);
+  await tester.ensureVisible(find.text(answer.text));
+  await tester.tap(find.text(answer.text));
+  await tester.pump();
+}
+
 void main() {
   group('MoneyStyleQuizScreen', () {
     late MoneyStyleCompletion? completedResult;
@@ -13,300 +28,231 @@ void main() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
       binding.platformDispatcher.views.first.physicalSize = const Size(
         1000,
-        2200,
+        2600,
       );
       binding.platformDispatcher.views.first.devicePixelRatio = 1;
       addTearDown(binding.platformDispatcher.views.first.resetPhysicalSize);
       addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
     });
 
-    testWidgets('displays first question', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {
-              completedResult = result;
-            },
-          ),
+    Future<void> pumpQuiz(
+      WidgetTester tester, {
+      VoidCallback? onSkipAll,
+      ValueChanged<AnswerSession>? onProgress,
+      AnswerSession? initialSession,
+    }) => tester.pumpWidget(
+      MaterialApp(
+        home: MoneyStyleQuizScreen(
+          userId: 'test-user',
+          answerOrderSeed: 1,
+          initialSession: initialSession,
+          onProgress: onProgress,
+          onSkipAll: onSkipAll,
+          onComplete: (result) => completedResult = result,
         ),
-      );
+      ),
+    );
+
+    testWidgets('opens on the first fixed opener', (tester) async {
+      await pumpQuiz(tester);
 
       expect(find.text('Discover your Money Style'), findsOneWidget);
       expect(find.text('1 of 12'), findsOneWidget);
-      expect(find.text(moneyStyleQuestions[0].prompt), findsOneWidget);
-      expect(find.byType(OutlinedButton), findsWidgets); // Answer buttons
+      expect(find.text(moneyStyleQuestionsById[1]!.prompt), findsOneWidget);
+      expect(find.text(moneyStyleQuestionsById[1]!.scenario), findsOneWidget);
     });
 
-    testWidgets('displays question scenario', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            answerOrderSeed: 1,
-            onComplete: (result) {},
-          ),
-        ),
-      );
+    testWidgets('displays all three answer options', (tester) async {
+      await pumpQuiz(tester);
 
-      expect(find.text(moneyStyleQuestions[0].scenario), findsOneWidget);
+      for (final answer in moneyStyleQuestionsById[1]!.answers) {
+        expect(find.text(answer.text), findsOneWidget);
+      }
     });
 
-    testWidgets('displays all three answer options', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {},
-          ),
-        ),
-      );
-
-      final q1 = moneyStyleQuestions[0];
-      expect(find.text(q1.answers[0].text), findsOneWidget);
-      expect(find.text(q1.answers[1].text), findsOneWidget);
-      expect(find.text(q1.answers[2].text), findsOneWidget);
-    });
-
-    testWidgets('next button is disabled when no answer selected', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {},
-          ),
-        ),
-      );
-
-      final nextButton = find.byWidgetPredicate(
-        (widget) => widget is FilledButton && widget.onPressed == null,
-      );
-      expect(nextButton, findsOneWidget);
-    });
-
-    testWidgets('next button is enabled when answer selected', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {},
-          ),
-        ),
-      );
-
-      final q1 = moneyStyleQuestions[0];
-      final answer = find.text(q1.answers[0].text);
-      await tester.ensureVisible(answer);
-      await tester.tap(answer);
-      await tester.pump();
+    testWidgets('next is disabled until an answer is selected', (tester) async {
+      await pumpQuiz(tester);
 
       expect(
-        find.byWidgetPredicate(
-          (widget) => widget is FilledButton && widget.onPressed != null,
-        ),
+        find.byWidgetPredicate((w) => w is FilledButton && w.onPressed == null),
+        findsOneWidget,
+      );
+
+      await answerCurrent(tester, PoleBand.bad);
+
+      expect(
+        find.byWidgetPredicate((w) => w is FilledButton && w.onPressed != null),
         findsOneWidget,
       );
     });
 
-    testWidgets('selected answer button is highlighted', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {},
-          ),
-        ),
-      );
-
-      final q1 = moneyStyleQuestions[0];
-      final answer = find.text(q1.answers[0].text);
-      await tester.ensureVisible(answer);
-      await tester.tap(answer);
-      await tester.pump();
-
-      // Verify the selected button has styling applied
-      final selectedButton = find.text(q1.answers[0].text);
-      expect(selectedButton, findsOneWidget);
-    });
-
-    testWidgets('skip button navigates to next question', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {},
-          ),
-        ),
-      );
+    testWidgets('skip moves to the next question', (tester) async {
+      await pumpQuiz(tester);
 
       expect(find.text('1 of 12'), findsOneWidget);
-
-      // Find and tap the Skip button
       await tester.tap(find.text('Skip'));
       await tester.pumpAndSettle();
 
-      // Should move to Q2
       expect(find.text('2 of 12'), findsOneWidget);
-      expect(find.text(moneyStyleQuestions[1].prompt), findsOneWidget);
+      expect(find.text(moneyStyleQuestionsById[2]!.prompt), findsOneWidget);
     });
 
-    testWidgets('navigates to next question when next button tapped', (
-      WidgetTester tester,
+    testWidgets('the back button only appears after the first question', (
+      tester,
     ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            answerOrderSeed: 1,
-            onComplete: (result) {},
-          ),
-        ),
-      );
+      await pumpQuiz(tester);
+      expect(find.byIcon(Icons.arrow_back), findsNothing);
 
-      expect(find.text('1 of 12'), findsOneWidget);
-
-      // Select an answer
-      final q1 = moneyStyleQuestions[0];
-      await tester.tap(find.text(q1.answers[0].text));
-      await tester.pump();
-
-      // Tap next
+      await answerCurrent(tester, PoleBand.bad);
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
 
-      // Should be on Q2
-      expect(find.text('2 of 12'), findsOneWidget);
-    });
-
-    testWidgets('progress indicator updates', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {},
-          ),
-        ),
-      );
-
-      // Start at Q1
-      expect(find.text('1 of 12'), findsOneWidget);
-
-      // Answer and go to Q2
-      final q1 = moneyStyleQuestions[0];
-      await tester.tap(find.text(q1.answers[0].text));
-      await tester.pump();
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('2 of 12'), findsOneWidget);
-
-      // Go to Q3
-      final q2 = moneyStyleQuestions[1];
-      await tester.tap(find.text(q2.answers[1].text));
-      await tester.pump();
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('3 of 12'), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     });
 
     testWidgets('progress callbacks receive immutable session snapshots', (
-      WidgetTester tester,
+      tester,
     ) async {
       final progress = <AnswerSession>[];
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            answerOrderSeed: 1,
-            onProgress: progress.add,
-            onComplete: (_) {},
-          ),
-        ),
-      );
+      await pumpQuiz(tester, onProgress: progress.add);
 
-      await tester.tap(find.text(moneyStyleQuestions[0].answers[0].text));
-      await tester.pump();
+      await answerCurrent(tester, PoleBand.bad);
       final firstSnapshot = progress.single;
 
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(moneyStyleQuestions[1].answers[0].text));
-      await tester.pump();
+      await answerCurrent(tester, PoleBand.bad);
 
-      expect(firstSnapshot.selectedAnswers, {1: 0});
-      expect(progress.last.selectedAnswers, {1: 0, 2: 0});
+      expect(firstSnapshot.selectedAnswers.keys, [1]);
+      expect(progress.last.selectedAnswers.keys, [1, 2]);
       expect(identical(firstSnapshot, progress.last), isFalse);
     });
 
-    testWidgets('back button appears after first question', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {},
-          ),
-        ),
-      );
+    testWidgets('pages 1 and 2 are the six fixed openers', (tester) async {
+      await pumpQuiz(tester);
 
-      // No back button on Q1
-      expect(find.byIcon(Icons.arrow_back), findsNothing);
-
-      // Answer and go to Q2
-      final q1 = moneyStyleQuestions[0];
-      await tester.tap(find.text(q1.answers[0].text));
-      await tester.pump();
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
-
-      // Back button appears on Q2
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      for (var i = 1; i <= 6; i++) {
+        expect(
+          find.text(moneyStyleQuestionsById[i]!.prompt),
+          findsOneWidget,
+          reason: 'opener $i',
+        );
+        await answerCurrent(tester, PoleBand.mixed);
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
+      }
     });
 
-    testWidgets('quiz completion calls onComplete callback', (
-      WidgetTester tester,
+    testWidgets('page 3 is routed from the running score, not a fixed list', (
+      tester,
     ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MoneyStyleQuizScreen(
-            userId: 'test-user',
-            onComplete: (result) {
-              completedResult = result;
-            },
-          ),
-        ),
-      );
+      await pumpQuiz(tester);
 
-      // Answer all 12 questions
-      for (int i = 0; i < moneyStyleQuestions.length; i++) {
-        final question = moneyStyleQuestions[i];
-        await tester.tap(find.text(question.answers[0].text));
-        await tester.pump();
+      // Answer the six openers exactly as the design doc's "Alex" does.
+      const bands = [
+        PoleBand.bad, // RD
+        PoleBand.good, // CI
+        PoleBand.mixed, // PA
+        PoleBand.mixed, // SB
+        PoleBand.bad, // SA
+        PoleBand.good, // FA
+      ];
+      for (final band in bands) {
+        await answerCurrent(tester, band);
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
+      }
 
-        if (i < moneyStyleQuestions.length - 1) {
-          await tester.tap(find.text('Next'));
-          await tester.pumpAndSettle();
-        } else {
-          // Last question
-          await tester.tap(find.text('Next'));
-          await tester.pumpAndSettle();
-        }
+      // Page 3 leads with the Revolving Debt bad-drill-down (Q7).
+      expect(find.text('7 of 12'), findsOneWidget);
+      expect(currentQuestion().id, 7);
+      expect(currentQuestion().branch, QuestionBranch.badDrill);
+    });
+
+    testWidgets('a full run completes with a result and 12 shown questions', (
+      tester,
+    ) async {
+      await pumpQuiz(tester);
+
+      for (var i = 0; i < 12; i++) {
+        await answerCurrent(tester, PoleBand.bad);
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
       }
 
       expect(completedResult, isNotNull);
-      expect(completedResult!.result!.archetype, isNotNull);
+      expect(completedResult!.result, isNotNull);
+      expect(completedResult!.session.shownQuestionIds, hasLength(12));
+      expect(completedResult!.session.totalAnswered, 12);
+      expect(
+        completedResult!.result!.confidenceTier,
+        ConfidenceTier.fullClarity,
+      );
+    });
+
+    testWidgets('a skipped opener is re-shown as a page-3 catch-up slot', (
+      tester,
+    ) async {
+      await pumpQuiz(tester);
+
+      for (var i = 0; i < 6; i++) {
+        if (currentQuestion().id == 5) {
+          // Skip the Savings Avoidance opener.
+          await tester.tap(find.text('Skip'));
+          await tester.pumpAndSettle();
+          continue;
+        }
+        await answerCurrent(tester, PoleBand.mixed);
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
+      }
+
+      // The unscored dimension outranks everything, so its opener comes back.
+      expect(currentQuestion().id, 5);
+      expect(currentQuestion().branch, QuestionBranch.opening);
+    });
+
+    testWidgets('the skip-everything action is on every page', (tester) async {
+      var skipped = 0;
+      await pumpQuiz(tester, onSkipAll: () => skipped++);
+
+      for (var i = 0; i < 12; i++) {
+        expect(
+          find.byKey(const Key('skip-questionnaire-button')),
+          findsOneWidget,
+          reason: 'app-bar skip on question ${i + 1}',
+        );
+        expect(
+          find.byKey(const Key('skip-questionnaire-footer-button')),
+          findsOneWidget,
+          reason: 'footer skip on question ${i + 1}',
+        );
+        if (i == 11) break;
+        await answerCurrent(tester, PoleBand.mixed);
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
+      }
+
+      await tester.tap(find.byKey(const Key('skip-questionnaire-button')));
+      await tester.pump();
+      expect(skipped, 1);
+    });
+
+    testWidgets('a resumed session opens at the first unanswered question', (
+      tester,
+    ) async {
+      await pumpQuiz(
+        tester,
+        initialSession: AnswerSession(
+          userId: 'u',
+          sessionId: 's',
+          selectedAnswers: {1: 0},
+          skippedQuestions: {2},
+        ),
+      );
+
+      expect(find.text('3 of 12'), findsOneWidget);
+      expect(currentQuestion().id, 3);
     });
   });
 }

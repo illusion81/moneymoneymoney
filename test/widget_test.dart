@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:moneymoneymoney/data/api_client.dart';
-import 'package:moneymoneymoney/data/money_style_archetypes.dart';
+import 'package:moneymoneymoney/data/money_style_questions.dart';
 import 'package:moneymoneymoney/main.dart';
 import 'package:moneymoneymoney/models/forest_day.dart';
 import 'package:moneymoneymoney/models/money_style.dart';
@@ -14,6 +14,7 @@ import 'package:moneymoneymoney/models/wealth_report.dart';
 import 'package:moneymoneymoney/screens/home_screen.dart';
 import 'package:moneymoneymoney/screens/shop_screen.dart';
 import 'package:moneymoneymoney/services/forest_engine.dart';
+import 'package:moneymoneymoney/services/money_style_engine.dart';
 import 'package:moneymoneymoney/services/money_style_repository.dart';
 import 'package:moneymoneymoney/services/shop_service.dart';
 
@@ -21,6 +22,7 @@ class _Store implements MoneyStyleStore {
   _Store(this.value);
 
   MoneyStyleCompletion? value;
+  bool deferred = false;
 
   @override
   Future<void> clear() async {
@@ -33,6 +35,19 @@ class _Store implements MoneyStyleStore {
   @override
   Future<void> save(MoneyStyleCompletion completion) async {
     value = completion;
+  }
+
+  @override
+  Future<void> deferQuestionnaire() async {
+    deferred = true;
+  }
+
+  @override
+  Future<bool> isQuestionnaireDeferred() async => deferred;
+
+  @override
+  Future<void> clearDeferral() async {
+    deferred = false;
   }
 }
 
@@ -49,6 +64,40 @@ class _DelayedClearStore extends _Store {
     value = null;
   }
 }
+
+/// A finished quiz session, built through the engine so the archetype and
+/// scores are the real ones rather than hand-assembled.
+MoneyStyleCompletion _savedCompletion() {
+  final bands = <int, PoleBand>{
+    1: PoleBand.bad, // revolving debt: watch
+    2: PoleBand.mixed, // convenience: watch
+    3: PoleBand.good, // price anchoring: hold
+    4: PoleBand.mixed,
+    5: PoleBand.mixed,
+    6: PoleBand.mixed,
+  };
+  final session = AnswerSession(
+    userId: 'user-1',
+    sessionId: 'saved-session',
+    selectedAnswers: {
+      for (final entry in bands.entries)
+        entry.key: moneyStyleQuestionsById[entry.key]!.answers.indexWhere(
+          (a) => a.band == entry.value,
+        ),
+    },
+    shownQuestionIds: List<int>.from(bands.keys),
+  );
+  return MoneyStyleCompletion(
+    session: session,
+    result: const MoneyStyleEngine().generateResult(
+      session,
+      moneyStyleQuestionPool,
+    ),
+  );
+}
+
+/// The archetype `_savedCompletion` resolves to.
+const _savedArchetypeName = 'The Careful Chooser';
 
 const _testReport = WealthReport(
   profileSummary: 'summary',
@@ -191,28 +240,7 @@ void main() {
   testWidgets(
     'restored result can cancel exact planning without submitting a survey',
     (tester) async {
-      final session = AnswerSession(
-        userId: 'user-1',
-        sessionId: 'saved-session',
-        selectedAnswers: {1: 0, 2: 0, 4: 0},
-        skippedQuestions: {3, 5, 6, 7, 8, 9, 10, 11, 12},
-      );
-      final completion = MoneyStyleCompletion(
-        session: session,
-        result: MoneyStyleResult(
-          archetype: archetypeMap['steady_pause_collaborative']!,
-          confidenceTier: ConfidenceTier.earlySnapshot,
-          dimensionScores: DimensionScores(
-            steadyCount: 1,
-            pauseCount: 1,
-            collaborativeCount: 1,
-          ),
-          moneyRhythmWinner: MoneyRhythmPole.steady,
-          decisionStyleWinner: DecisionStylePole.pause,
-          supportStyleWinner: SupportStylePole.collaborative,
-          totalAnswered: 3,
-        ),
-      );
+      final completion = _savedCompletion();
       final requests = <http.Request>[];
       final apiClient = ApiClient(
         baseUrl: 'http://example.test',
@@ -227,7 +255,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('The Intentional Protector'), findsOneWidget);
+      expect(find.text(_savedArchetypeName), findsOneWidget);
 
       await tester.tap(find.text('Build a practical plan with ranges'));
       await tester.pumpAndSettle();
@@ -240,7 +268,7 @@ void main() {
       await tester.tap(find.text('Skip for now'));
       await tester.pumpAndSettle();
 
-      expect(find.text('The Intentional Protector'), findsOneWidget);
+      expect(find.text(_savedArchetypeName), findsOneWidget);
       expect(
         requests.where((request) => request.url.path == '/api/survey'),
         isEmpty,
@@ -273,28 +301,7 @@ void main() {
   testWidgets('money style ideas can return to the restored result', (
     tester,
   ) async {
-    final session = AnswerSession(
-      userId: 'user-1',
-      sessionId: 'saved-session',
-      selectedAnswers: {1: 0, 2: 0, 4: 0},
-      skippedQuestions: {3, 5, 6, 7, 8, 9, 10, 11, 12},
-    );
-    final completion = MoneyStyleCompletion(
-      session: session,
-      result: MoneyStyleResult(
-        archetype: archetypeMap['steady_pause_collaborative']!,
-        confidenceTier: ConfidenceTier.earlySnapshot,
-        dimensionScores: DimensionScores(
-          steadyCount: 1,
-          pauseCount: 1,
-          collaborativeCount: 1,
-        ),
-        moneyRhythmWinner: MoneyRhythmPole.steady,
-        decisionStyleWinner: DecisionStylePole.pause,
-        supportStyleWinner: SupportStylePole.collaborative,
-        totalAnswered: 3,
-      ),
-    );
+    final completion = _savedCompletion();
 
     await tester.pumpWidget(MyApp(moneyStyleStore: _Store(completion)));
     await tester.pumpAndSettle();
@@ -306,7 +313,7 @@ void main() {
 
     await tester.tap(find.text('Back to Money Style'));
     await tester.pumpAndSettle();
-    expect(find.text('The Intentional Protector'), findsOneWidget);
+    expect(find.text(_savedArchetypeName), findsOneWidget);
   });
 
   testWidgets('start over awaits persisted-state clearing before a new quiz', (

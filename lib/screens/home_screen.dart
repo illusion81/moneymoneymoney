@@ -8,6 +8,7 @@ import '../services/forest_engine.dart';
 import '../data/api_client.dart';
 import '../services/item_visuals.dart';
 import '../widgets/app_nav_bar.dart';
+import '../widgets/money_style_reminder_card.dart';
 import 'connect_bank_screen.dart';
 import 'circle_screen.dart';
 import 'goals_screen.dart';
@@ -34,6 +35,9 @@ class HomeScreen extends StatefulWidget {
     this.lastEarnedSummary,
     this.api,
     this.onRetakeQuestionnaire,
+    this.showMoneyStyleReminder = false,
+    this.onResumeMoneyStyle,
+    this.onDismissMoneyStyleReminder,
   });
 
   final WealthReport report;
@@ -57,6 +61,12 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback onShowHomestead;
   final Future<double> Function() onFetchTodaySpending;
   final VoidCallback? onRetakeQuestionnaire;
+
+  /// True while the user has skipped the Money Style questionnaire and has
+  /// not completed or dismissed the offer to finish it later.
+  final bool showMoneyStyleReminder;
+  final VoidCallback? onResumeMoneyStyle;
+  final VoidCallback? onDismissMoneyStyleReminder;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -211,6 +221,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   onShowShop: widget.onShowShop,
                 ),
                 const SizedBox(height: 14),
+                if (widget.showMoneyStyleReminder &&
+                    widget.onResumeMoneyStyle != null) ...[
+                  MoneyStyleReminderCard(
+                    onResume: widget.onResumeMoneyStyle!,
+                    onDismiss: widget.onDismissMoneyStyleReminder,
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
