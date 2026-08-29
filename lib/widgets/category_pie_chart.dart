@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../services/category_breakdown.dart';
+import '../services/money_format.dart';
 
 /// Categorical palette, assigned in fixed slot order and never cycled.
 ///
@@ -70,7 +71,7 @@ class CategoryPieChart extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _money(total),
+                    formatMoney(total),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -110,8 +111,6 @@ class CategoryPieChart extends StatelessWidget {
   }
 }
 
-String _money(double v) => '\$${v.toStringAsFixed(v.abs() >= 1000 ? 0 : 2)}';
-
 class _LegendRow extends StatelessWidget {
   const _LegendRow({required this.slice, required this.color});
 
@@ -135,7 +134,7 @@ class _LegendRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(child: Text(slice.label)),
           Text(
-            _money(slice.amount),
+            formatMoney(slice.amount),
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           SizedBox(

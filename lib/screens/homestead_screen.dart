@@ -66,11 +66,10 @@ const _geometry = IsoGridGeometry(
   tileHeight: kHomeTileHeight,
 );
 const double _dirtEdgeHeight = 24;
-const double kHomeGridCanvasWidth =
-    kHomeTileWidth * kHomeGridSize + kHomeTileWidth;
-const double kHomeGridCanvasHeight =
+const double _gridCanvasWidth = kHomeTileWidth * kHomeGridSize + kHomeTileWidth;
+const double _gridCanvasHeight =
     kHomeTileHeight * kHomeGridSize + _dirtEdgeHeight + kHomeTileHeight;
-const kHomeGridOrigin = Offset(kHomeGridCanvasWidth / 2, kHomeTileHeight / 2);
+const kHomeGridOrigin = Offset(_gridCanvasWidth / 2, kHomeTileHeight / 2);
 
 class _HomesteadScreenState extends State<HomesteadScreen> {
   final _exportBoundaryKey = GlobalKey();
@@ -178,8 +177,8 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
 
   Widget _buildGrid(Set<String> placedIds) {
     return SizedBox(
-      width: kHomeGridCanvasWidth,
-      height: kHomeGridCanvasHeight,
+      width: _gridCanvasWidth,
+      height: _gridCanvasHeight,
       child: GestureDetector(
         key: const Key('homestead-grid'),
         behavior: HitTestBehavior.opaque,
@@ -187,7 +186,7 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
         child: Stack(
           children: [
             CustomPaint(
-              size: const Size(kHomeGridCanvasWidth, kHomeGridCanvasHeight),
+              size: const Size(_gridCanvasWidth, _gridCanvasHeight),
               painter: _IsoGridPainter(
                 origin: kHomeGridOrigin,
                 grassColor: groundColor(widget.shopState),

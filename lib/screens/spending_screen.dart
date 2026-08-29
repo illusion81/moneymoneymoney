@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../data/api_client.dart';
 import '../data/models.dart';
 import '../services/category_breakdown.dart';
+import '../services/money_format.dart';
 import '../widgets/app_nav_bar.dart';
 import '../widgets/category_pie_chart.dart';
 import 'connect_bank_screen.dart';
@@ -140,8 +141,6 @@ class _SpendingScreenState extends State<SpendingScreen> {
     'savings': 'stable',
     'investment': 'invest',
   };
-
-  String _money(double v) => '\$${v.toStringAsFixed(v.abs() >= 1000 ? 0 : 2)}';
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +308,7 @@ class _SpendingScreenState extends State<SpendingScreen> {
         Text(a.kind, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(width: 12),
         Text(
-          _money(a.balance),
+          formatMoney(a.balance),
           style: TextStyle(
             fontFeatures: const [],
             fontWeight: FontWeight.w600,
@@ -337,9 +336,9 @@ class _SpendingScreenState extends State<SpendingScreen> {
     );
     return Row(
       children: [
-        cell('In', _money(_income), c: const Color(0xff2f7d50)),
-        cell('Spent', _money(_outflow), c: const Color(0xffb4553f)),
-        cell('Moved', _money(_moved)),
+        cell('In', formatMoney(_income), c: const Color(0xff2f7d50)),
+        cell('Spent', formatMoney(_outflow), c: const Color(0xffb4553f)),
+        cell('Moved', formatMoney(_moved)),
       ],
     );
   }
@@ -360,7 +359,7 @@ class _SpendingScreenState extends State<SpendingScreen> {
                 ),
               ),
               Text(
-                '${_money(b.actualAmount)} / ${_money(b.targetAmount)}',
+                '${formatMoney(b.actualAmount)} / ${formatMoney(b.targetAmount)}',
                 style: TextStyle(
                   color: b.onTrack ? null : const Color(0xffb4553f),
                   fontWeight: FontWeight.w600,
@@ -401,7 +400,7 @@ class _SpendingScreenState extends State<SpendingScreen> {
               SizedBox(
                 width: 74,
                 child: Text(
-                  _money(amt),
+                  formatMoney(amt),
                   textAlign: TextAlign.right,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
@@ -456,7 +455,7 @@ class _SpendingScreenState extends State<SpendingScreen> {
           ),
           const SizedBox(width: 12),
           Text(
-            (out ? '-' : '+') + _money(tx.amount.abs()),
+            (out ? '-' : '+') + formatMoney(tx.amount.abs()),
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: out ? null : const Color(0xff2f7d50),
