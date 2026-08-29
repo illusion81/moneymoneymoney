@@ -30,6 +30,14 @@ services:
       # If the group is renamed or deleted, blueprint sync fails loudly rather
       # than silently falling back to mock data.
       - fromGroup: MMM
+      # A committed sample statement, so the deployed API always has data.
+      # Render's free tier has ephemeral disk and sleeps after ~15 min idle:
+      # an uploaded statement does NOT survive that, and the API silently fell
+      # back to mock, which is why the spending screen went blank for anyone
+      # who was not the person who had just uploaded. Uploading still works
+      # and still takes precedence for the length of a session.
+      - key: WEALTH_CSV
+        value: /opt/render/project/src/test-statements/statement-headered.csv
 
   # ------------------------------------------------------------------ web app
   # The Flutter build. Render has no Flutter SDK, so the build clones the
