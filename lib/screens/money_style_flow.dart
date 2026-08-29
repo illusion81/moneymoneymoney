@@ -11,6 +11,7 @@ class MoneyStyleFlow extends StatefulWidget {
     this.existingCompletion,
     this.onProgress,
     this.onStartOver,
+    this.onSkip,
   });
 
   final String userId;
@@ -18,6 +19,11 @@ class MoneyStyleFlow extends StatefulWidget {
   final MoneyStyleCompletion? existingCompletion;
   final ValueChanged<AnswerSession>? onProgress;
   final Future<void> Function()? onStartOver;
+
+  /// Lets someone straight into the app without taking the quiz. This screen
+  /// is the first thing a new user sees, so without a way past it the quiz is
+  /// effectively mandatory.
+  final VoidCallback? onSkip;
 
   @override
   State<MoneyStyleFlow> createState() => _MoneyStyleFlowState();
@@ -95,6 +101,14 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                       onPressed: _startOverQuiz,
                       child: const Text('Start over'),
                     ),
+                  if (widget.onSkip != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton(
+                      key: const Key('money-style-skip-button'),
+                      onPressed: widget.onSkip,
+                      child: const Text('Skip for now'),
+                    ),
+                  ],
                   const SizedBox(height: 40),
                 ],
               ),

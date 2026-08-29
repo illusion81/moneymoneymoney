@@ -18,12 +18,17 @@ class PlusScreen extends StatelessWidget {
     required this.isPlusMember,
     required this.onSubscribe,
     required this.onCancelMembership,
+    required this.onBuyFreezeTicket,
     required this.onBack,
   });
 
   final bool isPlusMember;
   final VoidCallback onSubscribe;
   final VoidCallback onCancelMembership;
+
+  /// A single streak freeze, sold outside the subscription. Offered to
+  /// members too — three freezes still run out on a bad month.
+  final VoidCallback onBuyFreezeTicket;
   final VoidCallback onBack;
 
   static const List<String> _benefits = [
@@ -71,6 +76,15 @@ class PlusScreen extends StatelessWidget {
                   ),
                 ] else
                   _planCards(context),
+                const SizedBox(height: 24),
+                _FreezeTicketCard(
+                  onTap: () => _openCheckout(
+                    context,
+                    'Freeze Streak Ticket',
+                    '\$0.99',
+                    onConfirm: onBuyFreezeTicket,
+                  ),
+                ),
               ],
             ),
           ),
@@ -149,7 +163,12 @@ class PlusScreen extends StatelessWidget {
     );
   }
 
-  void _openCheckout(BuildContext context, String plan, String price) {
+  void _openCheckout(
+    BuildContext context,
+    String plan,
+    String price, {
+    VoidCallback? onConfirm,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       builder: (sheetContext) => _CheckoutSheet(
@@ -157,8 +176,64 @@ class PlusScreen extends StatelessWidget {
         price: price,
         onConfirm: () {
           Navigator.of(sheetContext).pop();
-          onSubscribe();
+          (onConfirm ?? onSubscribe)();
         },
+      ),
+    );
+  }
+}
+
+/// A one-off streak freeze. Separate from the subscription on purpose: the
+/// person who needs it most is the one who just broke a streak and is not
+/// ready to commit to a monthly plan.
+class _FreezeTicketCard extends StatelessWidget {
+  const _FreezeTicketCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: const Key('freeze-ticket-card'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xffe8f5f3),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xff3f8f8a)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.ac_unit, color: Color(0xff3f8f8a), size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Freeze Streak Ticket',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    'One freeze, used once. Keeps a streak alive on a day you '
+                    'go over budget.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '\$0.99',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xff3f8f8a),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
