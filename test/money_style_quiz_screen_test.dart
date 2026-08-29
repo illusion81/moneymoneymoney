@@ -10,6 +10,11 @@ void main() {
 
     setUp(() {
       completedResult = null;
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      binding.platformDispatcher.views.first.physicalSize = const Size(1000, 2200);
+      binding.platformDispatcher.views.first.devicePixelRatio = 1;
+      addTearDown(binding.platformDispatcher.views.first.resetPhysicalSize);
+      addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
     });
 
     testWidgets('displays first question', (WidgetTester tester) async {
@@ -35,6 +40,7 @@ void main() {
         MaterialApp(
           home: MoneyStyleQuizScreen(
             userId: 'test-user',
+            answerOrderSeed: 1,
             onComplete: (result) {},
           ),
         ),
@@ -86,7 +92,9 @@ void main() {
       );
 
       final q1 = moneyStyleQuestions[0];
-      await tester.tap(find.text(q1.answers[0].text));
+      final answer = find.text(q1.answers[0].text);
+      await tester.ensureVisible(answer);
+      await tester.tap(answer);
       await tester.pump();
 
       expect(find.byWidgetPredicate(
@@ -105,7 +113,9 @@ void main() {
       );
 
       final q1 = moneyStyleQuestions[0];
-      await tester.tap(find.text(q1.answers[0].text));
+      final answer = find.text(q1.answers[0].text);
+      await tester.ensureVisible(answer);
+      await tester.tap(answer);
       await tester.pump();
 
       // Verify the selected button has styling applied
@@ -139,6 +149,7 @@ void main() {
         MaterialApp(
           home: MoneyStyleQuizScreen(
             userId: 'test-user',
+            answerOrderSeed: 1,
             onComplete: (result) {},
           ),
         ),

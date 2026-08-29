@@ -15,7 +15,7 @@ void main() {
     addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
   });
 
-  testWidgets('tapping Skip for now submits a default profile without validation', (
+  testWidgets('tapping Skip for now never submits fabricated financial facts', (
     tester,
   ) async {
     FinanceProfile? submitted;
@@ -31,7 +31,6 @@ void main() {
     await tester.tap(find.text('Skip for now'));
     await tester.pumpAndSettle();
 
-    expect(submitted, isNotNull);
-    expect(submitted!.monthlyIncome, greaterThan(0));
+    expect(submitted, isNull);
   });
 }
