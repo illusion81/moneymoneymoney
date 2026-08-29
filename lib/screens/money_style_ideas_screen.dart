@@ -1,0 +1,3 @@
+import 'package:flutter/material.dart';
+import '../models/money_style.dart';
+class MoneyStyleIdeasScreen extends StatelessWidget { const MoneyStyleIdeasScreen({super.key,required this.archetype}); final ArchetypeInfo archetype; @override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Ideas for your style')),body:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(archetype.name,style:Theme.of(c).textTheme.headlineSmall),const SizedBox(height:20),const Text('You could try a reminder cadence that feels realistic, a compare-before-deciding note, or a check-in style that suits you.'),const SizedBox(height:12),const Text('These are optional prompts, not financial advice.')]))); }
