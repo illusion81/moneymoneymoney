@@ -23,7 +23,10 @@ void main() {
           },
         );
 
-        final scores = engine.calculateDimensionScores(session, moneyStyleQuestions);
+        final scores = engine.calculateDimensionScores(
+          session,
+          moneyStyleQuestions,
+        );
 
         expect(scores.steadyCount, 1);
         expect(scores.responsiveCount, 0);
@@ -39,7 +42,10 @@ void main() {
           sessionId: 'session-1',
         );
 
-        final scores = engine.calculateDimensionScores(session, moneyStyleQuestions);
+        final scores = engine.calculateDimensionScores(
+          session,
+          moneyStyleQuestions,
+        );
 
         expect(scores.steadyCount, 0);
         expect(scores.responsiveCount, 0);
@@ -68,7 +74,10 @@ void main() {
           },
         );
 
-        final scores = engine.calculateDimensionScores(session, moneyStyleQuestions);
+        final scores = engine.calculateDimensionScores(
+          session,
+          moneyStyleQuestions,
+        );
 
         // Should have counted: Q1 Steady, Q5 Steady, Q10 Steady, Q2 Responsive
         // Q3 Pause, Q6 Pause, Q12 Pause, Q8 Momentum
@@ -96,12 +105,22 @@ void main() {
           },
         );
 
-        var scores = engine.calculateDimensionScores(session, moneyStyleQuestions);
+        var scores = engine.calculateDimensionScores(
+          session,
+          moneyStyleQuestions,
+        );
         expect(scores.steadyCount, 2);
         expect(scores.responsiveCount, 2); // Tied
 
-        final scoresAfter = engine.applyTieBreakers(scores, session, moneyStyleQuestions);
-        expect(scoresAfter.responsiveCount, 3); // Tie-breaker from Q2 breaks it to Responsive
+        final scoresAfter = engine.applyTieBreakers(
+          scores,
+          session,
+          moneyStyleQuestions,
+        );
+        expect(
+          scoresAfter.responsiveCount,
+          3,
+        ); // Tie-breaker from Q2 breaks it to Responsive
       });
 
       test('Q8 should break Decision Style ties', () {
@@ -118,11 +137,18 @@ void main() {
           },
         );
 
-        var scores = engine.calculateDimensionScores(session, moneyStyleQuestions);
+        var scores = engine.calculateDimensionScores(
+          session,
+          moneyStyleQuestions,
+        );
         expect(scores.pauseCount, 2);
         expect(scores.momentumCount, 2);
 
-        final scoresAfter = engine.applyTieBreakers(scores, session, moneyStyleQuestions);
+        final scoresAfter = engine.applyTieBreakers(
+          scores,
+          session,
+          moneyStyleQuestions,
+        );
         expect(scoresAfter.momentumCount, 3); // Q8 breaks tie to Momentum
       });
 
@@ -138,7 +164,10 @@ void main() {
           },
         );
 
-        var scores = engine.calculateDimensionScores(sessionBeforeTieBreaker, moneyStyleQuestions);
+        var scores = engine.calculateDimensionScores(
+          sessionBeforeTieBreaker,
+          moneyStyleQuestions,
+        );
         expect(scores.selfCount, 1);
         expect(scores.collaborativeCount, 1);
 
@@ -153,9 +182,16 @@ void main() {
           },
         );
 
-        final scoresAfter = engine.applyTieBreakers(scores, sessionWithTieBreaker, moneyStyleQuestions);
+        final scoresAfter = engine.applyTieBreakers(
+          scores,
+          sessionWithTieBreaker,
+          moneyStyleQuestions,
+        );
         expect(scoresAfter.selfCount, 1);
-        expect(scoresAfter.collaborativeCount, 2); // Q11 breaks tie to Collaborative
+        expect(
+          scoresAfter.collaborativeCount,
+          2,
+        ); // Q11 breaks tie to Collaborative
       });
 
       test('tie-breaker should not apply if question not answered', () {
@@ -170,7 +206,10 @@ void main() {
           },
         );
 
-        var scores = engine.calculateDimensionScores(session, moneyStyleQuestions);
+        var scores = engine.calculateDimensionScores(
+          session,
+          moneyStyleQuestions,
+        );
         expect(scores.steadyCount, 2);
         expect(scores.responsiveCount, 1);
 
@@ -198,17 +237,26 @@ void main() {
 
       test('getDecisionStyleWinner returns momentum when higher', () {
         final scores = DimensionScores(pauseCount: 3, momentumCount: 5);
-        expect(engine.getDecisionStyleWinner(scores), DecisionStylePole.momentum);
+        expect(
+          engine.getDecisionStyleWinner(scores),
+          DecisionStylePole.momentum,
+        );
       });
 
       test('getSupportStyleWinner returns selfDirected when higher', () {
         final scores = DimensionScores(selfCount: 5, collaborativeCount: 3);
-        expect(engine.getSupportStyleWinner(scores), SupportStylePole.selfDirected);
+        expect(
+          engine.getSupportStyleWinner(scores),
+          SupportStylePole.selfDirected,
+        );
       });
 
       test('getSupportStyleWinner returns collaborative when higher', () {
         final scores = DimensionScores(selfCount: 3, collaborativeCount: 5);
-        expect(engine.getSupportStyleWinner(scores), SupportStylePole.collaborative);
+        expect(
+          engine.getSupportStyleWinner(scores),
+          SupportStylePole.collaborative,
+        );
       });
     });
 
@@ -242,19 +290,67 @@ void main() {
 
       test('all 8 archetypes map correctly', () {
         final patterns = [
-          ('The Calm Comparator', MoneyRhythmPole.steady, DecisionStylePole.pause, SupportStylePole.selfDirected),
-          ('The Intentional Protector', MoneyRhythmPole.steady, DecisionStylePole.pause, SupportStylePole.collaborative),
-          ('The Quiet Builder', MoneyRhythmPole.steady, DecisionStylePole.momentum, SupportStylePole.selfDirected),
-          ('The Steady Improviser', MoneyRhythmPole.steady, DecisionStylePole.momentum, SupportStylePole.collaborative),
-          ('The Flexible Pathfinder', MoneyRhythmPole.responsive, DecisionStylePole.pause, SupportStylePole.selfDirected),
-          ('The Community Navigator', MoneyRhythmPole.responsive, DecisionStylePole.pause, SupportStylePole.collaborative),
-          ('The Resourceful Resetter', MoneyRhythmPole.responsive, DecisionStylePole.momentum, SupportStylePole.selfDirected),
-          ('The Momentum Maker', MoneyRhythmPole.responsive, DecisionStylePole.momentum, SupportStylePole.collaborative),
+          (
+            'The Calm Comparator',
+            MoneyRhythmPole.steady,
+            DecisionStylePole.pause,
+            SupportStylePole.selfDirected,
+          ),
+          (
+            'The Intentional Protector',
+            MoneyRhythmPole.steady,
+            DecisionStylePole.pause,
+            SupportStylePole.collaborative,
+          ),
+          (
+            'The Quiet Builder',
+            MoneyRhythmPole.steady,
+            DecisionStylePole.momentum,
+            SupportStylePole.selfDirected,
+          ),
+          (
+            'The Steady Improviser',
+            MoneyRhythmPole.steady,
+            DecisionStylePole.momentum,
+            SupportStylePole.collaborative,
+          ),
+          (
+            'The Flexible Pathfinder',
+            MoneyRhythmPole.responsive,
+            DecisionStylePole.pause,
+            SupportStylePole.selfDirected,
+          ),
+          (
+            'The Community Navigator',
+            MoneyRhythmPole.responsive,
+            DecisionStylePole.pause,
+            SupportStylePole.collaborative,
+          ),
+          (
+            'The Resourceful Resetter',
+            MoneyRhythmPole.responsive,
+            DecisionStylePole.momentum,
+            SupportStylePole.selfDirected,
+          ),
+          (
+            'The Momentum Maker',
+            MoneyRhythmPole.responsive,
+            DecisionStylePole.momentum,
+            SupportStylePole.collaborative,
+          ),
         ];
 
         for (final (expectedName, rhythm, decision, support) in patterns) {
-          final archetype = engine.mapScoresToArchetype(rhythm, decision, support);
-          expect(archetype.name, expectedName, reason: 'Failed for $expectedName');
+          final archetype = engine.mapScoresToArchetype(
+            rhythm,
+            decision,
+            support,
+          );
+          expect(
+            archetype.name,
+            expectedName,
+            reason: 'Failed for $expectedName',
+          );
         }
       });
     });
@@ -310,9 +406,7 @@ void main() {
         final session = AnswerSession(
           userId: 'test-user',
           sessionId: 'session-1',
-          selectedAnswers: {
-            1: 0,
-          },
+          selectedAnswers: {1: 0},
         );
 
         final result = engine.generateResult(session, moneyStyleQuestions);

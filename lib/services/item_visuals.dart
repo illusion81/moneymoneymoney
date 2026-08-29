@@ -71,10 +71,7 @@ const Map<String, ShopItemVisual> _decorationVisuals = {
     icon: Icons.water_drop,
     color: Color(0xff3f8f8a),
   ),
-  'deco-beehive': ShopItemVisual(
-    icon: Icons.hive,
-    color: Color(0xffc79a33),
-  ),
+  'deco-beehive': ShopItemVisual(icon: Icons.hive, color: Color(0xffc79a33)),
   'deco-garden-cabin': ShopItemVisual(
     icon: Icons.cabin,
     color: Color(0xff2f7d50),
@@ -96,15 +93,9 @@ ShopItemVisual shopItemVisual(ShopItem item) {
         color: Color(0xff8a6a4f),
       );
     case ShopItemCategory.sky:
-      return const ShopItemVisual(
-        icon: Icons.cloud,
-        color: Color(0xff3f8f8a),
-      );
+      return const ShopItemVisual(icon: Icons.cloud, color: Color(0xff3f8f8a));
     case ShopItemCategory.decoration:
       return _decorationVisuals[item.id] ??
-          const ShopItemVisual(
-            icon: Icons.deck,
-            color: Color(0xff8a6a4f),
-          );
+          const ShopItemVisual(icon: Icons.deck, color: Color(0xff8a6a4f));
   }
 }

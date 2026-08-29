@@ -24,7 +24,10 @@ class HomeLayoutService {
     return HomeLayoutState(placements: remaining);
   }
 
-  HomeLayoutState remove({required HomeLayoutState state, required String itemId}) {
+  HomeLayoutState remove({
+    required HomeLayoutState state,
+    required String itemId,
+  }) {
     return HomeLayoutState(
       placements: state.placements
           .where((placement) => placement.itemId != itemId)

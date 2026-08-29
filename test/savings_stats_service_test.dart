@@ -22,7 +22,10 @@ ForestDay _day({
 void main() {
   group('computeSavingsSeries', () {
     test('returns an empty series when there are no days', () {
-      final series = computeSavingsSeries(days: const [], period: StatsPeriod.week);
+      final series = computeSavingsSeries(
+        days: const [],
+        period: StatsPeriod.week,
+      );
 
       expect(series, isEmpty);
     });
@@ -46,7 +49,10 @@ void main() {
         _day(date: DateTime(2026, 8, 20), spending: 60, dailyBudget: 50), // -10
       ];
 
-      final series = computeSavingsSeries(days: days, period: StatsPeriod.month);
+      final series = computeSavingsSeries(
+        days: days,
+        period: StatsPeriod.month,
+      );
 
       expect(series, hasLength(2));
       expect(series[0].cumulativeSaved, 20);
@@ -55,7 +61,11 @@ void main() {
 
     test('produces one running-total point per calendar year, in order', () {
       final days = [
-        _day(date: DateTime(2025, 12, 31), spending: 30, dailyBudget: 50), // +20
+        _day(
+          date: DateTime(2025, 12, 31),
+          spending: 30,
+          dailyBudget: 50,
+        ), // +20
         _day(date: DateTime(2026, 1, 2), spending: 40, dailyBudget: 50), // +10
       ];
 

@@ -102,6 +102,9 @@ class _RestoreHarnessState extends State<_RestoreHarness> {
         onShowReport: () {},
         onShowAchievements: () {},
         onShowShop: () {},
+        onShowSpending: () {},
+        onShowPlus: () {},
+        isPlusMember: false,
         onShowCalendar: () {},
         onShowHomestead: () {},
         onFetchTodaySpending: () async => 0,
@@ -389,6 +392,8 @@ void main() {
             onPurchase: (_) {},
             onEquip: (_) {},
             onBack: () {},
+            isPlusMember: false,
+            onShowPlus: () {},
           ),
         ),
       );

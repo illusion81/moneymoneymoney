@@ -13,7 +13,8 @@ const List<MoneyStyleQuestion> moneyStyleQuestions = [
     prompt: 'How do you typically adjust your spending?',
     answers: [
       MoneyStyleAnswer(
-        text: 'I keep my spending plan steady and put the extra toward savings.',
+        text:
+            'I keep my spending plan steady and put the extra toward savings.',
         dimension: Dimension.moneyRhythm,
         pole: MoneyRhythmPole.steady,
       ),
@@ -37,13 +38,15 @@ const List<MoneyStyleQuestion> moneyStyleQuestions = [
     prompt: 'What\'s your first instinct?',
     answers: [
       MoneyStyleAnswer(
-        text: 'I check my budget categories and adjust other spending to cover it.',
+        text:
+            'I check my budget categories and adjust other spending to cover it.',
         dimension: Dimension.moneyRhythm,
         pole: MoneyRhythmPole.steady,
         isBreaker: true,
       ),
       MoneyStyleAnswer(
-        text: 'I pull from savings or find cash quickly without much deliberation.',
+        text:
+            'I pull from savings or find cash quickly without much deliberation.',
         dimension: Dimension.moneyRhythm,
         pole: MoneyRhythmPole.responsive,
         isBreaker: true,
@@ -73,7 +76,8 @@ const List<MoneyStyleQuestion> moneyStyleQuestions = [
         pole: DecisionStylePole.momentum,
       ),
       MoneyStyleAnswer(
-        text: 'I commit if the value seems clear, then cancel if I don\'t use it.',
+        text:
+            'I commit if the value seems clear, then cancel if I don\'t use it.',
         dimension: Dimension.decisionStyle,
         pole: DecisionStylePole.momentum,
       ),
@@ -107,7 +111,8 @@ const List<MoneyStyleQuestion> moneyStyleQuestions = [
   // Q5: Money Rhythm
   MoneyStyleQuestion(
     id: 5,
-    scenario: 'Your spending patterns shift seasonally (holidays, vacations, etc.).',
+    scenario:
+        'Your spending patterns shift seasonally (holidays, vacations, etc.).',
     prompt: 'How do you plan for these changes?',
     answers: [
       MoneyStyleAnswer(
@@ -121,7 +126,8 @@ const List<MoneyStyleQuestion> moneyStyleQuestions = [
         pole: MoneyRhythmPole.responsive,
       ),
       MoneyStyleAnswer(
-        text: 'I handle it as it comes, knowing I\'ll tighten up afterward if needed.',
+        text:
+            'I handle it as it comes, knowing I\'ll tighten up afterward if needed.',
         dimension: Dimension.moneyRhythm,
         pole: MoneyRhythmPole.responsive,
       ),
@@ -179,7 +185,8 @@ const List<MoneyStyleQuestion> moneyStyleQuestions = [
   // Q8: Decision Style (TIE-BREAKER)
   MoneyStyleQuestion(
     id: 8,
-    scenario: 'A spontaneous opportunity appears (travel deal, event ticket, experience).',
+    scenario:
+        'A spontaneous opportunity appears (travel deal, event ticket, experience).',
     prompt: 'What\'s your move?',
     answers: [
       MoneyStyleAnswer(
@@ -209,7 +216,8 @@ const List<MoneyStyleQuestion> moneyStyleQuestions = [
     prompt: 'How do you get clarity?',
     answers: [
       MoneyStyleAnswer(
-        text: 'I read articles, listen to podcasts, or study examples on my own.',
+        text:
+            'I read articles, listen to podcasts, or study examples on my own.',
         dimension: Dimension.supportStyle,
         pole: SupportStylePole.selfDirected,
       ),
@@ -219,7 +227,8 @@ const List<MoneyStyleQuestion> moneyStyleQuestions = [
         pole: SupportStylePole.collaborative,
       ),
       MoneyStyleAnswer(
-        text: 'I talk it through with someone I trust to help me see different angles.',
+        text:
+            'I talk it through with someone I trust to help me see different angles.',
         dimension: Dimension.supportStyle,
         pole: SupportStylePole.collaborative,
       ),

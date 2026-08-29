@@ -42,26 +42,29 @@ void main() {
       expect(result.placements.single.col, kHomeGridSize - 1);
     });
 
-    test('placing an already-placed item moves it instead of duplicating it', () {
-      var state = service.initialState();
-      state = service.place(
-        state: state,
-        itemId: 'deco-garden-lantern',
-        row: 0,
-        col: 0,
-      );
+    test(
+      'placing an already-placed item moves it instead of duplicating it',
+      () {
+        var state = service.initialState();
+        state = service.place(
+          state: state,
+          itemId: 'deco-garden-lantern',
+          row: 0,
+          col: 0,
+        );
 
-      final result = service.place(
-        state: state,
-        itemId: 'deco-garden-lantern',
-        row: 5,
-        col: 4,
-      );
+        final result = service.place(
+          state: state,
+          itemId: 'deco-garden-lantern',
+          row: 5,
+          col: 4,
+        );
 
-      expect(result.placements, hasLength(1));
-      expect(result.placements.single.row, 5);
-      expect(result.placements.single.col, 4);
-    });
+        expect(result.placements, hasLength(1));
+        expect(result.placements.single.row, 5);
+        expect(result.placements.single.col, 4);
+      },
+    );
 
     test('remove drops the placement for the given item', () {
       var state = service.initialState();
@@ -72,7 +75,10 @@ void main() {
         col: 0,
       );
 
-      final result = service.remove(state: state, itemId: 'deco-garden-lantern');
+      final result = service.remove(
+        state: state,
+        itemId: 'deco-garden-lantern',
+      );
 
       expect(result.placements, isEmpty);
     });

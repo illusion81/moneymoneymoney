@@ -12,8 +12,18 @@ class SavingsPoint {
 }
 
 const _monthNames = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 /// Buckets checked-in [days] by [period], sums each bucket's saved amount
@@ -23,8 +33,9 @@ List<SavingsPoint> computeSavingsSeries({
   required List<ForestDay> days,
   required StatsPeriod period,
 }) {
-  final recorded = days.where((day) => day.status != TreeStatus.pending).toList()
-    ..sort((a, b) => a.date.compareTo(b.date));
+  final recorded =
+      days.where((day) => day.status != TreeStatus.pending).toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
 
   final bucketOrder = <String>[];
   final bucketSaved = <String, double>{};

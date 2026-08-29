@@ -9,20 +9,20 @@ import 'models.dart';
 
 /// Risk appetite is 1..5 on the backend; the questionnaire offers three steps.
 int _risk(RiskPreference p) => switch (p) {
-      RiskPreference.conservative => 2,
-      RiskPreference.balanced => 3,
-      RiskPreference.growth => 5,
-    };
+  RiskPreference.conservative => 2,
+  RiskPreference.balanced => 3,
+  RiskPreference.growth => 5,
+};
 
 /// How far ahead they're planning, inferred from the goal they picked.
 /// Short horizons make the backend keep money liquid instead of locking it up.
 int _horizonMonths(FinancialGoal g) => switch (g) {
-      FinancialGoal.emergencyFund => 6,
-      FinancialGoal.reduceSpending => 6,
-      FinancialGoal.debtControl => 12,
-      FinancialGoal.saveForPurchase => 18,
-      FinancialGoal.invest => 36,
-    };
+  FinancialGoal.emergencyFund => 6,
+  FinancialGoal.reduceSpending => 6,
+  FinancialGoal.debtControl => 12,
+  FinancialGoal.saveForPurchase => 18,
+  FinancialGoal.invest => 36,
+};
 
 /// The worry drives which missions get generated first.
 String _worry(FinancialGoal g, SpendingPressure p) {
@@ -43,11 +43,11 @@ bool _hasBuffer(FinancialGoal g) => g != FinancialGoal.emergencyFund;
 
 extension FinanceProfileSurvey on FinanceProfile {
   SurveyAnswers toSurveyAnswers() => SurveyAnswers(
-        monthlyIncome: monthlyIncome,
-        fixedCosts: fixedMonthlyExpenses,
-        riskAppetite: _risk(riskPreference),
-        horizonMonths: _horizonMonths(financialGoal),
-        hasEmergencyFund: _hasBuffer(financialGoal),
-        topWorry: _worry(financialGoal, spendingPressure),
-      );
+    monthlyIncome: monthlyIncome,
+    fixedCosts: fixedMonthlyExpenses,
+    riskAppetite: _risk(riskPreference),
+    horizonMonths: _horizonMonths(financialGoal),
+    hasEmergencyFund: _hasBuffer(financialGoal),
+    topWorry: _worry(financialGoal, spendingPressure),
+  );
 }

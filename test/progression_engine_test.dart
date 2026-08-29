@@ -49,16 +49,19 @@ void main() {
   final engine = ProgressionEngine();
 
   group('ProgressionEngine level curve', () {
-    test('level thresholds match the closed-form table at levels 1 through 6', () {
-      // totalXpForLevel(L) = 100 * (L - 1) + 25 * (L - 1) * (L - 2), the same
-      // closed form given in the spec, cross-checked against the cumulative
-      // sum of xpToAdvance(1..L-1) so both formulas agree by construction.
-      const expected = {1: 0, 2: 100, 3: 250, 4: 450, 5: 700, 6: 1000};
+    test(
+      'level thresholds match the closed-form table at levels 1 through 6',
+      () {
+        // totalXpForLevel(L) = 100 * (L - 1) + 25 * (L - 1) * (L - 2), the same
+        // closed form given in the spec, cross-checked against the cumulative
+        // sum of xpToAdvance(1..L-1) so both formulas agree by construction.
+        const expected = {1: 0, 2: 100, 3: 250, 4: 450, 5: 700, 6: 1000};
 
-      for (final entry in expected.entries) {
-        expect(engine.totalXpForLevel(entry.key), entry.value);
-      }
-    });
+        for (final entry in expected.entries) {
+          expect(engine.totalXpForLevel(entry.key), entry.value);
+        }
+      },
+    );
 
     test('levelForXp returns the level whose threshold has been reached', () {
       expect(engine.levelForXp(0).level, 1);
@@ -72,7 +75,9 @@ void main() {
   group('ProgressionEngine XP and coins', () {
     test('a single healthy day under budget awards 15 XP and 8 coins', () {
       final state = engine.compute(
-        days: [_healthyDay(DateTime(2026, 8, 29), spending: 10, dailyBudget: 50)],
+        days: [
+          _healthyDay(DateTime(2026, 8, 29), spending: 10, dailyBudget: 50),
+        ],
         achievements: const [],
         spendEvents: const [],
       );
@@ -83,26 +88,29 @@ void main() {
       expect(state.lifetimeCoinsSpent, 0);
     });
 
-    test('a three-day healthy streak awards the streak milestone coins exactly once', () {
-      final days = [
-        _healthyDay(DateTime(2026, 8, 27), spending: 40, dailyBudget: 50),
-        _healthyDay(DateTime(2026, 8, 28), spending: 40, dailyBudget: 50),
-        _healthyDay(DateTime(2026, 8, 29), spending: 40, dailyBudget: 50),
-      ];
+    test(
+      'a three-day healthy streak awards the streak milestone coins exactly once',
+      () {
+        final days = [
+          _healthyDay(DateTime(2026, 8, 27), spending: 40, dailyBudget: 50),
+          _healthyDay(DateTime(2026, 8, 28), spending: 40, dailyBudget: 50),
+          _healthyDay(DateTime(2026, 8, 29), spending: 40, dailyBudget: 50),
+        ];
 
-      final state = engine.compute(
-        days: days,
-        achievements: const [],
-        spendEvents: const [],
-      );
+        final state = engine.compute(
+          days: days,
+          achievements: const [],
+          spendEvents: const [],
+        );
 
-      final milestoneEvents = state.ledger
-          .where((event) => event.type == RewardEventType.streakMilestone)
-          .toList();
+        final milestoneEvents = state.ledger
+            .where((event) => event.type == RewardEventType.streakMilestone)
+            .toList();
 
-      expect(milestoneEvents, hasLength(1));
-      expect(milestoneEvents.single.coins, 15);
-    });
+        expect(milestoneEvents, hasLength(1));
+        expect(milestoneEvents.single.coins, 15);
+      },
+    );
 
     test('withered and restored days award zero XP and zero coins', () {
       final witheredState = engine.compute(
@@ -122,32 +130,38 @@ void main() {
       expect(restoredState.coinBalance, 0);
     });
 
-    test('coin balance equals lifetime earned minus lifetime spent after a mixed sequence', () {
-      final days = [
-        _healthyDay(DateTime(2026, 8, 25), spending: 40, dailyBudget: 50),
-        _witheredDay(DateTime(2026, 8, 26)),
-        _restoredDay(DateTime(2026, 8, 27)),
-        _healthyDay(DateTime(2026, 8, 28), spending: 5, dailyBudget: 50),
-      ];
-      final spendEvents = [
-        RewardEvent(
-          date: DateTime(2026, 8, 27),
-          type: RewardEventType.restorationSpend,
-          xp: 0,
-          coins: -60,
-          description: 'Restored 2026-8-26',
-        ),
-      ];
+    test(
+      'coin balance equals lifetime earned minus lifetime spent after a mixed sequence',
+      () {
+        final days = [
+          _healthyDay(DateTime(2026, 8, 25), spending: 40, dailyBudget: 50),
+          _witheredDay(DateTime(2026, 8, 26)),
+          _restoredDay(DateTime(2026, 8, 27)),
+          _healthyDay(DateTime(2026, 8, 28), spending: 5, dailyBudget: 50),
+        ];
+        final spendEvents = [
+          RewardEvent(
+            date: DateTime(2026, 8, 27),
+            type: RewardEventType.restorationSpend,
+            xp: 0,
+            coins: -60,
+            description: 'Restored 2026-8-26',
+          ),
+        ];
 
-      final state = engine.compute(
-        days: days,
-        achievements: const [],
-        spendEvents: spendEvents,
-      );
+        final state = engine.compute(
+          days: days,
+          achievements: const [],
+          spendEvents: spendEvents,
+        );
 
-      expect(state.coinBalance, state.lifetimeCoinsEarned - state.lifetimeCoinsSpent);
-      expect(state.lifetimeCoinsSpent, 60);
-    });
+        expect(
+          state.coinBalance,
+          state.lifetimeCoinsEarned - state.lifetimeCoinsSpent,
+        );
+        expect(state.lifetimeCoinsSpent, 60);
+      },
+    );
 
     test('level-up coins scale with the new level', () {
       // 12 consecutive healthy, under-budget days cross the level-2 threshold

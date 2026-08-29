@@ -70,11 +70,14 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
         setState(() => _error = 'Could not read that file.');
         return;
       }
-      final status = await widget.api
-          .uploadStatement(filename: f.name, bytes: f.bytes!);
+      final status = await widget.api.uploadStatement(
+        filename: f.name,
+        bytes: f.bytes!,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(status.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(status.message)));
       Navigator.of(context).pop(true);
     } catch (e) {
       setState(() => _error = '$e');
@@ -95,8 +98,10 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
         return;
       }
       if (s.consentUrl == null) {
-        setState(() => _error =
-            'No bank connection configured on the server. Running on demo data.');
+        setState(
+          () => _error =
+              'No bank connection configured on the server. Running on demo data.',
+        );
         return;
       }
 
@@ -127,7 +132,9 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
     _poll?.cancel();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bank connected — your spending syncs automatically.')),
+      const SnackBar(
+        content: Text('Bank connected — your spending syncs automatically.'),
+      ),
     );
     Navigator.of(context).pop(true);
   }
@@ -151,13 +158,24 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
             ),
             const SizedBox(height: 28),
 
-            _Point(icon: Icons.lock_outline, title: 'We never see your login',
-                body: 'You sign in at your own bank. We only receive transactions.'),
-            _Point(icon: Icons.visibility_off_outlined, title: 'Read-only',
-                body: 'Nothing here can move, spend or transfer your money.'),
-            _Point(icon: Icons.event_available_outlined, title: 'You control the window',
-                body: 'Consent lasts up to 12 months and you can disconnect any time '
-                      'from your bank or from here.'),
+            _Point(
+              icon: Icons.lock_outline,
+              title: 'We never see your login',
+              body:
+                  'You sign in at your own bank. We only receive transactions.',
+            ),
+            _Point(
+              icon: Icons.visibility_off_outlined,
+              title: 'Read-only',
+              body: 'Nothing here can move, spend or transfer your money.',
+            ),
+            _Point(
+              icon: Icons.event_available_outlined,
+              title: 'You control the window',
+              body:
+                  'Consent lasts up to 12 months and you can disconnect any time '
+                  'from your bank or from here.',
+            ),
 
             const SizedBox(height: 28),
             if (_provider != 'basiq')
@@ -176,16 +194,27 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ),
             if (_waiting)
               const Padding(
                 padding: EdgeInsets.only(bottom: 16),
-                child: Row(children: [
-                  SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('Waiting for you to finish at your bank…')),
-                ]),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text('Waiting for you to finish at your bank…'),
+                    ),
+                  ],
+                ),
               ),
             SizedBox(
               width: double.infinity,
@@ -196,14 +225,19 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(children: [
-              const Expanded(child: Divider()),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text('or', style: Theme.of(context).textTheme.bodySmall),
-              ),
-              const Expanded(child: Divider()),
-            ]),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'or',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -241,17 +275,23 @@ class _Point extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 18),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 22),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    padding: const EdgeInsets.only(bottom: 18),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 22),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(title, style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 2),
               Text(body, style: Theme.of(context).textTheme.bodySmall),
-            ]),
+            ],
           ),
-        ]),
-      );
+        ),
+      ],
+    ),
+  );
 }

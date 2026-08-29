@@ -10,6 +10,7 @@ class AchievementsScreen extends StatefulWidget {
     required this.summary,
     required this.progression,
     required this.onShowForest,
+    required this.onShowSpending,
     required this.onShowCalendar,
     required this.onShowHomestead,
   });
@@ -17,6 +18,7 @@ class AchievementsScreen extends StatefulWidget {
   final ForestSummary summary;
   final ProgressionState progression;
   final VoidCallback onShowForest;
+  final VoidCallback onShowSpending;
   final VoidCallback onShowCalendar;
   final VoidCallback onShowHomestead;
 
@@ -34,12 +36,11 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final recentEvents = widget.progression.ledger.reversed.take(10).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Achievements'),
-      ),
+      appBar: AppBar(title: const Text('Achievements')),
       bottomNavigationBar: AppNavBar(
-        selectedIndex: 3,
+        selectedIndex: 4,
         onShowForest: widget.onShowForest,
+        onShowSpending: widget.onShowSpending,
         onShowCalendar: widget.onShowCalendar,
         onShowHomestead: widget.onShowHomestead,
         onShowAchievements: () {},
@@ -171,9 +172,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                       ListTile(
                         title: const Text('Recent activity'),
                         trailing: Icon(
-                          _showActivity
-                              ? Icons.expand_less
-                              : Icons.expand_more,
+                          _showActivity ? Icons.expand_less : Icons.expand_more,
                         ),
                         onTap: () =>
                             setState(() => _showActivity = !_showActivity),
@@ -218,10 +217,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 }
 
 class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({
-    required this.label,
-    required this.value,
-  });
+  const _ProgressCard({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -238,14 +234,11 @@ class _ProgressCard extends StatelessWidget {
         children: [
           Text(
             value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-          ),
+          Text(label, textAlign: TextAlign.center),
         ],
       ),
     );

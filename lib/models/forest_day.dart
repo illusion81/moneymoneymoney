@@ -59,10 +59,7 @@ class ForestSummary {
 }
 
 class CheckInResult {
-  const CheckInResult({
-    required this.day,
-    required this.summary,
-  });
+  const CheckInResult({required this.day, required this.summary});
 
   final ForestDay day;
   final ForestSummary summary;

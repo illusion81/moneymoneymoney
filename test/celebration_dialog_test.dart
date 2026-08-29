@@ -29,7 +29,12 @@ void main() {
       ),
     );
 
-    showCelebrationDialog(context: ctx, earnedXp: 15, earnedCoins: 8, streak: 3);
+    showCelebrationDialog(
+      context: ctx,
+      earnedXp: 15,
+      earnedCoins: 8,
+      streak: 3,
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('celebration-dialog')), findsOneWidget);
@@ -53,7 +58,12 @@ void main() {
       ),
     );
 
-    showCelebrationDialog(context: ctx, earnedXp: 10, earnedCoins: 5, streak: 1);
+    showCelebrationDialog(
+      context: ctx,
+      earnedXp: 10,
+      earnedCoins: 5,
+      streak: 1,
+    );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('celebration-dialog')), findsOneWidget);
 

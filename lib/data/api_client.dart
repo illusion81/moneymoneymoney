@@ -48,31 +48,44 @@ class ApiClient {
   final Duration timeout;
   final http.Client _http;
 
-  ApiClient({String? baseUrl, http.Client? client, this.timeout = const Duration(seconds: 15)})
-      : baseUrl = baseUrl ?? _defaultBase(),
-        _http = client ?? http.Client();
+  ApiClient({
+    String? baseUrl,
+    http.Client? client,
+    this.timeout = const Duration(seconds: 15),
+  }) : baseUrl = baseUrl ?? _defaultBase(),
+       _http = client ?? http.Client();
 
   void close() => _http.close();
 
   // ---------------------------------------------------------------- core
 
-  Uri _uri(String path, [Map<String, dynamic>? query]) => Uri.parse('$baseUrl$path').replace(
-        queryParameters: query?.map((k, v) => MapEntry(k, '$v')),
-      );
+  Uri _uri(String path, [Map<String, dynamic>? query]) => Uri.parse(
+    '$baseUrl$path',
+  ).replace(queryParameters: query?.map((k, v) => MapEntry(k, '$v')));
 
-  Future<dynamic> _send(String method, String path,
-      {Map<String, dynamic>? query, Object? body}) async {
+  Future<dynamic> _send(
+    String method,
+    String path, {
+    Map<String, dynamic>? query,
+    Object? body,
+  }) async {
     late http.Response r;
     try {
       final uri = _uri(path, query);
-      final headers = {'Accept': 'application/json', if (body != null) 'Content-Type': 'application/json'};
+      final headers = {
+        'Accept': 'application/json',
+        if (body != null) 'Content-Type': 'application/json',
+      };
       final encoded = body == null ? null : jsonEncode(body);
-      r = await (method == 'POST'
-              ? _http.post(uri, headers: headers, body: encoded)
-              : _http.get(uri, headers: headers))
-          .timeout(timeout);
+      r =
+          await (method == 'POST'
+                  ? _http.post(uri, headers: headers, body: encoded)
+                  : _http.get(uri, headers: headers))
+              .timeout(timeout);
     } on TimeoutException {
-      throw ApiException('The backend did not respond. Is uvicorn running on $baseUrl?');
+      throw ApiException(
+        'The backend did not respond. Is uvicorn running on $baseUrl?',
+      );
     } catch (e) {
       throw ApiException('Could not reach the backend at $baseUrl. $e');
     }
@@ -89,56 +102,69 @@ class ApiClient {
     return jsonDecode(r.body);
   }
 
-  Future<Map<String, dynamic>> _getObj(String p, [Map<String, dynamic>? q]) async =>
-      (await _send('GET', p, query: q)) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> _getObj(
+    String p, [
+    Map<String, dynamic>? q,
+  ]) async => (await _send('GET', p, query: q)) as Map<String, dynamic>;
 
   Future<List<dynamic>> _getList(String p, [Map<String, dynamic>? q]) async =>
       (await _send('GET', p, query: q)) as List<dynamic>;
 
   // ---------------------------------------------------------------- survey
 
-  Future<Profile> submitSurvey(SurveyAnswers a) async =>
-      Profile.fromJson((await _send('POST', '/api/survey', body: a.toJson())) as Map<String, dynamic>);
+  Future<Profile> submitSurvey(SurveyAnswers a) async => Profile.fromJson(
+    (await _send('POST', '/api/survey', body: a.toJson()))
+        as Map<String, dynamic>,
+  );
 
   /// Throws ApiException with needsSurvey == true if the user hasn't done the survey.
-  Future<Profile> profile() async => Profile.fromJson(await _getObj('/api/profile'));
+  Future<Profile> profile() async =>
+      Profile.fromJson(await _getObj('/api/profile'));
 
   // ---------------------------------------------------------------- bank
 
   Future<ConnectionStatus> connectBank({String persona = 'Whistler'}) async =>
       ConnectionStatus.fromJson(
-          (await _send('POST', '/api/bank/connect', body: {'persona': persona}))
-              as Map<String, dynamic>);
+        (await _send('POST', '/api/bank/connect', body: {'persona': persona}))
+            as Map<String, dynamic>,
+      );
 
-  Future<List<Account>> accounts() async =>
-      (await _getList('/api/bank/accounts')).map((e) => Account.fromJson(e)).toList();
+  Future<List<Account>> accounts() async => (await _getList(
+    '/api/bank/accounts',
+  )).map((e) => Account.fromJson(e)).toList();
 
-  Future<List<Txn>> transactions({int days = 30}) async =>
-      (await _getList('/api/bank/transactions', {'days': days}))
-          .map((e) => Txn.fromJson(e))
-          .toList();
+  Future<List<Txn>> transactions({int days = 30}) async => (await _getList(
+    '/api/bank/transactions',
+    {'days': days},
+  )).map((e) => Txn.fromJson(e)).toList();
 
   // ---------------------------------------------------------------- plan + game
 
   Future<Plan> plan({int days = 30}) async =>
       Plan.fromJson(await _getObj('/api/plan', {'days': days}));
 
-  Future<List<Mission>> missions() async =>
-      (await _getList('/api/missions')).map((e) => Mission.fromJson(e)).toList();
+  Future<List<Mission>> missions() async => (await _getList(
+    '/api/missions',
+  )).map((e) => Mission.fromJson(e)).toList();
 
   Future<ClaimResult> claim(String missionId) async => ClaimResult.fromJson(
-      (await _send('POST', '/api/missions/$missionId/claim')) as Map<String, dynamic>);
+    (await _send('POST', '/api/missions/$missionId/claim'))
+        as Map<String, dynamic>,
+  );
 
   Future<Progression> progression() async =>
       Progression.fromJson(await _getObj('/api/progression'));
 
-  Future<TowerState> tower() async => TowerState.fromJson(await _getObj('/api/tower'));
+  Future<TowerState> tower() async =>
+      TowerState.fromJson(await _getObj('/api/tower'));
 
   Future<List<ShopItem>> shop() async =>
       (await _getList('/api/shop')).map((e) => ShopItem.fromJson(e)).toList();
 
   Future<Progression> buy(String itemId) async => Progression.fromJson(
-      (await _send('POST', '/api/shop/buy', body: {'item_id': itemId})) as Map<String, dynamic>);
+    (await _send('POST', '/api/shop/buy', body: {'item_id': itemId}))
+        as Map<String, dynamic>,
+  );
 
   // ---------------------------------------------------------------- demo
 
@@ -158,10 +184,14 @@ class ApiClient {
       (await _getObj('/api/health'))['data_trusted'] as bool? ?? false;
 
   /// Upload a .csv or .pdf statement. Bytes go to our own backend only.
-  Future<ConnectionStatus> uploadStatement(
-      {required String filename, required List<int> bytes}) async {
+  Future<ConnectionStatus> uploadStatement({
+    required String filename,
+    required List<int> bytes,
+  }) async {
     final req = http.MultipartRequest('POST', _uri('/api/bank/upload'))
-      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+      ..files.add(
+        http.MultipartFile.fromBytes('file', bytes, filename: filename),
+      );
     final streamed = await req.send().timeout(const Duration(seconds: 60));
     final body = await streamed.stream.bytesToString();
     if (streamed.statusCode >= 400) {
@@ -178,8 +208,9 @@ class ApiClient {
   /// Self-report a mission the transaction feed cannot see (cancelling a
   /// subscription, a daily streak). Claim stays locked until this is called.
   Future<Mission> markDone(String missionId) async => Mission.fromJson(
-      (await _send('POST', '/api/missions/$missionId/mark_done'))
-          as Map<String, dynamic>);
+    (await _send('POST', '/api/missions/$missionId/mark_done'))
+        as Map<String, dynamic>,
+  );
 
   // ---------------------------------------------------------------- convenience
 

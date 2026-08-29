@@ -61,11 +61,7 @@ class _CelebrationDialog extends StatelessWidget {
               color: Color(0xffedf8ed),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.park,
-              size: 40,
-              color: Color(0xff2f7d50),
-            ),
+            child: const Icon(Icons.park, size: 40, color: Color(0xff2f7d50)),
           ),
           const SizedBox(height: 12),
           Text(
