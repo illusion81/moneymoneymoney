@@ -9,7 +9,6 @@
 // It refreshes on: first load, app resume, pull-to-refresh, and after any
 // action that changes server state (claim, mark done, buy).
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'api_client.dart';

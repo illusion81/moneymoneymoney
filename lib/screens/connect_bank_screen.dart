@@ -16,7 +16,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/api_client.dart';
-import '../data/models.dart';
 
 class ConnectBankScreen extends StatefulWidget {
   const ConnectBankScreen({super.key, required this.api});
@@ -27,7 +26,6 @@ class ConnectBankScreen extends StatefulWidget {
 }
 
 class _ConnectBankScreenState extends State<ConnectBankScreen> {
-  ConnectionStatus? _status;
   String _provider = 'mock';
   bool _busy = false;
   bool _waiting = false;
@@ -92,8 +90,6 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
     });
     try {
       final s = await widget.api.connectBank();
-      setState(() => _status = s);
-
       if (s.connected) {
         _finish();
         return;

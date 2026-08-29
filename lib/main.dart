@@ -1,26 +1,38 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
+import 'data/api_client.dart';
 import 'models/finance_profile.dart';
 import 'models/forest_day.dart';
+import 'models/home_layout.dart';
+import 'models/money_style.dart';
 import 'models/progression.dart';
 import 'models/shop_item.dart';
 import 'models/wealth_report.dart';
 import 'screens/achievements_screen.dart';
+import 'screens/calendar_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/homestead_screen.dart';
+import 'screens/money_style_flow.dart';
+import 'screens/money_style_result_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/shop_screen.dart';
+import 'services/bank_spending_service.dart';
 import 'services/forest_engine.dart';
+import 'services/home_layout_service.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
-import 'data/api_client.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
-enum AppView { onboarding, report, home, achievements, shop }
+enum AppView { onboarding, moneyStyleFlow, moneyStyleResult, report, forest, calendar, homestead, achievements, shop }
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -33,11 +45,13 @@ class _MyAppState extends State<MyApp> {
   final ForestEngine _forestEngine = ForestEngine();
   final ProgressionEngine _progressionEngine = ProgressionEngine();
   final ShopService _shopService = ShopService();
-  final ApiClient _api = ApiClient();
+  final HomeLayoutService _homeLayoutService = HomeLayoutService();
+  final ApiClient _apiClient = ApiClient();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
   WealthReport? _report;
+  MoneyStyleResult? _moneyStyleResult;
   ForestSummary _summary = const ForestSummary(
     days: [],
     currentStreak: 0,
@@ -48,6 +62,7 @@ class _MyAppState extends State<MyApp> {
   );
   late ProgressionState _progression;
   late ShopState _shopState;
+  late HomeLayoutState _homeLayout;
   final List<RewardEvent> _spendEvents = [];
   AppView _view = AppView.onboarding;
   String? _lastEarnedSummary;
@@ -55,10 +70,24 @@ class _MyAppState extends State<MyApp> {
 
   _MyAppState() {
     _shopState = _shopService.initialState();
+    _homeLayout = _homeLayoutService.initialState();
+    if (kDebugMode) {
+      // Debug builds start with an effectively unlimited coin balance so
+      // the shop/homestead can be tested without grinding for coins.
+      _spendEvents.add(
+        RewardEvent(
+          date: DateTime.now(),
+          type: RewardEventType.debugGrant,
+          xp: 0,
+          coins: 999999,
+          description: 'Debug: max coins',
+        ),
+      );
+    }
     _progression = _progressionEngine.compute(
       days: const [],
       achievements: const [],
-      spendEvents: const [],
+      spendEvents: _spendEvents,
     );
   }
 
@@ -77,24 +106,49 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  @override
+  void dispose() {
+    _apiClient.close();
+    super.dispose();
+  }
+
   Widget _buildCurrentView() {
     final report = _report;
-    if (report == null || _view == AppView.onboarding) {
-      return OnboardingScreen(onProfileSubmitted: _handleProfileSubmitted);
-    }
 
     switch (_view) {
       case AppView.onboarding:
-        return OnboardingScreen(onProfileSubmitted: _handleProfileSubmitted);
+        return OnboardingScreen(
+          onProfileSubmitted: _handleProfileSubmitted,
+          onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+        );
+      case AppView.moneyStyleFlow:
+        return MoneyStyleFlow(
+          userId: 'user-1', // TODO: Replace with actual user ID
+          onComplete: _handleMoneyStyleComplete,
+        );
+      case AppView.moneyStyleResult:
+        return MoneyStyleResultScreen(result: _moneyStyleResult!);
       case AppView.report:
+        if (report == null) {
+          return OnboardingScreen(
+            onProfileSubmitted: _handleProfileSubmitted,
+            onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          );
+        }
         return ReportScreen(
           report: report,
           onStartPlan: _startPlan,
           onShowForest: _planStarted
-              ? () => setState(() => _view = AppView.home)
+              ? () => setState(() => _view = AppView.forest)
               : null,
         );
-      case AppView.home:
+      case AppView.forest:
+        if (report == null) {
+          return OnboardingScreen(
+            onProfileSubmitted: _handleProfileSubmitted,
+            onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          );
+        }
         return HomeScreen(
           report: report,
           summary: _summary,
@@ -104,45 +158,105 @@ class _MyAppState extends State<MyApp> {
           onCheckIn: _handleCheckIn,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
+          onRetakeQuestionnaire: () =>
+              setState(() => _view = AppView.onboarding),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
-          api: _api,
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
+          onFetchTodaySpending: _fetchTodaySpending,
+          api: _apiClient,
+        );
+      case AppView.calendar:
+        return CalendarScreen(
+          summary: _summary,
+          shopState: _shopState,
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
+          onShowReport: () => setState(() => _view = AppView.report),
+          onShowAchievements: () =>
+              setState(() => _view = AppView.achievements),
+          onShowShop: () => setState(() => _view = AppView.shop),
+        );
+      case AppView.homestead:
+        return HomesteadScreen(
+          shopState: _shopState,
+          layout: _homeLayout,
+          onPlace: _handlePlaceDecoration,
+          onRemove: _handleRemoveDecoration,
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowReport: () => setState(() => _view = AppView.report),
+          onShowAchievements: () =>
+              setState(() => _view = AppView.achievements),
+          onShowShop: () => setState(() => _view = AppView.shop),
+          onExportImage: _handleExportImage,
         );
       case AppView.achievements:
+        if (report == null) {
+          return OnboardingScreen(
+            onProfileSubmitted: _handleProfileSubmitted,
+            onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          );
+        }
         return AchievementsScreen(
           summary: _summary,
           progression: _progression,
-          onBack: () => setState(() => _view = AppView.home),
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
         );
       case AppView.shop:
+        if (report == null) {
+          return OnboardingScreen(
+            onProfileSubmitted: _handleProfileSubmitted,
+            onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          );
+        }
         return ShopScreen(
           progression: _progression,
           shopState: _shopState,
           onPurchase: _handlePurchase,
           onEquip: _handleEquip,
-          onBack: () => setState(() => _view = AppView.home),
+          onBack: () => setState(() => _view = AppView.forest),
+          onDebugMaxCoins: _handleDebugMaxCoins,
+          onDebugUnlockAll: _handleDebugUnlockAll,
         );
     }
   }
 
   void _handleProfileSubmitted(FinanceProfile profile) {
+    final alreadyStarted = _planStarted;
     setState(() {
       _report = ReportGenerator().generate(profile);
       _summary = _forestEngine.summarize(
-        const [],
+        _summary.days,
         progression: _progression,
         shopState: _shopState,
       );
       _view = AppView.report;
-      _planStarted = false;
+      _planStarted = alreadyStarted;
+    });
+  }
+
+  void _startMoneyStyleQuiz() {
+    setState(() {
+      _view = AppView.moneyStyleFlow;
+    });
+  }
+
+  void _handleMoneyStyleComplete(MoneyStyleResult result) {
+    setState(() {
+      _moneyStyleResult = result;
+      _view = AppView.moneyStyleResult;
     });
   }
 
   void _startPlan() {
     setState(() {
       _planStarted = true;
-      _view = AppView.home;
+      _view = AppView.forest;
     });
   }
 
@@ -224,13 +338,77 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  void _handlePlaceDecoration(String itemId, double dx, double dy) {
+    setState(() {
+      _homeLayout = _homeLayoutService.place(
+        state: _homeLayout,
+        itemId: itemId,
+        dx: dx,
+        dy: dy,
+      );
+    });
+  }
+
+  void _handleRemoveDecoration(String itemId) {
+    setState(() {
+      _homeLayout = _homeLayoutService.remove(state: _homeLayout, itemId: itemId);
+    });
+  }
+
+  Future<void> _handleExportImage(Uint8List pngBytes) async {
+    final home =
+        Platform.environment['USERPROFILE'] ??
+        Platform.environment['HOME'] ??
+        '.';
+    final picturesDir = Directory('$home${Platform.pathSeparator}Pictures');
+    if (!await picturesDir.exists()) {
+      await picturesDir.create(recursive: true);
+    }
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File(
+      '${picturesDir.path}${Platform.pathSeparator}homestead_$timestamp.png',
+    );
+    await file.writeAsBytes(pngBytes);
+    _showMessage('Saved to ${file.path}');
+  }
+
+  Future<double> _fetchTodaySpending() async {
+    final transactions = await _apiClient.transactions(days: 7);
+    return sumTodaySpending(transactions);
+  }
+
+  void _handleDebugMaxCoins() {
+    setState(() {
+      _spendEvents.add(
+        RewardEvent(
+          date: DateTime.now(),
+          type: RewardEventType.debugGrant,
+          xp: 0,
+          coins: 999999,
+          description: 'Debug: max coins',
+        ),
+      );
+      _recomputeProgression();
+    });
+  }
+
+  void _handleDebugUnlockAll() {
+    setState(() {
+      _shopState = ShopState(
+        ownedItemIds: {for (final item in kShopCatalog) item.id},
+        equippedItemIds: _shopState.equippedItemIds,
+      );
+    });
+  }
+
   /// Recomputes progression and the achievement-derived parts of the summary
   /// together, since Curator and Seedling Scholar depend on progression and
   /// achievement-unlock rewards feed back into progression. A few passes are
   /// enough for this to reach a fixed point.
   void _recomputeProgression() {
     var achievements = _summary.achievements;
-    for (var pass = 0; pass < 4; pass++) {
+    var stable = false;
+    for (var pass = 0; pass < 6; pass++) {
       final newProgression = _progressionEngine.compute(
         days: _summary.days,
         achievements: achievements,
@@ -241,7 +419,7 @@ class _MyAppState extends State<MyApp> {
         progression: newProgression,
         shopState: _shopState,
       );
-      final stable =
+      stable =
           newProgression.totalXp == _progression.totalXp &&
           _sameUnlockState(newSummary.achievements, achievements);
 
@@ -253,6 +431,7 @@ class _MyAppState extends State<MyApp> {
         break;
       }
     }
+    assert(stable, 'Progression/achievement convergence did not reach fixed point within 6 passes');
   }
 
   bool _sameUnlockState(List<Achievement> a, List<Achievement> b) {
