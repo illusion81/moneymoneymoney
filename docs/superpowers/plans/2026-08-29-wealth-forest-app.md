@@ -300,7 +300,7 @@ git commit -m "feat: add local wealth report generator"
 **Interfaces:**
 - Consumes: `WealthReport`
 - Produces: `enum TreeStatus { pending, healthy, withered }`
-- Produces: `class ForestDay { const ForestDay({required DateTime date, required TreeStatus status, required int treeLevel, required double spending, required bool actionCompleted, required String message}); }`
+- Produces: `class ForestDay { const ForestDay({required DateTime date, required TreeStatus status, required int treeLevel, required double spending, required double dailyBudget, required bool actionCompleted, required String message}); }`
 - Produces: `class Achievement { const Achievement({required String id, required String title, required String description, required bool unlocked}); }`
 - Produces: `class ForestSummary { const ForestSummary({required List<ForestDay> days, required int currentStreak, required int healthyTreeCount, required int witheredTreeCount, required List<Achievement> achievements}); }`
 - Produces: `class CheckInResult { const CheckInResult({required ForestDay day, required ForestSummary summary}); }`
@@ -596,7 +596,9 @@ class ForestEngine {
     required int healthyTreeCount,
   }) {
     final budgetGuardian = days.any(
-      (day) => day.status == TreeStatus.healthy && day.spending <= 40,
+      (day) =>
+          day.status == TreeStatus.healthy &&
+          day.spending <= day.dailyBudget * 0.8,
     );
     final recoveryDay = _hasRecoveryDay(days);
 
