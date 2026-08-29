@@ -12,6 +12,26 @@ void main() {
     });
 
     group('calculateDimensionScores', () {
+      test('returns null when no answers are present', () {
+        final session = AnswerSession(userId: 'u', sessionId: 's');
+        expect(engine.generateResult(session, moneyStyleQuestions), isNull);
+      });
+
+      test('returns null when any dimension has no answered item', () {
+        final session = AnswerSession(
+          userId: 'u', sessionId: 's', selectedAnswers: {1: 0, 2: 1, 3: 0},
+        );
+        expect(engine.generateResult(session, moneyStyleQuestions), isNull);
+      });
+
+      test('returns early snapshot after all dimensions are observed', () {
+        final session = AnswerSession(
+          userId: 'u', sessionId: 's', selectedAnswers: {1: 0, 3: 1, 4: 1},
+        );
+        final result = engine.generateResult(session, moneyStyleQuestions);
+        expect(result, isNotNull);
+        expect(result!.confidenceTier, ConfidenceTier.earlySnapshot);
+      });
       test('should calculate scores from selected answers', () {
         final session = AnswerSession(
           userId: 'test-user',
@@ -296,7 +316,8 @@ void main() {
 
         final result = engine.generateResult(session, moneyStyleQuestions);
 
-        expect(result.archetype, isNotNull);
+        expect(result, isNotNull);
+        expect(result!.archetype, isNotNull);
         expect(result.archetype.name, isNotEmpty);
         expect(result.confidenceTier, ConfidenceTier.standard);
         expect(result.dimensionScores, isNotNull);
@@ -312,12 +333,15 @@ void main() {
           sessionId: 'session-1',
           selectedAnswers: {
             1: 0,
+            3: 0,
+            4: 0,
           },
         );
 
         final result = engine.generateResult(session, moneyStyleQuestions);
 
-        expect(result.confidenceTier, ConfidenceTier.earlySnapshot);
+        expect(result, isNotNull);
+        expect(result!.confidenceTier, ConfidenceTier.earlySnapshot);
         expect(result.confidenceLabel, 'Early Snapshot');
       });
 
@@ -343,7 +367,8 @@ void main() {
 
         final result = engine.generateResult(session, moneyStyleQuestions);
 
-        expect(result.confidenceTier, ConfidenceTier.fullClarity);
+        expect(result, isNotNull);
+        expect(result!.confidenceTier, ConfidenceTier.fullClarity);
         expect(result.confidenceLabel, 'Full Clarity');
       });
     });

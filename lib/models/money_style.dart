@@ -183,3 +183,13 @@ class MoneyStyleResult {
     }
   }
 }
+
+/// Keeps the raw session even when it cannot honestly support an archetype.
+class MoneyStyleCompletion {
+  const MoneyStyleCompletion({required this.session, required this.result});
+
+  final AnswerSession session;
+  final MoneyStyleResult? result;
+
+  bool get hasEnoughEvidence => result != null;
+}
