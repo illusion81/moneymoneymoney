@@ -201,6 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   api: widget.api!,
                   streak: widget.summary.currentStreak,
                   level: widget.progression.level.level,
+                  adherence: localAdherence,
                 ),
               )),
             ),
@@ -509,6 +510,21 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 0..1. Half of it is the check-in streak, half is how closely they are
   /// holding their actual budget. Streak alone would mean the tree rewards
   /// opening the app, which is not the product's claim.
+  /// Share of recorded days that stayed within budget.
+  ///
+  /// The backend's adherence comes from bank transactions, which never change
+  /// while you play — so it sat at 45% no matter what you did, and your rank
+  /// could never move. This is the number the app actually knows.
+  double? get localAdherence {
+    final days = widget.summary.days;
+    if (days.isEmpty) return null;
+    final kept = days
+        .where((d) =>
+            d.status == TreeStatus.healthy || d.status == TreeStatus.restored)
+        .length;
+    return kept / days.length;
+  }
+
   double _farmGrowth(ForestDay? day) {
     // Three inputs so the farm keeps visibly growing well past the first week:
     //   streak    — caps at 7 days, gets you started

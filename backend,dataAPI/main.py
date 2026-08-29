@@ -355,7 +355,8 @@ def join_circle(body: JoinCircle) -> Circle:
 
 
 @app.get("/api/social/leaderboard", response_model=Circle)
-def leaderboard(streak: int | None = None, level: int | None = None) -> Circle:
+def leaderboard(streak: int | None = None, level: int | None = None,
+                adherence: float | None = None) -> Circle:
     """The app keeps its own streak and level (the forest engine owns them), so
     it passes them in. Without this the leaderboard would rank you on the
     backend's copy and your rank would never move as you play."""
@@ -367,7 +368,7 @@ def leaderboard(streak: int | None = None, level: int | None = None) -> Circle:
         code=code,
         name=CIRCLE_NAMES.get(code, f"Circle {code}"),
         you_display=u.get("display_name") or "You",
-        you_adherence=_your_adherence(),
+        you_adherence=adherence if adherence is not None else _your_adherence(),
         you_level=level if level is not None else prog.level,
         you_streak=streak if streak is not None else prog.streak_days,
     )

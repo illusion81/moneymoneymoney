@@ -112,7 +112,10 @@ class FarmScene extends StatelessWidget {
                   ),
                 ),
 
-                // ground plane
+                // Ground plane. The gradient runs light at the horizon to dark
+                // in the foreground, which is what makes it read as a receding
+                // surface rather than a flat block of colour. horizonGlow adds
+                // the haze where ground meets sky.
                 Positioned(
                   left: 0,
                   right: 0,
@@ -124,8 +127,38 @@ class FarmScene extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: wilted
-                            ? [const Color(0xffcfc4ae), const Color(0xffbfb49c)]
-                            : [ground, Color.lerp(ground, Colors.black, 0.08)!],
+                            ? [
+                                const Color(0xffd6ccb6),
+                                const Color(0xffb8ad94),
+                              ]
+                            : [
+                                Color.lerp(ground, Colors.white, 0.32)!,
+                                ground,
+                                Color.lerp(ground, Colors.black, 0.16)!,
+                              ],
+                        stops: wilted ? null : const [0.0, 0.35, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                // horizonGlow
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: horizon - h * 0.06,
+                  height: h * 0.12,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.0),
+                            Colors.white.withValues(alpha: wilted ? 0.10 : 0.30),
+                            Colors.white.withValues(alpha: 0.0),
+                          ],
+                        ),
                       ),
                     ),
                   ),

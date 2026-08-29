@@ -138,6 +138,14 @@ class _TreeViewState extends State<TreeView>
   }
 }
 
+/// Lighten (positive) or darken (negative) a colour, keeping its hue.
+Color _shade(Color c, double amount) {
+  final hsl = HSLColor.fromColor(c);
+  return hsl
+      .withLightness((hsl.lightness + amount).clamp(0.0, 1.0))
+      .toColor();
+}
+
 class _TreePainter extends CustomPainter {
   _TreePainter({
     required this.level,
@@ -204,13 +212,32 @@ class _TreePainter extends CustomPainter {
 
     final to = from + Offset(math.cos(angle) * length, math.sin(angle) * length);
 
-    final bark = Paint()
-      ..color = _bare
-          ? Color.lerp(skin.bark, const Color(0xff8a6a4f), 0.6)!
-          : skin.bark
+    final barkColour = _bare
+        ? Color.lerp(skin.bark, const Color(0xff8a6a4f), 0.6)!
+        : skin.bark;
+
+    // Draw each limb three times: a dark core, then a lit edge on the upper-left
+    // and a shadow on the lower-right. Flat strokes are what made this read as a
+    // 2D diagram; a light direction is most of what sells volume.
+    final shadow = Paint()
+      ..color = _shade(barkColour, -0.28)
       ..strokeWidth = width
       ..strokeCap = StrokeCap.round;
-    canvas.drawLine(from, to, bark);
+    canvas.drawLine(from.translate(width * 0.18, width * 0.18),
+        to.translate(width * 0.18, width * 0.18), shadow);
+
+    final core = Paint()
+      ..color = barkColour
+      ..strokeWidth = width
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(from, to, core);
+
+    final lit = Paint()
+      ..color = _shade(barkColour, 0.26)
+      ..strokeWidth = width * 0.42
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(from.translate(-width * 0.20, -width * 0.16),
+        to.translate(-width * 0.20, -width * 0.16), lit);
 
     // Two children, occasionally three on a well-grown tree.
     final children = (depth > 3 && rng.nextDouble() < 0.35) ? 3 : 2;
@@ -239,7 +266,13 @@ class _TreePainter extends CustomPainter {
           .withValues(alpha: health == TreeHealth.restored ? 0.72 : 0.95);
 
     if (skin.canopyIsCluster) {
+      // shaded underside
+      canvas.drawCircle(at.translate(r * 0.16, r * 0.20),
+          r, Paint()..color = _shade(paint.color, -0.22));
       canvas.drawCircle(at, r, paint);
+      // sun catching the top-left
+      canvas.drawCircle(at.translate(-r * 0.26, -r * 0.28), r * 0.52,
+          Paint()..color = _shade(paint.color, 0.30));
     } else {
       // conifer: small triangle instead of a blob
       final path = Path()
