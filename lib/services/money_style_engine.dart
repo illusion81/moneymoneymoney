@@ -82,9 +82,9 @@ class MoneyStyleEngine {
   ) {
     var updatedScores = scores;
 
-    // Money Rhythm tie-breaker: Q2
+    // Money Rhythm tie-breaker: Q1
     if (scores.steadyCount == scores.responsiveCount) {
-      final breakerAnswer = _getTieBreakerAnswer(2, session, questions);
+      final breakerAnswer = _getTieBreakerAnswer(1, session, questions);
       if (breakerAnswer != null &&
           breakerAnswer.dimension == Dimension.moneyRhythm) {
         if (breakerAnswer.pole == MoneyRhythmPole.steady) {

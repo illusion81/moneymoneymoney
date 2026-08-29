@@ -12,12 +12,15 @@ enum ConfidenceTier { earlySnapshot, standard, fullClarity }
 // MoneyStyleAnswer represents one of the 3 answer options for a question
 class MoneyStyleAnswer {
   const MoneyStyleAnswer({
+    required this.id,
     required this.text,
     required this.dimension,
     required this.pole,
     this.isBreaker = false,
   });
 
+  /// Stable storage identity, independent of randomized display order.
+  final String id;
   final String text;
   final Dimension dimension;
   final dynamic pole; // MoneyRhythmPole | DecisionStylePole | SupportStylePole
@@ -31,12 +34,14 @@ class MoneyStyleAnswer {
 class MoneyStyleQuestion {
   const MoneyStyleQuestion({
     required this.id,
+    required this.dimension,
     required this.scenario,
     required this.prompt,
     required this.answers,
   });
 
   final int id;
+  final Dimension dimension;
   final String scenario;
   final String prompt;
   final List<MoneyStyleAnswer> answers; // Always exactly 3
