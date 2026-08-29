@@ -19,11 +19,13 @@ void main() {
     tester,
   ) async {
     FinanceProfile? submitted;
+    var cancelled = false;
 
     await tester.pumpWidget(
       MaterialApp(
         home: OnboardingScreen(
           onProfileSubmitted: (profile) => submitted = profile,
+          onCancel: () => cancelled = true,
         ),
       ),
     );
@@ -32,5 +34,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(submitted, isNull);
+    expect(cancelled, isTrue);
   });
 }
