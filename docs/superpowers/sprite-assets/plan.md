@@ -1096,12 +1096,34 @@ Then, inside `main()` and after the existing `host` helper, add:
 ```
 
 Finally, update the three existing tests: each passes
-`ActorCatalog.animals` and now gets 25 actors. Change the first test's
-expectation from `ActorCatalog.animals.length` — it already reads the list
-length, so it stays correct — but change all three to use
+`ActorCatalog.animals` and now gets 25 actors. Change all three to use
 `ActorCatalog.animals.take(4).toList()` so the tests stay fast and the
-positions stay distinguishable. Note that with the cache empty these still
-paint boxes, which is what those tests assert.
+positions stay distinguishable.
+
+**Defect found during execution (fixed in place):** the plan originally said
+these three keep asserting on `PlaceholderBoxPainter`. That holds for the two
+that only call `pumpWidget`, but not for "actors move as time advances" —
+`tester.pump(Duration(seconds: 2))` advances real time far enough for the
+preload to complete, so the actor is drawn by `SpriteActorPainter` on the
+second read and `.whereType<PlaceholderBoxPainter>().first` throws
+`Bad state: No element`. That test must read the position off whichever
+painter is present:
+
+```dart
+    Offset firstPosition() {
+      final painter = tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((p) => p.painter)
+          .firstWhere(
+            (p) => p is PlaceholderBoxPainter || p is SpriteActorPainter,
+          );
+      return switch (painter) {
+        PlaceholderBoxPainter(:final position) => position,
+        SpriteActorPainter(:final position) => position,
+        _ => throw StateError('no actor painter'),
+      };
+    }
+```
 
 - [ ] **Step 7: Run it to confirm it fails**
 
