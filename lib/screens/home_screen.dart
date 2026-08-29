@@ -169,7 +169,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: const Icon(Icons.groups_outlined),
               tooltip: 'Your circle',
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => CircleScreen(api: widget.api!),
+                builder: (_) => CircleScreen(
+                  api: widget.api!,
+                  streak: widget.summary.currentStreak,
+                  level: widget.progression.level.level,
+                ),
               )),
             ),
           if (widget.api != null)
@@ -213,11 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: widget.onRetakeQuestionnaire,
               icon: const Icon(Icons.fact_check_outlined),
             ),
-          IconButton(
-            tooltip: 'Achievements',
-            onPressed: widget.onShowAchievements,
-            icon: const Icon(Icons.emoji_events_outlined),
-          ),
         ],
       ),
       bottomNavigationBar: AppNavBar(

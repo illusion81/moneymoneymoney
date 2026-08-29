@@ -37,6 +37,19 @@ def _stage(level: int) -> int:
     return min(6, 1 + level // 5)
 
 
+def discipline(adherence: float, streak_days: int) -> float:
+    """The single ranked number.
+
+    Adherence is the bulk of it — holding your own plan is the thing worth
+    measuring. Streak carries the rest: it is effort, not income, so it is fair
+    to reward, and it means someone rebuilding a habit can climb without
+    needing a bigger paycheque. Level is deliberately NOT in here — level is
+    time played, and ranking on it would just rank whoever started first.
+    """
+    streak_part = min(streak_days / 14, 1.0)
+    return round(adherence * 0.7 + streak_part * 0.3, 4)
+
+
 def build_circle(code: str, name: str, you_display: str, you_adherence: float,
                  you_level: int, you_streak: int) -> Circle:
     rows = [dict(p) for p in SEEDED_PEERS]
@@ -49,8 +62,10 @@ def build_circle(code: str, name: str, you_display: str, you_adherence: float,
         "_you": True,
     })
 
-    # rank by adherence, streak breaks ties — both are effort, not income
-    rows.sort(key=lambda r: (r["adherence"], r["streak_days"]), reverse=True)
+    # rank by the composite discipline score — adherence plus sustained streak
+    for r in rows:
+        r["score"] = discipline(r["adherence"], r["streak_days"])
+    rows.sort(key=lambda r: (r["score"], r["adherence"]), reverse=True)
 
     entries: list[LeaderboardEntry] = []
     your_rank = None
@@ -69,7 +84,9 @@ def build_circle(code: str, name: str, you_display: str, you_adherence: float,
         headline = "You are holding your plan better than anyone in the circle."
     elif your_rank and your_rank <= len(rows) // 2:
         ahead = entries[your_rank - 2].display_name
-        gap = (entries[your_rank - 2].adherence - you_adherence) * 100
+        gap = (discipline(entries[your_rank - 2].adherence,
+                          entries[your_rank - 2].streak_days)
+               - discipline(you_adherence, you_streak)) * 100
         headline = f"{gap:.0f} points behind {ahead}. Close one mission and you pass them."
     else:
         headline = ("Everyone here is working from their own plan, not the same target. "
