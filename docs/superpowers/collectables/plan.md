@@ -1416,10 +1416,16 @@ void main() {
       final start = coin.poseAt(clip, 0);
       final end = coin.poseAt(clip, 0.9999);
       for (final id in start.keys) {
-        expect(end[id]!.scaleX, closeTo(start[id]!.scaleX, 0.02),
-            reason: '$clip / $id');
+        expect(end[id]!.rotation, closeTo(start[id]!.rotation, 0.02),
+            reason: '$clip / $id rotation');
+        expect(end[id]!.offset.dx, closeTo(start[id]!.offset.dx, 0.05),
+            reason: '$clip / $id offset.dx');
         expect(end[id]!.offset.dy, closeTo(start[id]!.offset.dy, 0.05),
-            reason: '$clip / $id');
+            reason: '$clip / $id offset.dy');
+        expect(end[id]!.scaleX, closeTo(start[id]!.scaleX, 0.02),
+            reason: '$clip / $id scaleX');
+        expect(end[id]!.scaleY, closeTo(start[id]!.scaleY, 0.02),
+            reason: '$clip / $id scaleY');
       }
     }
   });
@@ -1477,10 +1483,16 @@ void main() {
       final start = orb.poseAt(clip, 0);
       final end = orb.poseAt(clip, 0.9999);
       for (final id in start.keys) {
+        expect(end[id]!.rotation, closeTo(start[id]!.rotation, 0.02),
+            reason: '$clip / $id rotation');
         expect(end[id]!.offset.dx, closeTo(start[id]!.offset.dx, 0.05),
-            reason: '$clip / $id');
+            reason: '$clip / $id offset.dx');
         expect(end[id]!.offset.dy, closeTo(start[id]!.offset.dy, 0.05),
-            reason: '$clip / $id');
+            reason: '$clip / $id offset.dy');
+        expect(end[id]!.scaleX, closeTo(start[id]!.scaleX, 0.02),
+            reason: '$clip / $id scaleX');
+        expect(end[id]!.scaleY, closeTo(start[id]!.scaleY, 0.02),
+            reason: '$clip / $id scaleY');
       }
     }
   });
@@ -1855,9 +1867,15 @@ void main() {
       final end = egg.poseAt(clip, 0.9999);
       for (final id in start.keys) {
         expect(end[id]!.rotation, closeTo(start[id]!.rotation, 0.02),
-            reason: '$clip / $id');
+            reason: '$clip / $id rotation');
+        expect(end[id]!.offset.dx, closeTo(start[id]!.offset.dx, 0.05),
+            reason: '$clip / $id offset.dx');
         expect(end[id]!.offset.dy, closeTo(start[id]!.offset.dy, 0.05),
-            reason: '$clip / $id');
+            reason: '$clip / $id offset.dy');
+        expect(end[id]!.scaleX, closeTo(start[id]!.scaleX, 0.02),
+            reason: '$clip / $id scaleX');
+        expect(end[id]!.scaleY, closeTo(start[id]!.scaleY, 0.02),
+            reason: '$clip / $id scaleY');
       }
     }
   });
