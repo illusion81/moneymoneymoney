@@ -95,7 +95,9 @@ Cumulative XP required to have reached level `L`:
 totalXpForLevel(L) = 100 * (L - 1) + 25 * (L - 1) * (L - 2)
 ```
 
-Worked values: level 2 at 100 XP, level 3 at 350, level 4 at 750, level 5 at 1300, level 6 at 2000.
+Worked values: level 2 at 100 XP, level 3 at 250, level 4 at 450, level 5 at 700, level 6 at 1000.
+
+The formulas are authoritative. `totalXpForLevel` is by construction the cumulative sum of `xpToAdvance`, and any worked value in this document that disagrees with them is an error in the document, not a second intended curve.
 
 Levels start at 1 and cap at 50. XP continues to accumulate past the cap but the level stays at 50 and no further level-up coins are paid.
 
