@@ -25,6 +25,7 @@ class FarmScene extends StatelessWidget {
     this.skyColor,
     this.groundColor,
     this.animals = const [],
+    this.treeCount = 1,
     this.seed = 7,
     this.height = 260,
   });
@@ -40,6 +41,10 @@ class FarmScene extends StatelessWidget {
   /// Asset stems of the animals the player owns, e.g. ['cow', 'cat'].
   /// Bought in the shop — nothing here is granted for free.
   final List<String> animals;
+
+  /// How many trees stand in the forest. One per few levels: the app is called
+  /// Wealth Forest, and a single tree never looked like one.
+  final int treeCount;
   final int seed;
   final double height;
 
@@ -126,18 +131,24 @@ class FarmScene extends StatelessWidget {
                   ),
                 ),
 
-                // the tree, standing on the horizon
-                Positioned(
-                  left: w * 0.5 - (h * 0.46) / 2,
-                  top: horizon - h * 0.46 + 6,
-                  child: TreeView(
-                    level: (growth * 6).round(),
-                    health: health,
-                    skinId: skinId,
-                    seed: seed,
-                    size: Size(h * 0.46, h * 0.46),
+                // The forest. Trees are laid out back-to-front: the ones
+                // behind sit higher, smaller and slightly faded, so a handful
+                // of trees reads as depth rather than a row of duplicates.
+                for (final t in _layout(w, h, horizon))
+                  Positioned(
+                    left: t.x,
+                    top: t.y,
+                    child: Opacity(
+                      opacity: t.opacity,
+                      child: TreeView(
+                        level: (growth * 6 * t.maturity).round().clamp(1, 6),
+                        health: health,
+                        skinId: skinId,
+                        seed: seed + t.index * 31,
+                        size: Size(t.size, t.size),
+                      ),
+                    ),
                   ),
-                ),
 
                 // animals along the ground, spread either side of the tree
                 for (var i = 0; i < shown; i++)
@@ -163,6 +174,45 @@ class FarmScene extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Positions for each tree. Index 0 is the hero: front and centre, full
+  /// size. The rest fan outwards and backwards.
+  List<_TreeSlot> _layout(double w, double h, double horizon) {
+    final n = treeCount.clamp(1, 9);
+    final slots = <_TreeSlot>[];
+    final heroSize = h * 0.46;
+
+    for (var i = 0; i < n; i++) {
+      if (i == 0) {
+        slots.add(_TreeSlot(
+          index: 0,
+          x: w * 0.5 - heroSize / 2,
+          y: horizon - heroSize + 6,
+          size: heroSize,
+          opacity: 1,
+          maturity: 1,
+        ));
+        continue;
+      }
+      // alternate sides, stepping further out and further back each time
+      final side = i.isOdd ? -1 : 1;
+      final rank = (i + 1) ~/ 2;
+      final depth = (rank / 5).clamp(0.0, 0.8);
+      final size = heroSize * (0.78 - depth * 0.35);
+      slots.add(_TreeSlot(
+        index: i,
+        x: (w * 0.5 + side * w * (0.13 + rank * 0.10) - size / 2)
+            .clamp(2.0, w - size - 2),
+        y: horizon - size - depth * h * 0.10,
+        size: size,
+        opacity: 1 - depth * 0.45,
+        maturity: 0.6 + (1 - depth) * 0.4,
+      ));
+    }
+    // paint far trees first so the hero overlaps them
+    slots.sort((a, b) => a.size.compareTo(b.size));
+    return slots;
   }
 
   Widget _animal(int i, double w, double h, double horizon, math.Random rng,
@@ -229,4 +279,22 @@ class _HillPainter extends CustomPainter {
   @override
   bool shouldRepaint(_HillPainter old) =>
       old.horizon != horizon || old.colour != colour || old.wilted != wilted;
+}
+
+
+class _TreeSlot {
+  const _TreeSlot({
+    required this.index,
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.opacity,
+    required this.maturity,
+  });
+
+  final int index;
+  final double x, y, size, opacity;
+
+  /// Back trees are drawn slightly less grown, which reads as distance.
+  final double maturity;
 }

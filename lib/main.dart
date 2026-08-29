@@ -140,6 +140,41 @@ class _MyAppState extends State<MyApp> {
     unawaited(_loadMoneyStyle());
   }
 
+  /// Plus gets a warmer, richer look: deeper greens, a brass accent and a
+  /// darker ground. It is purely cosmetic — nothing about the plan, the
+  /// leaderboard or the tree changes — but it makes the membership feel like
+  /// something rather than a flag in a database.
+  ThemeData _buildTheme({required bool plus}) {
+    final seed = plus ? const Color(0xff1f5d3c) : const Color(0xff2f7d50);
+    final base = ColorScheme.fromSeed(seedColor: seed);
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: plus
+          ? base.copyWith(
+              secondary: const Color(0xffb08d3f),
+              tertiary: const Color(0xffd9b45f),
+              surfaceContainerHighest: const Color(0xffe9e2d2),
+            )
+          : base,
+      scaffoldBackgroundColor:
+          plus ? const Color(0xfff2ede0) : const Color(0xfff5f1e8),
+      cardTheme: CardThemeData(
+        elevation: plus ? 2 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(plus ? 16 : 12),
+          side: plus
+              ? const BorderSide(color: Color(0xffd9c79a))
+              : BorderSide.none,
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor:
+            plus ? const Color(0xffe8e0cd) : const Color(0xffe8f0ea),
+        foregroundColor: const Color(0xff173b2f),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -147,11 +182,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
       navigatorKey: _navigatorKey,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff2f7d50)),
-        scaffoldBackgroundColor: const Color(0xfff5f1e8),
-        useMaterial3: true,
-      ),
+      theme: _buildTheme(plus: _isPlusMember),
       home: _buildCurrentView(),
     );
   }

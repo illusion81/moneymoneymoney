@@ -266,6 +266,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             .where((i) => i.category == ShopItemCategory.animal)
                             .map((i) => i.asset!)
                             .toList(),
+                        // One tree, then another every three levels — the
+                        // forest grows as you do.
+                        treeCount: 1 + (widget.progression.level.level ~/ 3),
                         seed: widget.summary.days.length + 7,
                         height: 280,
                       ),
