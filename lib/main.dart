@@ -345,9 +345,13 @@ class _MyAppState extends State<MyApp> {
       _lastEarnedSummary = '+$earnedXp XP, +$earnedCoins coins';
     });
 
-    // Celebrate only a day that actually stayed within budget — an
-    // over-budget day gets the restoration panel instead.
-    if (result.day.status == TreeStatus.healthy) {
+    // Two celebrations exist and they must not stack. Levelling up is the
+    // bigger moment, so it wins; otherwise a within-budget day gets the
+    // ordinary check-in celebration. An over-budget day gets neither — it
+    // gets the restoration panel instead.
+    if (_progression.level.level > beforeLevel) {
+      _celebrateIfLevelled(beforeLevel, xp: earnedXp, coins: earnedCoins);
+    } else if (result.day.status == TreeStatus.healthy) {
       final context = _navigatorKey.currentContext;
       if (context != null) {
         showCelebrationDialog(

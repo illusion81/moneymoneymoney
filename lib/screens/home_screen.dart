@@ -7,6 +7,7 @@ import '../models/wealth_report.dart';
 import '../services/forest_engine.dart';
 import '../data/api_client.dart';
 import '../services/item_visuals.dart';
+import '../widgets/tree_view.dart';
 import '../widgets/app_nav_bar.dart';
 import 'connect_bank_screen.dart';
 import 'circle_screen.dart';
@@ -226,10 +227,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: groundColor(widget.shopState),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(
-                          _treeIcon(latestDay, widget.shopState),
-                          size: 112,
-                          color: statusColor,
+                        child: TreeView(
+                          level: latestDay?.treeLevel ?? 0,
+                          health: _treeHealth(latestDay),
+                          skinId: widget
+                              .shopState.equippedItemIds[ShopItemCategory.treeSkin],
+                          seed: widget.summary.days.length + 7,
+                          size: const Size(150, 150),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -438,6 +442,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  TreeHealth _treeHealth(ForestDay? day) => switch (day?.status) {
+        TreeStatus.withered => TreeHealth.withered,
+        TreeStatus.restored => TreeHealth.restored,
+        TreeStatus.healthy => TreeHealth.healthy,
+        _ => TreeHealth.pending,
+      };
+
+  // Kept for the shop preview, which still shows icons.
+  // ignore: unused_element
   IconData _treeIcon(ForestDay? day, ShopState shopState) {
     if (day?.status == TreeStatus.withered) {
       return Icons.energy_savings_leaf_outlined;
