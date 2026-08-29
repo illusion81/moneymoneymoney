@@ -55,8 +55,11 @@ void main() {
     await tester.tap(find.byKey(const Key('skip-questionnaire-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Build an exact-number plan'), findsOneWidget);
-    expect(find.byKey(const Key('income-field')), findsOneWidget);
+    // Skipping goes FORWARD to the tree, not back to a form. A starter plan is
+    // seeded so the Forest has something to draw; the user can replace it from
+    // Retake questionnaire whenever they want.
+    expect(find.text('Wealth Forest'), findsOneWidget);
+    expect(find.byKey(const Key('income-field')), findsNothing);
     expect(store.deferred, isTrue);
   });
 
@@ -77,7 +80,7 @@ void main() {
     await tester.tap(find.byKey(const Key('skip-questionnaire-footer-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Build an exact-number plan'), findsOneWidget);
+    expect(find.text('Wealth Forest'), findsOneWidget);
     expect(store.deferred, isTrue);
   });
 
@@ -126,17 +129,11 @@ void main() {
 
       await tester.tap(find.byKey(const Key('skip-questionnaire-button')));
       await tester.pumpAndSettle();
-      expect(find.text('Build an exact-number plan'), findsOneWidget);
 
-      await tester.tap(find.text('Skip for now'));
-      await tester.pumpAndSettle();
-
-      // Back to the questionnaire entry — which itself still offers a way out.
-      expect(find.text('Discover Your Money Style'), findsOneWidget);
-      expect(
-        find.byKey(const Key('skip-questionnaire-button')),
-        findsOneWidget,
-      );
+      // Skipping now lands on the tree with a starter plan, so the manual
+      // form is no longer the hand-off — there is nothing left to escape.
+      expect(find.text('Wealth Forest'), findsOneWidget);
+      expect(find.byKey(const Key('income-field')), findsNothing);
     },
   );
 

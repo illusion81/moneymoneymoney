@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 
 import 'data/api_client.dart';
@@ -541,13 +543,37 @@ class _MyAppState extends State<MyApp> {
   /// The user is handed to the manual exact-number form — the app's existing
   /// alternative route to a plan — rather than being left with nowhere to go,
   /// and the decision is persisted so the offer can be picked up later.
+  /// "Skip for now" lands on the Forest — the tree — every time.
+  ///
+  /// The Forest cannot render without a plan, and the old code dealt with that
+  /// by sending you to the questionnaire, which is the screen you just chose
+  /// to skip. Instead, skipping seeds a neutral starter plan so there is
+  /// something to look at. The numbers are placeholders, not claims about the
+  /// user, and Retake questionnaire replaces them the moment they care.
   void _skipMoneyStyleQuestionnaire() {
-    setState(() {
-      _moneyStyleDeferred = true;
-      _view = AppView.onboarding;
-    });
+    _moneyStyleDeferred = true;
     unawaited(_deferMoneyStyle());
+
+    if (_report == null) {
+      // Routes through the normal submit path, which builds the report,
+      // seeds the forest and switches the view to the Forest.
+      _handleProfileSubmitted(_starterProfile);
+      return;
+    }
+    setState(() => _view = AppView.forest);
   }
+
+  /// A deliberately unremarkable plan for someone who has not told us
+  /// anything yet. Round numbers on purpose here — unlike the demo profile,
+  /// these are openly placeholders and should look like it.
+  static const _starterProfile = FinanceProfile(
+    monthlyIncome: 3000,
+    fixedMonthlyExpenses: 1500,
+    monthlySavingsGoal: 300,
+    riskLevel: RiskLevel.steady,
+    financialGoal: FinancialGoal.emergencyFund,
+    spendingPressure: SpendingPressure.medium,
+  );
 
   Future<void> _deferMoneyStyle() async {
     try {
@@ -836,27 +862,72 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  /// Export the homestead as a picture.
+  ///
+  /// On desktop and mobile this writes a PNG to the Pictures folder. On the
+  /// web there is no filesystem — `dart:io` compiles but every call throws at
+  /// runtime, which is why this button appeared to do nothing there. Rather
+  /// than pretending, show the image so it can be saved or screenshotted.
   Future<void> _handleExportImage(Uint8List pngBytes) async {
-    final home =
-        Platform.environment['USERPROFILE'] ??
-        Platform.environment['HOME'] ??
-        '.';
-    final picturesDir = Directory('$home${Platform.pathSeparator}Pictures');
-    if (!await picturesDir.exists()) {
-      await picturesDir.create(recursive: true);
+    if (!kIsWeb) {
+      try {
+        final home = Platform.environment['USERPROFILE'] ??
+            Platform.environment['HOME'] ??
+            '.';
+        final picturesDir =
+            Directory('$home${Platform.pathSeparator}Pictures');
+        if (!await picturesDir.exists()) {
+          await picturesDir.create(recursive: true);
+        }
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final file = File(
+          '${picturesDir.path}${Platform.pathSeparator}homestead_$timestamp.png',
+        );
+        await file.writeAsBytes(pngBytes);
+        _showMessage('Saved to ${file.path}');
+        return;
+      } catch (error) {
+        debugPrint('Could not write the homestead PNG: $error');
+        // fall through and show it instead
+      }
     }
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final file = File(
-      '${picturesDir.path}${Platform.pathSeparator}homestead_$timestamp.png',
+
+    final ctx = _navigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    await showDialog<void>(
+      context: ctx,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Your homestead'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.memory(pngBytes),
+            const SizedBox(height: 12),
+            const Text(
+              'Right-click (or long-press) the picture to save it.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
     );
-    await file.writeAsBytes(pngBytes);
-    _showMessage('Saved to ${file.path}');
   }
 
   /// Suggests income and fixed expenses from the last 90 days of bank
   /// activity, so onboarding asks the user to confirm rather than recall.
   Future<ProfileSuggestion?> _fetchProfileSuggestion() async {
-    const days = 90;
+    // 30, not 90. The suggestion scales whatever it finds by 30/days, so
+    // asking for 90 days and receiving a one-month statement divided the real
+    // income by three — it would tell someone earning \$3,700 that they earn
+    // \$1,233. A month of data is also what a statement upload actually gives
+    // us, so this matches the common case instead of penalising it.
+    const days = 30;
     final transactions = await _apiClient.transactions(days: days);
     return suggestProfileFromTransactions(transactions, days: days);
   }
