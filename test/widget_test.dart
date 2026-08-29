@@ -1,30 +1,83 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:moneymoneymoney/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('first app screen shows the questionnaire', (tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Money Profile'), findsOneWidget);
+    expect(find.text('Monthly income'), findsOneWidget);
+    expect(find.text('Generate Report'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('valid questionnaire submission shows generated report', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('income-field')), '6000');
+    await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
+    await tester.enterText(find.byKey(const Key('savings-field')), '900');
+    await tester.tap(find.text('Generate Report'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('AI Wealth Report'), findsOneWidget);
+    expect(find.textContaining('Daily flexible budget'), findsOneWidget);
+    expect(find.text('Start Plan'), findsOneWidget);
+  });
+
+  testWidgets('starting the plan shows the forest home screen', (tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.enterText(find.byKey(const Key('income-field')), '6000');
+    await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
+    await tester.enterText(find.byKey(const Key('savings-field')), '900');
+    await tester.tap(find.text('Generate Report'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start Plan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wealth Forest'), findsOneWidget);
+    expect(find.text('Today\'s money action'), findsOneWidget);
+    expect(find.text('Check In'), findsOneWidget);
+  });
+
+  testWidgets('successful check-in changes tree status to healthy', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.enterText(find.byKey(const Key('income-field')), '6000');
+    await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
+    await tester.enterText(find.byKey(const Key('savings-field')), '900');
+    await tester.tap(find.text('Generate Report'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start Plan'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('spending-field')), '40');
+    await tester.tap(find.byKey(const Key('action-complete-checkbox')));
+    await tester.tap(find.text('Check In'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Healthy tree'), findsOneWidget);
+  });
+
+  testWidgets('overspending changes tree status to withered', (tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.enterText(find.byKey(const Key('income-field')), '6000');
+    await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
+    await tester.enterText(find.byKey(const Key('savings-field')), '900');
+    await tester.tap(find.text('Generate Report'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start Plan'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('spending-field')), '200');
+    await tester.tap(find.byKey(const Key('action-complete-checkbox')));
+    await tester.tap(find.text('Check In'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Withered tree'), findsOneWidget);
   });
 }
