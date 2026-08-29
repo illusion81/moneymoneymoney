@@ -135,6 +135,20 @@ class AnswerSession {
 
   int get totalAnswered => selectedAnswers.length;
   int get totalSkipped => skippedQuestions.length;
+
+  Map<String, String> answerIdsFor(List<MoneyStyleQuestion> questions) {
+    final values = <String, String>{};
+    for (final entry in selectedAnswers.entries) {
+      MoneyStyleQuestion? question;
+      for (final candidate in questions) {
+        if (candidate.id == entry.key) { question = candidate; break; }
+      }
+      if (question != null && entry.value >= 0 && entry.value < question.answers.length) {
+        values['${entry.key}'] = question.answers[entry.value].id;
+      }
+    }
+    return values;
+  }
 }
 
 // ArchetypeInfo contains all metadata for an archetype

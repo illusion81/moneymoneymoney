@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'data/api_client.dart';
+import 'data/money_style_questions.dart';
 import 'data/models.dart';
 import 'data/survey_adapter.dart';
 import 'models/finance_profile.dart';
@@ -302,7 +303,7 @@ class _MyAppState extends State<MyApp> {
 
   void _syncMoneyStyle(MoneyStyleCompletion completion) {
     final result = completion.result;
-    _apiClient.submitMoneyStyle(MoneyStyleSubmission(sessionId: completion.session.sessionId, questionVersion: 'money-style-v1', selectedAnswers: const {}, skippedQuestionIds: completion.session.skippedQuestions.toList(), answeredCount: completion.session.totalAnswered, confidenceTier: result?.confidenceTier.name, archetypeId: result?.archetype.name)).catchError((error) { debugPrint('Money Style not sent to backend: $error'); return MoneyStyleSubmission(sessionId: '', questionVersion: '', selectedAnswers: const {}, skippedQuestionIds: const [], answeredCount: 0); });
+    _apiClient.submitMoneyStyle(MoneyStyleSubmission(sessionId: completion.session.sessionId, questionVersion: 'money-style-v1', selectedAnswers: completion.session.answerIdsFor(moneyStyleQuestions), skippedQuestionIds: completion.session.skippedQuestions.toList(), answeredCount: completion.session.totalAnswered, confidenceTier: result?.confidenceTier.name, archetypeId: result?.archetype.pattern.toLowerCase().replaceAll(' ', '_').replaceAll('-directed', ''))).catchError((error) { debugPrint('Money Style not sent to backend: $error'); return MoneyStyleSubmission(sessionId: '', questionVersion: '', selectedAnswers: const {}, skippedQuestionIds: const [], answeredCount: 0); });
   }
 
   void _startPlan() {
