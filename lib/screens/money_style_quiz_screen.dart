@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../data/money_style_questions.dart';
 import '../models/money_style.dart';
 import '../services/money_style_engine.dart';
-import 'money_style_result_screen.dart';
 
 class MoneyStyleQuizScreen extends StatefulWidget {
   const MoneyStyleQuizScreen({

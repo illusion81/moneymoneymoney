@@ -49,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: [
                     const SizedBox(height: 16),
                     Text(
-                      'Money Profile',
+                      'Build an exact-number plan',
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -58,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Answer a short money questionnaire to generate your personal wealth report.',
+                      'Optional: these amounts are used to calculate a daily budget. You can go back and keep using your Money Style result without sharing them.',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 24),
@@ -271,10 +271,8 @@ class _EnumDropdown<T> extends StatelessWidget {
       ),
       items: values
           .map(
-            (item) => DropdownMenuItem<T>(
-              value: item,
-              child: Text(labelFor(item)),
-            ),
+            (item) =>
+                DropdownMenuItem<T>(value: item, child: Text(labelFor(item))),
           )
           .toList(),
       onChanged: (value) {
