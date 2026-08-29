@@ -65,97 +65,100 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          _treeIcon(latestDay),
+                          size: 112,
+                          color: statusColor,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          statusText,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: statusColor,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          latestDay?.message ??
+                              'Complete today\'s money action to grow your tree.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        _treeIcon(latestDay),
-                        size: 112,
-                        color: statusColor,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        statusText,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: statusColor,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        latestDay?.message ??
-                            'Complete today\'s money action to grow your tree.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  const SizedBox(height: 18),
+                  _MetricRow(
+                    streak: widget.summary.currentStreak,
+                    healthy: widget.summary.healthyTreeCount,
+                    withered: widget.summary.witheredTreeCount,
                   ),
-                ),
-                const SizedBox(height: 18),
-                _MetricRow(
-                  streak: widget.summary.currentStreak,
-                  healthy: widget.summary.healthyTreeCount,
-                  withered: widget.summary.witheredTreeCount,
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Today\'s money action',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: 18),
+                  Text(
+                    'Today\'s money action',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(widget.report.dailyActions.first),
-                const SizedBox(height: 14),
-                Text(
-                  'Daily budget: \$${widget.report.dailyBudget.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  key: const Key('spending-field'),
-                  controller: _spendingController,
-                  decoration: InputDecoration(
-                    labelText: 'Today\'s spending',
-                    prefixIcon: const Icon(Icons.payments_outlined),
-                    border: const OutlineInputBorder(),
-                    errorText: _errorText,
+                  const SizedBox(height: 8),
+                  Text(widget.report.dailyActions.first),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Daily budget: \$${widget.report.dailyBudget.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                  const SizedBox(height: 14),
+                  TextField(
+                    key: const Key('spending-field'),
+                    controller: _spendingController,
+                    decoration: InputDecoration(
+                      labelText: 'Today\'s spending',
+                      prefixIcon: const Icon(Icons.payments_outlined),
+                      border: const OutlineInputBorder(),
+                      errorText: _errorText,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  key: const Key('action-complete-checkbox'),
-                  value: _actionCompleted,
-                  onChanged: (value) =>
-                      setState(() => _actionCompleted = value ?? false),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Money action completed'),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: _checkIn,
-                  icon: const Icon(Icons.check),
-                  label: const Text('Check In'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: widget.onShowAchievements,
-                  icon: const Icon(Icons.emoji_events_outlined),
-                  label: const Text('Achievements'),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    key: const Key('action-complete-checkbox'),
+                    value: _actionCompleted,
+                    onChanged: (value) =>
+                        setState(() => _actionCompleted = value ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Money action completed'),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _checkIn,
+                    icon: const Icon(Icons.check),
+                    label: const Text('Check In'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: widget.onShowAchievements,
+                    icon: const Icon(Icons.emoji_events_outlined),
+                    label: const Text('Achievements'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
