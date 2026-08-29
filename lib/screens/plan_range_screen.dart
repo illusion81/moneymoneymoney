@@ -168,7 +168,7 @@ class _PlanRangeScreenState extends State<PlanRangeScreen> {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: widget.onExact,
-                  child: const Text('Use exact numbers instead'),
+                  child: const Text('Use exact numbers for a daily calculation'),
                 ),
               ),
             ]),

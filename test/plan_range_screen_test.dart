@@ -70,7 +70,7 @@ void main() {
       home: PlanRangeScreen(onKeep: (_) {}, onExact: () => exact = true),
     ));
 
-    await tester.tap(find.text('Use exact numbers instead'));
+    await tester.tap(find.text('Use exact numbers for a daily calculation'));
     await tester.pump();
     expect(exact, isTrue);
   });
