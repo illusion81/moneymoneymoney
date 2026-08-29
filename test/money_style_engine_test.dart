@@ -21,4 +21,13 @@ void main() {
     }
     expect(names, hasLength(8));
   });
+  test('scores both poles across all dimensions', () {
+    final scores = engine.calculateDimensionScores(AnswerSession(userId: 'u', sessionId: 's', selectedAnswers: {1: 0, 3: 1, 2: 0, 6: 0, 4: 0, 7: 0}), moneyStyleQuestions);
+    expect(scores.steadyCount, 1);
+    expect(scores.responsiveCount, 1);
+    expect(scores.pauseCount, 1);
+    expect(scores.momentumCount, 1);
+    expect(scores.selfCount, 1);
+    expect(scores.collaborativeCount, 1);
+  });
 }
