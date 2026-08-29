@@ -13,9 +13,13 @@ services:
     name: wealth-tower-api
     runtime: python
     plan: free
-    rootDir: "backend,dataAPI"
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    # NOTE: no rootDir here. Render validates rootDir against
+    # ^[A-Za-z0-9-_./ ]*$ and our folder name has a comma in it
+    # ("backend,dataAPI"), which that pattern rejects. Doing the cd inside the
+    # commands sidesteps it without renaming the folder and breaking everyone
+    # else's paths mid-hackathon.
+    buildCommand: pip install -r "backend,dataAPI/requirements.txt"
+    startCommand: cd "backend,dataAPI" && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
