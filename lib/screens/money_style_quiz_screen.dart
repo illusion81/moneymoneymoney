@@ -38,6 +38,8 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       userId: widget.userId,
       sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
     );
+    final resumedIndex = moneyStyleQuestions.indexWhere((q) => !_session.selectedAnswers.containsKey(q.id) && !_session.skippedQuestions.contains(q.id));
+    if (resumedIndex >= 0) _currentQuestionIndex = resumedIndex;
     final random = Random(widget.answerOrderSeed ?? _session.sessionId.hashCode);
     _answerOrder = {
       for (final question in moneyStyleQuestions)
