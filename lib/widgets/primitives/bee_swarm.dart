@@ -37,7 +37,7 @@ class BeeSwarm extends StatefulWidget {
   State<BeeSwarm> createState() => _BeeSwarmState();
 }
 
-class _BeeSwarmState extends State<BeeSwarm> with SingleTickerProviderStateMixin {
+class _BeeSwarmState extends State<BeeSwarm> with TickerProviderStateMixin {
   final List<_BeeFlight> _flights = <_BeeFlight>[];
 
   static const int _cap = 5;
