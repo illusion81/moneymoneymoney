@@ -37,7 +37,6 @@ dependencies:
 
   # Backend API client (lib/data/api_client.dart) — Lane A
   http: ^1.2.0
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

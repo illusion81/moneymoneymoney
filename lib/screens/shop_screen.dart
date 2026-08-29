@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../models/progression.dart';
@@ -13,6 +14,8 @@ class ShopScreen extends StatelessWidget {
     required this.onPurchase,
     required this.onEquip,
     required this.onBack,
+    this.onDebugMaxCoins,
+    this.onDebugUnlockAll,
   });
 
   final ProgressionState progression;
@@ -21,9 +24,18 @@ class ShopScreen extends StatelessWidget {
   final void Function(String itemId) onEquip;
   final VoidCallback onBack;
 
+  /// Testing aids, only ever shown in debug builds (gated by [kDebugMode]) —
+  /// never real user-facing features.
+  final VoidCallback? onDebugMaxCoins;
+
+  /// Marks every catalog item as owned, bypassing price and level gates.
+  final VoidCallback? onDebugUnlockAll;
+
   @override
   Widget build(BuildContext context) {
     final shopService = ShopService();
+    final debugMaxCoins = onDebugMaxCoins;
+    final debugUnlockAll = onDebugUnlockAll;
 
     return Scaffold(
       appBar: AppBar(
@@ -33,6 +45,22 @@ class ShopScreen extends StatelessWidget {
           onPressed: onBack,
           icon: const Icon(Icons.arrow_back),
         ),
+        actions: [
+          if (kDebugMode && debugUnlockAll != null)
+            IconButton(
+              key: const Key('debug-unlock-all-button'),
+              tooltip: 'Debug: unlock all items',
+              onPressed: debugUnlockAll,
+              icon: const Icon(Icons.lock_open_outlined),
+            ),
+          if (kDebugMode && debugMaxCoins != null)
+            IconButton(
+              key: const Key('debug-max-coins-button'),
+              tooltip: 'Debug: max coins',
+              onPressed: debugMaxCoins,
+              icon: const Icon(Icons.bug_report_outlined),
+            ),
+        ],
       ),
       body: SafeArea(
         child: Center(

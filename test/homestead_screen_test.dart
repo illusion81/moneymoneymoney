@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneymoneymoney/models/home_layout.dart';
@@ -42,6 +44,7 @@ void main() {
           onShowReport: () {},
           onShowAchievements: () {},
           onShowShop: () => shopTapped = true,
+          onExportImage: (_) async {},
         ),
       ),
     );
@@ -69,6 +72,7 @@ void main() {
           onShowReport: () {},
           onShowAchievements: () {},
           onShowShop: () {},
+          onExportImage: (_) async {},
         ),
       ),
     );
@@ -106,6 +110,7 @@ void main() {
           onShowReport: () {},
           onShowAchievements: () {},
           onShowShop: () {},
+          onExportImage: (_) async {},
         ),
       ),
     );
@@ -145,6 +150,7 @@ void main() {
           onShowReport: () {},
           onShowAchievements: () {},
           onShowShop: () {},
+          onExportImage: (_) async {},
         ),
       ),
     );
@@ -180,6 +186,7 @@ void main() {
           onShowReport: () {},
           onShowAchievements: () {},
           onShowShop: () {},
+          onExportImage: (_) async {},
         ),
       ),
     );
@@ -196,4 +203,48 @@ void main() {
     expect(placedDx! >= 0.0 && placedDx! <= 1.0, isTrue);
     expect(placedDy! >= 0.0 && placedDy! <= 1.0, isTrue);
   });
+
+  testWidgets(
+    'tapping Export image captures the boundary and forwards its bytes',
+    (tester) async {
+      Uint8List? exported;
+      final fakeBytes = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]);
+      GlobalKey? capturedKey;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HomesteadScreen(
+            shopState: _withOwned({'deco-garden-lantern'}),
+            layout: const HomeLayoutState(
+              placements: [
+                DecorationPlacement(
+                  itemId: 'deco-garden-lantern',
+                  dx: 0.5,
+                  dy: 0.5,
+                ),
+              ],
+            ),
+            onPlace: (_, _, _) {},
+            onRemove: (_) {},
+            onShowForest: () {},
+            onShowCalendar: () {},
+            onShowReport: () {},
+            onShowAchievements: () {},
+            onShowShop: () {},
+            onExportImage: (bytes) async => exported = bytes,
+            captureBoundary: (key) async {
+              capturedKey = key;
+              return fakeBytes;
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('export-image-button')));
+      await tester.pumpAndSettle();
+
+      expect(capturedKey, isNotNull);
+      expect(exported, fakeBytes);
+    },
+  );
 }
