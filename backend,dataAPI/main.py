@@ -81,6 +81,17 @@ def _safe(fn, *a, **kw):
         return getattr(_mock, name)(*a, **kw)
 
 
+def data_trusted() -> bool:
+    """Can the user have tampered with this data before we saw it?
+
+    Only true for a direct bank connection (CDR/Basiq), where transactions come
+    from the institution and never pass through the user's hands. A CSV export
+    is editable in Excel; mock data is invented. Neither can back a claim that
+    a mission was 'verified by your bank'.
+    """
+    return isinstance(provider(), BasiqProvider)
+
+
 def _require_profile() -> Profile:
     p = store.user(UID)["profile"]
     if p is None:
@@ -278,6 +289,9 @@ def health() -> dict:
     return {
         "ok": True,
         "provider": name,
+        # UI contract: when false, show a "demo data" banner and do NOT render
+        # any per-mission "verified by your bank" badge.
+        "data_trusted": name == "basiq",
         "csv_configured": bool(os.getenv("WEALTH_CSV")),
         "basiq_configured": bool(os.getenv("BASIQ_API_KEY")),
         "forced": _forced_provider,

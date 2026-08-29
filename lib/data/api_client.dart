@@ -144,9 +144,24 @@ class ApiClient {
 
   Future<void> resetDemo() => _send('POST', '/api/demo/reset');
 
-  /// Returns 'basiq' or 'mock'. Check this before you walk on stage.
+  /// Returns 'basiq', 'csv' or 'mock'. Check this before you walk on stage.
   Future<String> providerName() async =>
       (await _getObj('/api/health'))['provider'] as String;
+
+  /// True only for a direct bank connection, where the user cannot have edited
+  /// the data before we saw it. A CSV export is editable; mock data is invented.
+  ///
+  /// UI rule: when this is false, show a "demo data" banner and do NOT render
+  /// any per-mission "verified by your bank" badge. Saying a mission was bank
+  /// verified when it came from a file the user supplied is a lie.
+  Future<bool> dataTrusted() async =>
+      (await _getObj('/api/health'))['data_trusted'] as bool? ?? false;
+
+  /// Self-report a mission the transaction feed cannot see (cancelling a
+  /// subscription, a daily streak). Claim stays locked until this is called.
+  Future<Mission> markDone(String missionId) async => Mission.fromJson(
+      (await _send('POST', '/api/missions/$missionId/mark_done'))
+          as Map<String, dynamic>);
 
   // ---------------------------------------------------------------- convenience
 
