@@ -1,3 +1,4 @@
+import 'animals/fox.dart';
 import 'rig/viz_rig.dart';
 
 /// Registry of every viz gameobject the workbench can show.
@@ -6,7 +7,7 @@ import 'rig/viz_rig.dart';
 class VizCatalog {
   const VizCatalog._();
 
-  static List<VizRig> get all => List<VizRig>.unmodifiable(<VizRig>[]);
+  static List<VizRig> get all => List<VizRig>.unmodifiable(<VizRig>[Fox()]);
 
   static VizRig byId(String id) => all.firstWhere((rig) => rig.id == id);
 }

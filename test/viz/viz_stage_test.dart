@@ -52,8 +52,8 @@ void main() {
     expect(painterOf(tester).palette.id, rig.defaultPalette.id);
   });
 
-  test('catalog starts empty and reports unknown ids', () {
-    expect(VizCatalog.all, isEmpty);
+  test('catalog exposes registered rigs and rejects unknown ids', () {
+    expect(VizCatalog.all, isNotEmpty);
     expect(() => VizCatalog.byId('nope'), throwsStateError);
   });
 }
