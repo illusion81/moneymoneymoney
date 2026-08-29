@@ -5,6 +5,8 @@ import '../models/progression.dart';
 import '../models/shop_item.dart';
 import '../services/item_visuals.dart';
 import '../services/shop_service.dart';
+import '../ui/market_icon.dart';
+import '../ui/shop_item_icon.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({
@@ -132,9 +134,8 @@ class _ShopScreenState extends State<ShopScreen> {
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
-                        Icons.monetization_on,
-                        color: Color(0xffc79a33),
+                      const MarketIconImage(
+                        icon: MarketIcon.coin,
                         size: 20,
                       ),
                       const SizedBox(width: 4),
@@ -251,7 +252,7 @@ class _ShopItemCard extends StatelessWidget {
       return OutlinedButton.icon(
         key: Key('plus-lock-${item.id}'),
         onPressed: onShowPlus,
-        icon: const Icon(Icons.lock, size: 16),
+        icon: const MarketIconImage(icon: MarketIcon.lockedSkin, size: 16),
         label: const Text('Plus'),
         style: OutlinedButton.styleFrom(
           foregroundColor: const Color(0xffc79a33),
@@ -282,7 +283,7 @@ class _ItemIconChip extends StatelessWidget {
     return CircleAvatar(
       backgroundColor: visual.color.withValues(alpha: 0.15),
       foregroundColor: visual.color,
-      child: Icon(visual.icon),
+      child: ShopItemIcon(visual: visual),
     );
   }
 }
