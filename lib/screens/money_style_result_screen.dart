@@ -44,6 +44,7 @@ class MoneyStyleResultScreen extends StatelessWidget {
                 ),
 
               // Archetype name (large)
+              const Text('Based on what you shared today'),
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
