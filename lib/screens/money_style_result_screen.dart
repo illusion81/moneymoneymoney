@@ -6,9 +6,16 @@ class MoneyStyleResultScreen extends StatelessWidget {
   const MoneyStyleResultScreen({
     super.key,
     required this.result,
+    this.onExplore,
+    this.onBuildPlan,
   });
 
   final MoneyStyleResult result;
+
+  /// Where the two buttons go. Left null they fall back to a snackbar, so the
+  /// screen still works standalone (e.g. in a widget test).
+  final VoidCallback? onExplore;
+  final VoidCallback? onBuildPlan;
 
   @override
   Widget build(BuildContext context) {
@@ -163,23 +170,21 @@ class MoneyStyleResultScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     FilledButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to ideas page
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Explore ideas - coming soon')),
-                        );
-                      },
+                      onPressed: onExplore ??
+                          () => ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Nothing wired here yet')),
+                              ),
                       icon: const Icon(Icons.lightbulb_outline),
                       label: const Text('Explore ideas that fit my style'),
                     ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to plan builder
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Build a plan - coming soon')),
-                        );
-                      },
+                      onPressed: onBuildPlan ??
+                          () => ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Nothing wired here yet')),
+                              ),
                       icon: const Icon(Icons.edit_note),
                       label: const Text('Build a practical plan with ranges'),
                     ),

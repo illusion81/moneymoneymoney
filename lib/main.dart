@@ -138,7 +138,15 @@ class _MyAppState extends State<MyApp> {
           onComplete: _handleMoneyStyleComplete,
         );
       case AppView.moneyStyleResult:
-        return MoneyStyleResultScreen(result: _moneyStyleResult!);
+        return MoneyStyleResultScreen(
+          result: _moneyStyleResult!,
+          // The quiz tells them who they are; these are the two ways out of it.
+          // "Explore ideas" goes to the forest if they already have a plan,
+          // otherwise there is nothing to explore yet and they need the numbers.
+          onExplore: () => setState(() =>
+              _view = _report == null ? AppView.onboarding : AppView.forest),
+          onBuildPlan: () => setState(() => _view = AppView.onboarding),
+        );
       case AppView.report:
         if (report == null) {
           return OnboardingScreen(
