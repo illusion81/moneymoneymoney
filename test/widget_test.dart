@@ -117,6 +117,7 @@ class _RestoreHarnessState extends State<_RestoreHarness> {
         progression: _progression,
         shopState: ShopService().initialState(),
         onCheckIn: ({required spending}) {},
+        freezes: const FreezeState(available: 1, capacity: 1),
         onRestore: (note) {
           final result = _engine.restoreDay(
             days: _summary.days,

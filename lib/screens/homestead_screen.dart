@@ -444,7 +444,14 @@ class _SavingsStatsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Title and three chips do not fit side by side at real phone width
+          // (390pt) — Wrap lets the chips drop to their own line instead of
+          // running off the edge.
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
+            runSpacing: 8,
+            spacing: 12,
             children: [
               Text(
                 'Surplus assets',
@@ -452,20 +459,16 @@ class _SavingsStatsSection extends StatelessWidget {
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
-              const Spacer(),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 6,
                 children: [
-                  for (final option in StatsPeriod.values) ...[
+                  for (final option in StatsPeriod.values)
                     ChoiceChip(
                       key: Key('stats-period-${option.name}'),
                       label: Text(_periodLabel(option)),
                       selected: option == period,
                       onSelected: (_) => onPeriodChanged(option),
                     ),
-                    if (option != StatsPeriod.values.last)
-                      const SizedBox(width: 6),
-                  ],
                 ],
               ),
             ],

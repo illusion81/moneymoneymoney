@@ -115,6 +115,19 @@ class _MyAppState extends State<MyApp> {
   bool _isPlusMember = false;
   int _diamonds = 0;
 
+  /// Streak freezes. Free players hold one; Plus members hold three and earn
+  /// them twice as fast. This is the perk that matters — everything else Plus
+  /// sells is decoration, and this is the one that protects the thing people
+  /// actually care about losing.
+  static const int _freeFreezeCap = 1;
+  static const int _plusFreezeCap = 3;
+  FreezeState _freezes = const FreezeState(available: 1, capacity: 1);
+
+  /// Healthy days banked toward the next freeze.
+  int _daysTowardFreeze = 0;
+
+  int get _freezeEarnEvery => _isPlusMember ? 3 : 7;
+
   /// The diamond store is reachable from more than one place (the shop, and
   /// the Plus screen). Back should return where you came from rather than
   /// always dumping you on the forest.
@@ -280,6 +293,7 @@ class _MyAppState extends State<MyApp> {
           shopState: _shopState,
           lastEarnedSummary: _lastEarnedSummary,
           onCheckIn: _handleCheckIn,
+          freezes: _freezes,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
           onRetakeQuestionnaire: () => setState(
@@ -597,6 +611,7 @@ class _MyAppState extends State<MyApp> {
       report: report,
       date: DateTime.now(),
       spending: spending,
+      freezesAvailable: _freezes.available,
     );
 
     final beforeXp = _progression.totalXp;
@@ -607,11 +622,28 @@ class _MyAppState extends State<MyApp> {
 
     setState(() {
       _summary = result.summary;
+      if (result.freezesUsed > 0) {
+        _freezes = _freezes.copyWith(
+          available: _freezes.available - result.freezesUsed,
+        );
+      }
+      if (result.day.status == TreeStatus.healthy) _bankFreezeProgress();
       _recomputeProgression();
       earnedXp = _progression.totalXp - beforeXp;
       earnedCoins = _progression.coinBalance - beforeCoins;
       _lastEarnedSummary = '+$earnedXp XP, +$earnedCoins coins';
     });
+
+    if (result.freezesUsed > 0) {
+      final n = result.freezesUsed;
+      _showMessage(
+        n == 1
+            ? 'You missed a day. A streak freeze covered it — your '
+                '${_summary.currentStreak}-day streak is intact.'
+            : '$n streak freezes covered the days you missed. Your '
+                '${_summary.currentStreak}-day streak is intact.',
+      );
+    }
 
     // Two celebrations exist and they must not stack. Levelling up is the
     // bigger moment, so it wins; otherwise a within-budget day gets the
@@ -630,6 +662,34 @@ class _MyAppState extends State<MyApp> {
         );
       }
     }
+  }
+
+  /// Freezes are earned, not given: every [_freezeEarnEvery] healthy days
+  /// tops one back up. Must be called inside setState.
+  void _bankFreezeProgress() {
+    if (_freezes.isFull) {
+      _daysTowardFreeze = 0;
+      return;
+    }
+    _daysTowardFreeze++;
+    if (_daysTowardFreeze >= _freezeEarnEvery) {
+      _daysTowardFreeze = 0;
+      _freezes = _freezes.copyWith(available: _freezes.available + 1);
+    }
+  }
+
+  /// Keeps the freeze capacity in step with membership. Subscribing raises the
+  /// cap and hands over the extra freezes immediately — the perk should be
+  /// visible the moment it is paid for. Lapsing lowers the cap but never takes
+  /// back a freeze already held.
+  void _syncFreezeCapacity() {
+    final cap = _isPlusMember ? _plusFreezeCap : _freeFreezeCap;
+    if (cap == _freezes.capacity) return;
+    final gained = cap > _freezes.capacity ? cap - _freezes.capacity : 0;
+    _freezes = FreezeState(
+      available: (_freezes.available + gained).clamp(0, cap),
+      capacity: cap,
+    );
   }
 
   void _handleRestore(String recoveryNote) {
@@ -879,12 +939,21 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleSubscribePlus() {
-    setState(() => _isPlusMember = true);
-    _showMessage('Plus activated (demo — no payment was taken).');
+    setState(() {
+      _isPlusMember = true;
+      _syncFreezeCapacity();
+    });
+    _showMessage(
+      'Plus activated (demo — no payment was taken). '
+      'You now hold ${_freezes.available} streak freezes.',
+    );
   }
 
   void _handleCancelPlus() {
-    setState(() => _isPlusMember = false);
+    setState(() {
+      _isPlusMember = false;
+      _syncFreezeCapacity();
+    });
     _showMessage('Plus membership cancelled.');
   }
 

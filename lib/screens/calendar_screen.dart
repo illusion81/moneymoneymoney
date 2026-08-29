@@ -187,7 +187,9 @@ class ForestCalendar extends StatelessWidget {
               crossAxisCount: 7,
               mainAxisSpacing: 6,
               crossAxisSpacing: 6,
-              childAspectRatio: 0.78,
+              // At a real phone width each cell is ~40pt wide; 0.78 left it
+              // 8pt short of the day number + tree + dot stack.
+              childAspectRatio: 0.66,
             ),
             itemBuilder: (context, index) {
               if (index < leadingEmptyCells) {
@@ -295,7 +297,7 @@ class _ForestDayCell extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
         decoration: BoxDecoration(
           color: _cellColor(status),
           borderRadius: BorderRadius.circular(8),
@@ -321,12 +323,12 @@ class _ForestDayCell extends StatelessWidget {
             Icon(
               _treeIcon(status, treeLevel, shopState),
               key: Key('forest-tree-${status.name}-$dateKey'),
-              size: 24,
+              size: 20,
               color: color,
             ),
             Container(
-              width: 6,
-              height: 6,
+              width: 5,
+              height: 5,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
           ],
@@ -342,6 +344,8 @@ class _ForestDayCell extends StatelessWidget {
         return Icons.energy_savings_leaf_outlined;
       case TreeStatus.restored:
         return Icons.eco;
+      case TreeStatus.frozen:
+        return Icons.ac_unit;
       case TreeStatus.pending:
         return Icons.grass;
       case TreeStatus.healthy:
@@ -360,6 +364,8 @@ class _ForestDayCell extends StatelessWidget {
         return const Color(0xfff3eadf);
       case TreeStatus.restored:
         return const Color(0xffe8f5f3);
+      case TreeStatus.frozen:
+        return const Color(0xffe6eff7);
       case TreeStatus.pending:
         return const Color(0xfffaf8f1);
     }
@@ -373,6 +379,8 @@ class _ForestDayCell extends StatelessWidget {
         return const Color(0xff8a6a4f);
       case TreeStatus.restored:
         return const Color(0xff3f8f8a);
+      case TreeStatus.frozen:
+        return const Color(0xff4a7fa8);
       case TreeStatus.pending:
         return const Color(0xffc79a33);
     }
@@ -411,6 +419,8 @@ String _statusLabel(TreeStatus status) {
       return 'withered tree';
     case TreeStatus.restored:
       return 'restored tree';
+    case TreeStatus.frozen:
+      return 'frozen — streak held';
     case TreeStatus.pending:
       return 'pending';
   }

@@ -584,6 +584,23 @@ def set_provider(body: ProviderBody) -> dict:
     return health()
 
 
+@app.get("/")
+def root() -> dict:
+    """A landing page for the API root.
+
+    Everything real lives under /api/. Without this, hitting the bare hostname
+    returns FastAPI's bare {"detail": "Not Found"}, which looks like a broken
+    deploy when the service is in fact perfectly healthy.
+    """
+    return {
+        "service": "Wealth Forest API",
+        "status": "up",
+        "docs": "/docs",
+        "health": "/api/health",
+        "note": "All endpoints are under /api/. There is nothing at the root.",
+    }
+
+
 @app.get("/api/health")
 def health() -> dict:
     p = provider()

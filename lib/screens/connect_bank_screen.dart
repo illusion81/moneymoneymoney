@@ -156,6 +156,31 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
               'No logging, no receipts — the forest grows from what you actually spend.',
               style: t.bodyLarge,
             ),
+            const SizedBox(height: 20),
+
+            // The single sentence that separates this from every other
+            // habit-tree app: those reward you for saying you behaved. This
+            // one reads the transactions and checks.
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xffedf4ee),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xffc7ddd0)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.verified_outlined,
+                    size: 22, color: Color(0xff2f7d50)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Other habit apps trust whatever you type in. '
+                    'This one checks your transactions.',
+                    style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ]),
+            ),
             const SizedBox(height: 28),
 
             _Point(

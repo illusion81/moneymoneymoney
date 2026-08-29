@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:moneymoneymoney/models/forest_day.dart';
 import 'package:moneymoneymoney/models/progression.dart';
 import 'package:moneymoneymoney/models/wealth_report.dart';
 import 'package:moneymoneymoney/screens/home_screen.dart';
@@ -39,6 +40,7 @@ Widget _harness({required Future<double> Function() onFetchTodaySpending}) {
       shopState: ShopService().initialState(),
       onCheckIn: ({required spending}) {},
       onRestore: (_) {},
+      freezes: const FreezeState(available: 1, capacity: 1),
       onShowReport: () {},
       onShowAchievements: () {},
       onShowShop: () {},
