@@ -18,6 +18,7 @@ class ShopScreen extends StatefulWidget {
     required this.onShowPlus,
     this.onDebugMaxCoins,
     this.onDebugUnlockAll,
+    this.onDebugGrantXp,
   });
 
   final ProgressionState progression;
@@ -39,6 +40,9 @@ class ShopScreen extends StatefulWidget {
   /// Marks every catalog item as owned, bypassing price and level gates.
   final VoidCallback? onDebugUnlockAll;
 
+  /// Debug: jump to the next level so the level-up moment can be rehearsed.
+  final VoidCallback? onDebugGrantXp;
+
   @override
   State<ShopScreen> createState() => _ShopScreenState();
 }
@@ -56,7 +60,9 @@ class _ShopScreenState extends State<ShopScreen> {
     final onBack = widget.onBack;
     final debugMaxCoins = widget.onDebugMaxCoins;
     final debugUnlockAll = widget.onDebugUnlockAll;
-    final hasDebugActions = debugMaxCoins != null || debugUnlockAll != null;
+    final debugGrantXp = widget.onDebugGrantXp;
+    final hasDebugActions =
+        debugMaxCoins != null || debugUnlockAll != null || debugGrantXp != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -87,6 +93,13 @@ class _ShopScreenState extends State<ShopScreen> {
               tooltip: 'Debug: unlock all items',
               onPressed: debugUnlockAll,
               icon: const Icon(Icons.lock_open_outlined),
+            ),
+          if (kDebugMode && _debugMode && debugGrantXp != null)
+            OutlinedButton.icon(
+              key: const Key('debug-grant-xp'),
+              icon: const Icon(Icons.bolt),
+              label: const Text('Grant XP to next level'),
+              onPressed: debugGrantXp,
             ),
           if (kDebugMode && _debugMode && debugMaxCoins != null)
             IconButton(

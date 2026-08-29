@@ -25,6 +25,10 @@ def user(uid: str = DEFAULT_USER) -> dict[str, Any]:
             "claimed": set(),
             "self_done": set(),
             "missions": [],
+            "goals": {},
+            "circle": None,
+            "display_name": None,
+            "cheers": [],
         }
     return _STATE[uid]
 

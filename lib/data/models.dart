@@ -373,3 +373,119 @@ class ShopItem {
     description: j['description'] as String,
   );
 }
+
+
+/// A large planned expense — concert tickets, a flight, a laptop.
+/// Saving toward something is not the same as blowing a budget, so the backend
+/// reserves this money before it judges any bucket.
+class Goal {
+  final String id, name, targetDate, headline;
+  final double targetAmount, savedSoFar, remaining;
+  final double perWeekNeeded, perMonthNeeded, shareOfDiscretionary;
+  final int daysLeft;
+  final double weeksLeft;
+  final bool onTrack;
+  final String? warning;
+
+  const Goal({
+    required this.id,
+    required this.name,
+    required this.targetAmount,
+    required this.targetDate,
+    required this.savedSoFar,
+    required this.remaining,
+    required this.daysLeft,
+    required this.weeksLeft,
+    required this.perWeekNeeded,
+    required this.perMonthNeeded,
+    required this.onTrack,
+    required this.shareOfDiscretionary,
+    required this.headline,
+    this.warning,
+  });
+
+  double get progress =>
+      targetAmount == 0 ? 0 : (savedSoFar / targetAmount).clamp(0.0, 1.0);
+  bool get funded => remaining <= 0;
+
+  factory Goal.fromJson(Map<String, dynamic> j) => Goal(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        targetAmount: (j['target_amount'] as num).toDouble(),
+        targetDate: j['target_date'] as String,
+        savedSoFar: (j['saved_so_far'] as num).toDouble(),
+        remaining: (j['remaining'] as num).toDouble(),
+        daysLeft: j['days_left'] as int,
+        weeksLeft: (j['weeks_left'] as num).toDouble(),
+        perWeekNeeded: (j['per_week_needed'] as num).toDouble(),
+        perMonthNeeded: (j['per_month_needed'] as num).toDouble(),
+        onTrack: j['on_track'] as bool,
+        shareOfDiscretionary: (j['share_of_discretionary'] as num).toDouble(),
+        headline: j['headline'] as String,
+        warning: j['warning'] as String?,
+      );
+}
+
+
+/// One row of a circle leaderboard.
+/// Deliberately carries no dollar figures — see the note on [Circle].
+class LeaderboardEntry {
+  final int rank, level, towerStage, streakDays;
+  final String displayName, trend;
+  final bool isYou;
+  final double adherence;
+  final String? badge;
+
+  const LeaderboardEntry({
+    required this.rank,
+    required this.displayName,
+    required this.isYou,
+    required this.adherence,
+    required this.level,
+    required this.towerStage,
+    required this.streakDays,
+    required this.trend,
+    this.badge,
+  });
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> j) => LeaderboardEntry(
+        rank: j['rank'] as int,
+        displayName: j['display_name'] as String,
+        isYou: j['is_you'] as bool,
+        adherence: (j['adherence'] as num).toDouble(),
+        level: j['level'] as int,
+        towerStage: j['tower_stage'] as int,
+        streakDays: j['streak_days'] as int,
+        trend: j['trend'] as String,
+        badge: j['badge'] as String?,
+      );
+}
+
+/// A study circle. Ranking is by adherence to each person's OWN plan, never by
+/// dollars saved — otherwise the table just ranks whose parents earn more.
+class Circle {
+  final String code, name, headline;
+  final int memberCount;
+  final int? yourRank;
+  final List<LeaderboardEntry> entries;
+
+  const Circle({
+    required this.code,
+    required this.name,
+    required this.memberCount,
+    required this.headline,
+    required this.entries,
+    this.yourRank,
+  });
+
+  factory Circle.fromJson(Map<String, dynamic> j) => Circle(
+        code: j['code'] as String,
+        name: j['name'] as String,
+        memberCount: j['member_count'] as int,
+        yourRank: j['your_rank'] as int?,
+        headline: j['headline'] as String,
+        entries: (j['entries'] as List)
+            .map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}

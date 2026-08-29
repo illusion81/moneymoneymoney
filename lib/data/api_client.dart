@@ -33,7 +33,13 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode): $message';
 }
 
+/// Override at build time so the app can point at a deployed backend:
+///   flutter run  --dart-define=API_BASE_URL=https://wealth-tower-api.onrender.com
+///   flutter build web --dart-define=API_BASE_URL=https://...
+const _envBase = String.fromEnvironment('API_BASE_URL');
+
 String _defaultBase() {
+  if (_envBase.isNotEmpty) return _envBase;
   if (kIsWeb) return 'http://localhost:8000';
   try {
     if (Platform.isAndroid) return 'http://10.0.2.2:8000';
@@ -77,11 +83,12 @@ class ApiClient {
         if (body != null) 'Content-Type': 'application/json',
       };
       final encoded = body == null ? null : jsonEncode(body);
-      r =
-          await (method == 'POST'
-                  ? _http.post(uri, headers: headers, body: encoded)
-                  : _http.get(uri, headers: headers))
-              .timeout(timeout);
+      r = await (switch (method) {
+        'POST' => _http.post(uri, headers: headers, body: encoded),
+        'DELETE' => _http.delete(uri, headers: headers),
+        _ => _http.get(uri, headers: headers),
+      })
+          .timeout(timeout);
     } on TimeoutException {
       throw ApiException(
         'The backend did not respond. Is uvicorn running on $baseUrl?',
@@ -165,6 +172,45 @@ class ApiClient {
     (await _send('POST', '/api/shop/buy', body: {'item_id': itemId}))
         as Map<String, dynamic>,
   );
+
+  // ---------------------------------------------------------------- social
+
+  Future<Circle> joinCircle({required String displayName, String code = 'UQ2026'}) async =>
+      Circle.fromJson((await _send('POST', '/api/social/join',
+          body: {'display_name': displayName, 'code': code})) as Map<String, dynamic>);
+
+  Future<Circle> leaderboard() async =>
+      Circle.fromJson(await _getObj('/api/social/leaderboard'));
+
+  Future<void> cheer(String toName, {String message = 'Keep going'}) =>
+      _send('POST', '/api/social/cheer',
+          query: {'to_name': toName, 'message': message});
+
+  // ---------------------------------------------------------------- goals
+
+  Future<List<Goal>> goals() async =>
+      (await _getList('/api/goals')).map((e) => Goal.fromJson(e)).toList();
+
+  /// [targetDate] is an ISO date: '2026-10-10'.
+  Future<Goal> addGoal({
+    required String name,
+    required double targetAmount,
+    required String targetDate,
+    double savedSoFar = 0,
+  }) async =>
+      Goal.fromJson((await _send('POST', '/api/goals', body: {
+        'name': name,
+        'target_amount': targetAmount,
+        'target_date': targetDate,
+        'saved_so_far': savedSoFar,
+      })) as Map<String, dynamic>);
+
+  Future<Goal> contributeToGoal(String goalId, double amount) async =>
+      Goal.fromJson((await _send('POST', '/api/goals/$goalId/contribute',
+          query: {'amount': amount})) as Map<String, dynamic>);
+
+  Future<void> deleteGoal(String goalId) =>
+      _send('DELETE', '/api/goals/$goalId');
 
   // ---------------------------------------------------------------- demo
 

@@ -9,6 +9,8 @@ import '../data/api_client.dart';
 import '../services/item_visuals.dart';
 import '../widgets/app_nav_bar.dart';
 import 'connect_bank_screen.dart';
+import 'circle_screen.dart';
+import 'goals_screen.dart';
 import 'spending_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -129,6 +131,22 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: widget.isPlusMember ? 'Plus member' : 'Get Plus',
             onPressed: widget.onShowPlus,
           ),
+          if (widget.api != null)
+            IconButton(
+              icon: const Icon(Icons.groups_outlined),
+              tooltip: 'Your circle',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => CircleScreen(api: widget.api!),
+              )),
+            ),
+          if (widget.api != null)
+            IconButton(
+              icon: const Icon(Icons.savings_outlined),
+              tooltip: 'Saving for something',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => GoalsScreen(api: widget.api!),
+              )),
+            ),
           if (widget.api != null)
             IconButton(
               icon: const Icon(Icons.receipt_long_outlined),

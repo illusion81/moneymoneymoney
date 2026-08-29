@@ -196,7 +196,10 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
         _currentQuestionIndex++;
       });
     } else {
-      // Quiz complete
+      // Quiz complete. onComplete tells main.dart to switch to
+      // AppView.moneyStyleResult, which renders the result screen WITH its two
+      // buttons wired up. Pushing our own copy here shadowed that one with a
+      // callback-less version, which is why both buttons did nothing.
       final result = _engine.generateResult(_session, moneyStyleQuestions);
       // Navigation is owned by the app shell: onComplete switches the view.
       // Pushing a route here as well stacked a second result screen on top,

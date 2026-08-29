@@ -31,6 +31,7 @@ import 'services/profile_suggestions.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
+import 'widgets/level_up_overlay.dart';
 import 'widgets/celebration_dialog.dart';
 
 void main() {
@@ -143,9 +144,13 @@ class _MyAppState extends State<MyApp> {
       case AppView.moneyStyleResult:
         return MoneyStyleResultScreen(
           result: _moneyStyleResult!,
-          onContinue: () => setState(
+          // The quiz tells them who they are; these are the two ways out of it.
+          // "Explore ideas" goes to the forest if they already have a plan,
+          // otherwise there is nothing to explore yet and they need the numbers.
+          onExplore: () => setState(
             () => _view = _report == null ? AppView.onboarding : AppView.forest,
           ),
+          onBuildPlan: () => setState(() => _view = AppView.onboarding),
         );
       case AppView.report:
         if (report == null) {
@@ -270,6 +275,7 @@ class _MyAppState extends State<MyApp> {
           onBack: () => setState(() => _view = AppView.forest),
           onDebugMaxCoins: _handleDebugMaxCoins,
           onDebugUnlockAll: _handleDebugUnlockAll,
+          onDebugGrantXp: _handleDebugGrantXp,
         );
     }
   }
@@ -342,6 +348,7 @@ class _MyAppState extends State<MyApp> {
 
     final beforeXp = _progression.totalXp;
     final beforeCoins = _progression.coinBalance;
+    final beforeLevel = _progression.level.level;
     var earnedXp = 0;
     var earnedCoins = 0;
 
@@ -466,6 +473,55 @@ class _MyAppState extends State<MyApp> {
   Future<double> _fetchTodaySpending() async {
     final transactions = await _apiClient.transactions(days: 7);
     return sumTodaySpending(transactions);
+  }
+
+  /// Fires the level-up overlay when the level number actually increased.
+  /// Called after any action that can award XP.
+  void _celebrateIfLevelled(
+    int beforeLevel, {
+    required int xp,
+    required int coins,
+  }) {
+    final after = _progression.level.level;
+    if (after <= beforeLevel) return;
+    final ctx = _messengerKey.currentContext;
+    if (ctx == null) return;
+    LevelUpOverlay.show(
+      ctx,
+      newLevel: after,
+      xpGained: xp,
+      coinsGained: coins,
+      unlockedLabel: after % 5 == 0 ? 'New tower stage unlocked' : null,
+    );
+  }
+
+  /// Debug only: grant enough XP to cross the next level boundary, so the
+  /// level-up moment can be tested and rehearsed without waiting for real
+  /// check-ins. Hidden outside debug builds.
+  void _handleDebugGrantXp() {
+    final beforeLevel = _progression.level.level;
+    final beforeXp = _progression.totalXp;
+    final beforeCoins = _progression.coinBalance;
+    setState(() {
+      _spendEvents.add(
+        RewardEvent(
+          date: DateTime.now(),
+          type: RewardEventType.debugGrant,
+          xp:
+              _progression.level.xpForNextLevel -
+              _progression.level.xpIntoLevel +
+              5,
+          coins: 40,
+          description: 'Debug: grant XP to next level',
+        ),
+      );
+      _recomputeProgression();
+    });
+    _celebrateIfLevelled(
+      beforeLevel,
+      xp: _progression.totalXp - beforeXp,
+      coins: _progression.coinBalance - beforeCoins,
+    );
   }
 
   void _handleDebugMaxCoins() {

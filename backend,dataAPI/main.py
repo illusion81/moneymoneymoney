@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 import store
 from models import (SurveyAnswers, Profile, ConnectionStatus, Account, Transaction,
+                    Goal, GoalCreate, JoinCircle, Circle, Cheer,
                     Plan, Mission, ClaimResult, Progression, TowerState, ShopItem,
                     ConsentStatus)
 from bank import MockProvider, BasiqProvider, BasiqError, CsvProvider
@@ -27,6 +28,8 @@ from engine.allocation import build_profile
 from engine.plan import build_plan
 from engine.missions import generate as generate_missions
 from engine.progression import progression as build_progression, tower as build_tower, SHOP
+from engine.goals import build_goal, monthly_commitment
+from engine.social import build_circle
 
 app = FastAPI(title="Wealth Tower API", version="0.1.0")
 app.add_middleware(
@@ -303,6 +306,106 @@ def get_consent() -> ConsentStatus:
     return consent_status()
 
 
+def _goals() -> list[Goal]:
+    profile = store.user(UID)["profile"]
+    if profile is None:
+        return []
+    raw = store.user(UID).setdefault("goals", {})
+    return [build_goal(g, profile, gid) for gid, g in raw.items()]
+
+
+# ---------------------------------------------------------------- social
+
+CIRCLE_NAMES = {"UQ2026": "UQ Weekend of Startups"}
+
+
+def _your_adherence(days: int = 30) -> float:
+    """Your own plan adherence — the only number the circle ever sees."""
+    profile = store.user(UID)["profile"]
+    if profile is None:
+        return 0.0
+    txns = _safe(provider().transactions, days)
+    plan = build_plan(txns, profile.allocation, profile.monthly_income, days,
+                      goal_reserve=monthly_commitment(_goals()))
+    return plan.adherence
+
+
+@app.post("/api/social/join", response_model=Circle)
+def join_circle(body: JoinCircle) -> Circle:
+    _require_profile()
+    u = store.user(UID)
+    u["display_name"] = body.display_name.strip()[:24] or "You"
+    u["circle"] = body.code.strip().upper() or "UQ2026"
+    return leaderboard()
+
+
+@app.get("/api/social/leaderboard", response_model=Circle)
+def leaderboard() -> Circle:
+    _require_profile()
+    u = store.user(UID)
+    code = u.get("circle") or "UQ2026"
+    prog = get_progression()
+    return build_circle(
+        code=code,
+        name=CIRCLE_NAMES.get(code, f"Circle {code}"),
+        you_display=u.get("display_name") or "You",
+        you_adherence=_your_adherence(),
+        you_level=prog.level,
+        you_streak=prog.streak_days,
+    )
+
+
+@app.post("/api/social/cheer", response_model=Cheer)
+def cheer(to_name: str, message: str = "Keep going") -> Cheer:
+    """Encouragement only. There is deliberately no way to send a taunt, and no
+    figures are attached — the whole point is that you cannot see what anyone
+    actually earns or spends."""
+    u = store.user(UID)
+    c = Cheer(from_name=u.get("display_name") or "You", to_name=to_name,
+              message=message[:80],
+              sent_at=dt.datetime.now().isoformat(timespec="seconds"))
+    u.setdefault("cheers", []).append(c)
+    return c
+
+
+@app.get("/api/social/cheers", response_model=list[Cheer])
+def cheers() -> list[Cheer]:
+    return store.user(UID).setdefault("cheers", [])
+
+
+@app.get("/api/goals", response_model=list[Goal])
+def list_goals() -> list[Goal]:
+    _require_profile()
+    return _goals()
+
+
+@app.post("/api/goals", response_model=Goal)
+def add_goal(body: GoalCreate) -> Goal:
+    profile = _require_profile()
+    g = build_goal(body, profile)
+    store.user(UID).setdefault("goals", {})[g.id] = body
+    store.user(UID).pop("last_plan", None)
+    return g
+
+
+@app.post("/api/goals/{goal_id}/contribute", response_model=Goal)
+def contribute(goal_id: str, amount: float) -> Goal:
+    profile = _require_profile()
+    raw = store.user(UID).setdefault("goals", {})
+    if goal_id not in raw:
+        raise HTTPException(404, "Unknown goal")
+    raw[goal_id].saved_so_far += amount
+    store.user(UID).pop("last_plan", None)
+    return build_goal(raw[goal_id], profile, goal_id)
+
+
+@app.delete("/api/goals/{goal_id}")
+def delete_goal(goal_id: str) -> dict:
+    store.user(UID).setdefault("goals", {}).pop(goal_id, None)
+    store.user(UID).pop("last_plan", None)
+    return {"ok": True}
+
+
 @app.get("/api/plan", response_model=Plan)
 def get_plan(days: int = 30) -> Plan:
     profile = _require_profile()
@@ -311,7 +414,8 @@ def get_plan(days: int = 30) -> Plan:
         frozen = u["last_plan"].model_copy(update={"stale": True})
         return frozen
     txns = _safe(provider().transactions, days)
-    plan = build_plan(txns, profile.allocation, profile.monthly_income, days)
+    plan = build_plan(txns, profile.allocation, profile.monthly_income, days,
+                      goal_reserve=monthly_commitment(_goals()))
     u["last_plan"] = plan          # keep the last good one so we can freeze, not erase
     return plan
 
@@ -322,8 +426,9 @@ def get_plan(days: int = 30) -> Plan:
 def get_missions(days: int = 30) -> list[Mission]:
     profile = _require_profile()
     txns = _safe(provider().transactions, days)
-    plan = build_plan(txns, profile.allocation, profile.monthly_income, days)
-    missions = generate_missions(profile, plan, txns)
+    plan = build_plan(txns, profile.allocation, profile.monthly_income, days,
+                      goal_reserve=monthly_commitment(_goals()))
+    missions = generate_missions(profile, plan, txns, goals=_goals())
     u = store.user(UID)
     claimed = u["claimed"]
     self_done = u.setdefault("self_done", set())
@@ -402,7 +507,8 @@ def get_tower(days: int = 30) -> TowerState:
         # the bank's — losing bank access must not cost them progress.
         return u["last_tower"].model_copy(update={"stale": True})
     txns = _safe(provider().transactions, days)
-    plan = build_plan(txns, profile.allocation, profile.monthly_income, days)
+    plan = build_plan(txns, profile.allocation, profile.monthly_income, days,
+                      goal_reserve=monthly_commitment(_goals()))
     tower = build_tower(plan, get_progression())
     u["last_tower"] = tower
     return tower

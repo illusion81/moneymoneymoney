@@ -27,32 +27,50 @@ void main() {
     addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
   });
 
-  testWidgets('the result screen offers a way to continue', (tester) async {
-    var continued = false;
+  testWidgets('both result-screen buttons lead somewhere', (tester) async {
+    var explored = false;
+    var planned = false;
 
     await tester.pumpWidget(
       MaterialApp(
         home: MoneyStyleResultScreen(
           result: _result(),
-          onContinue: () => continued = true,
+          onExplore: () => explored = true,
+          onBuildPlan: () => planned = true,
         ),
       ),
     );
 
-    final button = find.byKey(const Key('money-style-continue-button'));
-    expect(button, findsOneWidget);
-
-    await tester.ensureVisible(button);
+    final explore = find.widgetWithText(
+      FilledButton,
+      'Explore ideas that fit my style',
+    );
+    await tester.ensureVisible(explore);
     await tester.pump();
-    await tester.tap(button);
+    await tester.tap(explore);
     await tester.pumpAndSettle();
+    expect(explored, isTrue);
 
-    expect(continued, isTrue);
+    final plan = find.widgetWithText(
+      FilledButton,
+      'Build a practical plan with ranges',
+    );
+    await tester.ensureVisible(plan);
+    await tester.pump();
+    await tester.tap(plan);
+    await tester.pumpAndSettle();
+    expect(planned, isTrue);
   });
 
   testWidgets('no button silently does nothing', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: MoneyStyleResultScreen(result: _result(), onContinue: () {})),
+      MaterialApp(
+        home: MoneyStyleResultScreen(
+          result: _result(),
+          onExplore: () {},
+          onBuildPlan: () {},
+        ),
+      ),
     );
 
     // Every button on this screen must actually lead somewhere; a stub that

@@ -22,7 +22,7 @@ EXCLUDED_CATEGORIES = {"transfer", "transfer-in", "transfer-out"}
 
 
 def build_plan(txns: list[Transaction], alloc: Allocation, fallback_income: float,
-               period_days: int = 30) -> Plan:
+               period_days: int = 30, goal_reserve: float = 0.0) -> Plan:
     income = sum(t.amount for t in txns if t.amount > 0 and t.category == "income")
     if income <= 0:
         income = fallback_income
@@ -37,13 +37,18 @@ def build_plan(txns: list[Transaction], alloc: Allocation, fallback_income: floa
         elif t.bucket in ("invest", "stable") and t.category != "income":
             spend[t.bucket] += t.amount
 
+    # Money earmarked for a planned purchase is not spending money. Take it off
+    # the top so saving for a concert doesn't read as blowing the budget.
+    reserve = min(max(goal_reserve, 0.0), income * 0.6)
+    spendable = max(income - reserve, 1.0)
+
     alloc_map = alloc.model_dump()
     plans: list[BucketPlan] = []
     score = 0.0
 
     for b in BUCKETS:
         pct = float(alloc_map[b])
-        target = income * pct
+        target = spendable * pct
         actual = round(spend[b], 2)
         variance = round(actual - target, 2)
 
@@ -65,10 +70,15 @@ def build_plan(txns: list[Transaction], alloc: Allocation, fallback_income: floa
     adherence = round(min(max(score, 0.0), 1.0), 3)
     worst = min(plans, key=lambda p: (p.on_track, -abs(p.variance)))
 
+    if reserve > 0:
+        note = f" (${reserve:,.0f}/mo reserved for your goals)"
+    else:
+        note = ""
+
     if adherence >= 0.85:
-        headline = "Tower is growing. Every floor is holding."
+        headline = "Tower is growing. Every floor is holding." + note
     elif adherence >= 0.6:
-        headline = f"Mostly on plan — {worst.bucket} is the floor that's cracking."
+        headline = f"Mostly on plan — {worst.bucket} is the floor that's cracking." + note
     else:
         headline = f"Tower is losing height. {worst.bucket} is ${abs(worst.variance):.0f} off plan."
 
