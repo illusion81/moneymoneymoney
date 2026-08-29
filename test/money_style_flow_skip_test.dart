@@ -14,30 +14,30 @@ void main() {
     addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
   });
 
-  Widget harness({VoidCallback? onSkip}) {
+  Widget harness({VoidCallback? onSkipAll}) {
     return MaterialApp(
       home: MoneyStyleFlow(
         userId: 'u1',
         onComplete: (_) {},
-        onSkip: onSkip,
+        onSkipAll: onSkipAll,
       ),
     );
   }
 
   testWidgets('a skip option sits under Find My Style', (tester) async {
-    await tester.pumpWidget(harness(onSkip: () {}));
+    await tester.pumpWidget(harness(onSkipAll: () {}));
 
     expect(find.text('Find My Style'), findsOneWidget);
-    expect(find.byKey(const Key('money-style-skip-button')), findsOneWidget);
+    expect(find.byKey(const Key('skip-questionnaire-button')), findsOneWidget);
   });
 
   testWidgets('tapping skip calls onSkip without starting the quiz', (
     tester,
   ) async {
     var skipped = false;
-    await tester.pumpWidget(harness(onSkip: () => skipped = true));
+    await tester.pumpWidget(harness(onSkipAll: () => skipped = true));
 
-    final skip = find.byKey(const Key('money-style-skip-button'));
+    final skip = find.byKey(const Key('skip-questionnaire-button'));
     await tester.ensureVisible(skip);
     await tester.pump();
     await tester.tap(skip);
@@ -53,6 +53,6 @@ void main() {
   ) async {
     await tester.pumpWidget(harness());
 
-    expect(find.byKey(const Key('money-style-skip-button')), findsNothing);
+    expect(find.byKey(const Key('skip-questionnaire-button')), findsNothing);
   });
 }

@@ -2,9 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneymoneymoney/models/money_style.dart';
 import 'package:moneymoneymoney/screens/money_style_flow.dart';
-import 'package:moneymoneymoney/screens/money_style_quiz_screen.dart';
 
 void main() {
+  setUp(() {
+    final binding = TestWidgetsFlutterBinding.ensureInitialized();
+    binding.platformDispatcher.views.first.physicalSize = const Size(
+      1000,
+      2600,
+    );
+    binding.platformDispatcher.views.first.devicePixelRatio = 1;
+    addTearDown(binding.platformDispatcher.views.first.resetPhysicalSize);
+    addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
+  });
+
   testWidgets('existing session offers resume and start over', (tester) async {
     var cleared = false;
     final completion = MoneyStyleCompletion(
@@ -31,24 +41,49 @@ void main() {
     await tester.tap(find.text('Start over'));
     expect(cleared, isTrue);
   });
-  testWidgets('resumed session opens at first unanswered question', (
+
+  testWidgets('the entry screen offers a way out before any question', (
     tester,
   ) async {
-    final session = AnswerSession(
-      userId: 'u',
-      sessionId: 's',
-      selectedAnswers: {1: 0},
-      skippedQuestions: {2},
-    );
+    var skipped = 0;
     await tester.pumpWidget(
       MaterialApp(
-        home: MoneyStyleQuizScreen(
+        home: MoneyStyleFlow(
           userId: 'u',
-          initialSession: session,
           onComplete: (_) {},
+          onSkipAll: () => skipped++,
         ),
       ),
     );
-    expect(find.text('3 of 12'), findsOneWidget);
+
+    expect(find.byKey(const Key('skip-questionnaire-button')), findsOneWidget);
+    expect(find.textContaining('come back to this any time'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('skip-questionnaire-button')));
+    await tester.pump();
+    expect(skipped, 1);
+  });
+
+  testWidgets('the way out stays available once the quiz has started', (
+    tester,
+  ) async {
+    var skipped = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MoneyStyleFlow(
+          userId: 'u',
+          onComplete: (_) {},
+          onSkipAll: () => skipped++,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Find My Style'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 of 12'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('skip-questionnaire-button')));
+    await tester.pump();
+    expect(skipped, 1);
   });
 }

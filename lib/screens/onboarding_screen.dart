@@ -5,6 +5,7 @@ import '../models/finance_profile.dart';
 import '../services/profile_suggestions.dart';
 import '../services/risk_assessment.dart';
 import '../widgets/dev_gate.dart';
+import '../widgets/money_style_reminder_card.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
@@ -13,11 +14,19 @@ class OnboardingScreen extends StatefulWidget {
     this.onStartMoneyStyleQuiz,
     this.onCancel,
     this.onFetchSuggestion,
+    this.showMoneyStyleReminder = false,
+    this.onDismissMoneyStyleReminder,
   });
 
   final ValueChanged<FinanceProfile> onProfileSubmitted;
   final VoidCallback? onStartMoneyStyleQuiz;
   final VoidCallback? onCancel;
+
+  /// Shown when the user reached this form by skipping the Money Style
+  /// questionnaire, so the offer to complete it later is visible right where
+  /// they land rather than disappearing silently.
+  final bool showMoneyStyleReminder;
+  final VoidCallback? onDismissMoneyStyleReminder;
 
   /// Pulls suggested figures from the bank feed so the user confirms numbers
   /// rather than recalling them. Null when no backend is available; a
@@ -131,6 +140,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 24),
+                    if (widget.showMoneyStyleReminder &&
+                        widget.onStartMoneyStyleQuiz != null) ...[
+                      MoneyStyleReminderCard(
+                        onResume: widget.onStartMoneyStyleQuiz!,
+                        onDismiss: widget.onDismissMoneyStyleReminder,
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     if (_prefilledFromBank) ...[
                       Container(
                         key: const Key('prefill-banner'),

@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:moneymoneymoney/data/money_style_questions.dart';
 import 'package:moneymoneymoney/models/finance_profile.dart';
 import 'package:moneymoneymoney/models/money_style.dart';
+import 'package:moneymoneymoney/services/money_style_engine.dart';
 import 'package:moneymoneymoney/services/report_generator.dart';
 import 'package:moneymoneymoney/services/risk_assessment.dart';
 
@@ -13,6 +15,26 @@ const _profile = FinanceProfile(
   spendingPressure: SpendingPressure.medium,
 );
 
+/// Builds a real result from opener answers, so the payoff is exercised
+/// through the same path the app uses.
+MoneyStyleResult resultFrom(Map<int, PoleBand> bands) {
+  final session = AnswerSession(
+    userId: 'u',
+    sessionId: 's',
+    selectedAnswers: {
+      for (final entry in bands.entries)
+        entry.key: moneyStyleQuestionsById[entry.key]!.answers.indexWhere(
+          (a) => a.band == entry.value,
+        ),
+    },
+    shownQuestionIds: List<int>.from(bands.keys),
+  );
+  return const MoneyStyleEngine().generateResult(
+    session,
+    moneyStyleQuestionPool,
+  )!;
+}
+
 void main() {
   group('Money Style shapes the daily action', () {
     test('without a quiz result the actions are unchanged', () {
@@ -22,54 +44,72 @@ void main() {
       expect(without.dailyActions, explicitNull.dailyActions);
     });
 
-    test('a pause-style result adds a deliberation prompt', () {
+    test('the action names the habit the quiz found most critical', () {
       final report = ReportGenerator().generate(
         _profile,
-        style: styleActionFor(
-          decision: DecisionStylePole.pause,
-          support: SupportStylePole.selfDirected,
+        style: styleActionForResult(
+          resultFrom({
+            1: PoleBand.bad, // revolving debt is the worst score
+            2: PoleBand.mixed,
+            3: PoleBand.mixed,
+            4: PoleBand.mixed,
+            5: PoleBand.mixed,
+            6: PoleBand.mixed,
+          }),
         ),
       );
 
-      expect(report.dailyActions.join(' ').toLowerCase(), contains('before'));
+      expect(
+        report.dailyActions.join(' ').toLowerCase(),
+        contains('credit card'),
+      );
     });
 
-    test('a momentum-style result reads differently from a pause one', () {
-      final pause = ReportGenerator().generate(
+    test('a different critical habit produces a different action', () {
+      final debt = ReportGenerator().generate(
         _profile,
-        style: styleActionFor(
-          decision: DecisionStylePole.pause,
-          support: SupportStylePole.selfDirected,
+        style: styleActionForResult(
+          resultFrom({
+            1: PoleBand.bad,
+            2: PoleBand.mixed,
+            3: PoleBand.mixed,
+            4: PoleBand.mixed,
+            5: PoleBand.mixed,
+            6: PoleBand.mixed,
+          }),
         ),
       );
-      final momentum = ReportGenerator().generate(
+      final savings = ReportGenerator().generate(
         _profile,
-        style: styleActionFor(
-          decision: DecisionStylePole.momentum,
-          support: SupportStylePole.selfDirected,
+        style: styleActionForResult(
+          resultFrom({
+            1: PoleBand.mixed,
+            2: PoleBand.mixed,
+            3: PoleBand.mixed,
+            4: PoleBand.mixed,
+            5: PoleBand.bad,
+            6: PoleBand.mixed,
+          }),
         ),
       );
 
-      expect(pause.dailyActions, isNot(equals(momentum.dailyActions)));
+      expect(debt.dailyActions, isNot(equals(savings.dailyActions)));
     });
 
-    test('a collaborative result reads differently from a self-directed one', () {
-      final solo = ReportGenerator().generate(
-        _profile,
-        style: styleActionFor(
-          decision: DecisionStylePole.pause,
-          support: SupportStylePole.selfDirected,
-        ),
-      );
-      final shared = ReportGenerator().generate(
-        _profile,
-        style: styleActionFor(
-          decision: DecisionStylePole.pause,
-          support: SupportStylePole.collaborative,
-        ),
+    test('an all-positive result confirms the strongest habit instead', () {
+      final action = styleActionForResult(
+        resultFrom({
+          1: PoleBand.good,
+          2: PoleBand.mixed,
+          3: PoleBand.mixed,
+          4: PoleBand.mixed,
+          5: PoleBand.mixed,
+          6: PoleBand.mixed,
+        }),
       );
 
-      expect(solo.dailyActions, isNot(equals(shared.dailyActions)));
+      expect(action, isNotNull);
+      expect(action!.toLowerCase(), contains('already automated'));
     });
 
     test('the style action is added, not substituted for the goal actions', () {
@@ -77,8 +117,8 @@ void main() {
       final with_ = ReportGenerator().generate(
         _profile,
         style: styleActionFor(
-          decision: DecisionStylePole.momentum,
-          support: SupportStylePole.collaborative,
+          dimension: Dimension.subscriptionBlindness,
+          positive: false,
         ),
       );
 
