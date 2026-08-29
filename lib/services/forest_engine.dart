@@ -10,9 +10,13 @@ class ForestEngine {
     required bool actionCompleted,
   }) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
-    final previousDays = existingDays
-        .where((day) => !_isSameDate(day.date, normalizedDate))
-        .toList();
+    final previousDays = _withMissedDays(
+      existingDays
+          .where((day) => !_isSameDate(day.date, normalizedDate))
+          .toList(),
+      normalizedDate,
+      report.dailyBudget,
+    );
     final overBudget = spending > report.dailyBudget;
     final healthy = actionCompleted && !overBudget;
     final provisionalDays = [
@@ -32,7 +36,9 @@ class ForestEngine {
     ]..sort((a, b) => a.date.compareTo(b.date));
 
     final streak = _currentStreak(provisionalDays);
-    final day = provisionalDays.last;
+    final day = provisionalDays.firstWhere(
+      (day) => _isSameDate(day.date, normalizedDate),
+    );
     final updatedDay = ForestDay(
       date: day.date,
       status: day.status,
@@ -42,15 +48,46 @@ class ForestEngine {
       actionCompleted: day.actionCompleted,
       message: day.message,
     );
-    final updatedDays = [
-      ...provisionalDays.take(provisionalDays.length - 1),
-      updatedDay,
-    ];
+    final updatedDays = provisionalDays
+        .map((day) => _isSameDate(day.date, normalizedDate) ? updatedDay : day)
+        .toList();
 
     return CheckInResult(
       day: updatedDay,
       summary: summarize(updatedDays),
     );
+  }
+
+  List<ForestDay> _withMissedDays(
+    List<ForestDay> existingDays,
+    DateTime checkInDate,
+    double dailyBudget,
+  ) {
+    if (existingDays.isEmpty) {
+      return existingDays;
+    }
+
+    final orderedDays = [...existingDays]..sort((a, b) => a.date.compareTo(b.date));
+    final lastRecordedDate = orderedDays.last.date;
+    final missedDays = <ForestDay>[];
+    var missedDate = lastRecordedDate.add(const Duration(days: 1));
+
+    while (missedDate.isBefore(checkInDate)) {
+      missedDays.add(
+        ForestDay(
+          date: missedDate,
+          status: TreeStatus.withered,
+          treeLevel: 0,
+          spending: 0,
+          dailyBudget: dailyBudget,
+          actionCompleted: false,
+          message: 'Today withered because no check-in was completed.',
+        ),
+      );
+      missedDate = missedDate.add(const Duration(days: 1));
+    }
+
+    return [...orderedDays, ...missedDays];
   }
 
   ForestSummary summarize(List<ForestDay> days) {
