@@ -71,6 +71,17 @@ class SurveyAnswers {
       };
 }
 
+class MoneyStyleSubmission {
+  const MoneyStyleSubmission({required this.sessionId, required this.questionVersion, required this.selectedAnswers, required this.skippedQuestionIds, required this.answeredCount, this.confidenceTier, this.archetypeId});
+  final String sessionId, questionVersion;
+  final Map<String, String> selectedAnswers;
+  final List<int> skippedQuestionIds;
+  final int answeredCount;
+  final String? confidenceTier, archetypeId;
+  Map<String, dynamic> toJson() => {'session_id': sessionId, 'question_version': questionVersion, 'selected_answers': selectedAnswers, 'skipped_question_ids': skippedQuestionIds, 'answered_count': answeredCount, 'confidence_tier': confidenceTier, 'archetype_id': archetypeId};
+  factory MoneyStyleSubmission.fromJson(Map<String, dynamic> j) => MoneyStyleSubmission(sessionId: j['session_id'] as String, questionVersion: j['question_version'] as String, selectedAnswers: (j['selected_answers'] as Map).map((k,v) => MapEntry('$k','$v')), skippedQuestionIds: (j['skipped_question_ids'] as List).cast<int>(), answeredCount: j['answered_count'] as int, confidenceTier: j['confidence_tier'] as String?, archetypeId: j['archetype_id'] as String?);
+}
+
 class Account {
   final String id, name, kind, currency;
   final double balance;
