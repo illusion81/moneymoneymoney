@@ -71,9 +71,13 @@ class MoneyStyleEngine {
       if (breakerAnswer != null &&
           breakerAnswer.dimension == Dimension.moneyRhythm) {
         if (breakerAnswer.pole == MoneyRhythmPole.steady) {
-          updatedScores = updatedScores.copyWith(steadyCount: scores.steadyCount + 1);
+          updatedScores = updatedScores.copyWith(
+            steadyCount: scores.steadyCount + 1,
+          );
         } else {
-          updatedScores = updatedScores.copyWith(responsiveCount: scores.responsiveCount + 1);
+          updatedScores = updatedScores.copyWith(
+            responsiveCount: scores.responsiveCount + 1,
+          );
         }
       }
     }
@@ -84,9 +88,13 @@ class MoneyStyleEngine {
       if (breakerAnswer != null &&
           breakerAnswer.dimension == Dimension.decisionStyle) {
         if (breakerAnswer.pole == DecisionStylePole.pause) {
-          updatedScores = updatedScores.copyWith(pauseCount: updatedScores.pauseCount + 1);
+          updatedScores = updatedScores.copyWith(
+            pauseCount: updatedScores.pauseCount + 1,
+          );
         } else {
-          updatedScores = updatedScores.copyWith(momentumCount: updatedScores.momentumCount + 1);
+          updatedScores = updatedScores.copyWith(
+            momentumCount: updatedScores.momentumCount + 1,
+          );
         }
       }
     }
@@ -97,9 +105,13 @@ class MoneyStyleEngine {
       if (breakerAnswer != null &&
           breakerAnswer.dimension == Dimension.supportStyle) {
         if (breakerAnswer.pole == SupportStylePole.selfDirected) {
-          updatedScores = updatedScores.copyWith(selfCount: updatedScores.selfCount + 1);
+          updatedScores = updatedScores.copyWith(
+            selfCount: updatedScores.selfCount + 1,
+          );
         } else {
-          updatedScores = updatedScores.copyWith(collaborativeCount: updatedScores.collaborativeCount + 1);
+          updatedScores = updatedScores.copyWith(
+            collaborativeCount: updatedScores.collaborativeCount + 1,
+          );
         }
       }
     }
@@ -174,7 +186,11 @@ class MoneyStyleEngine {
     final isDecisionStylePause = decisionStyle == DecisionStylePole.pause;
     final isSupportStyleSelf = supportStyle == SupportStylePole.selfDirected;
 
-    return getArchetypeByPattern(isMoneyRhythmSteady, isDecisionStylePause, isSupportStyleSelf);
+    return getArchetypeByPattern(
+      isMoneyRhythmSteady,
+      isDecisionStylePause,
+      isSupportStyleSelf,
+    );
   }
 
   // Determine confidence tier based on number of answers

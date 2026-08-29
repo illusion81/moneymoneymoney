@@ -4,25 +4,27 @@ import 'package:moneymoneymoney/models/shop_item.dart';
 import 'package:moneymoneymoney/services/item_visuals.dart';
 import 'package:moneymoneymoney/services/shop_service.dart';
 
-ShopItem _item(String id) =>
-    kShopCatalog.firstWhere((item) => item.id == id);
+ShopItem _item(String id) => kShopCatalog.firstWhere((item) => item.id == id);
 
 void main() {
   group('treeSkinIcon', () {
-    test('classic oak escalates icon with level when no other skin equipped', () {
-      expect(
-        treeSkinIcon(equippedId: 'tree-classic-oak', level: 1),
-        Icons.eco,
-      );
-      expect(
-        treeSkinIcon(equippedId: 'tree-classic-oak', level: 2),
-        Icons.park,
-      );
-      expect(
-        treeSkinIcon(equippedId: 'tree-classic-oak', level: 3),
-        Icons.forest,
-      );
-    });
+    test(
+      'classic oak escalates icon with level when no other skin equipped',
+      () {
+        expect(
+          treeSkinIcon(equippedId: 'tree-classic-oak', level: 1),
+          Icons.eco,
+        );
+        expect(
+          treeSkinIcon(equippedId: 'tree-classic-oak', level: 2),
+          Icons.park,
+        );
+        expect(
+          treeSkinIcon(equippedId: 'tree-classic-oak', level: 3),
+          Icons.forest,
+        );
+      },
+    );
 
     test('a distinct skin overrides the level-based icon', () {
       expect(

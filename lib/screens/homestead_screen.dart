@@ -21,6 +21,7 @@ class HomesteadScreen extends StatefulWidget {
     required this.onPlace,
     required this.onRemove,
     required this.onShowForest,
+    required this.onShowSpending,
     required this.onShowCalendar,
     required this.onShowReport,
     required this.onShowAchievements,
@@ -37,6 +38,7 @@ class HomesteadScreen extends StatefulWidget {
   final void Function(String itemId, int row, int col) onPlace;
   final void Function(String itemId) onRemove;
   final VoidCallback onShowForest;
+  final VoidCallback onShowSpending;
   final VoidCallback onShowCalendar;
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
@@ -122,8 +124,9 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
         ],
       ),
       bottomNavigationBar: AppNavBar(
-        selectedIndex: 2,
+        selectedIndex: 3,
         onShowForest: widget.onShowForest,
+        onShowSpending: widget.onShowSpending,
         onShowCalendar: widget.onShowCalendar,
         onShowHomestead: () {},
         onShowAchievements: widget.onShowAchievements,

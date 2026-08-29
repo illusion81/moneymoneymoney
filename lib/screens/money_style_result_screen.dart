@@ -3,20 +3,14 @@ import 'package:flutter/material.dart';
 import '../models/money_style.dart';
 
 class MoneyStyleResultScreen extends StatelessWidget {
-  const MoneyStyleResultScreen({
-    super.key,
-    required this.result,
-  });
+  const MoneyStyleResultScreen({super.key, required this.result});
 
   final MoneyStyleResult result;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your Money Style'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Your Money Style'), elevation: 0),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -39,9 +33,9 @@ class MoneyStyleResultScreen extends StatelessWidget {
                 child: Text(
                   result.archetype.name,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xff173b2f),
-                      ),
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xff173b2f),
+                  ),
                 ),
               ),
 
@@ -51,9 +45,9 @@ class MoneyStyleResultScreen extends StatelessWidget {
                 child: Text(
                   result.archetype.playfulDescriptor,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
-                      ),
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
 
@@ -69,8 +63,8 @@ class MoneyStyleResultScreen extends StatelessWidget {
                     Text(
                       'Your Strengths',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     ...result.archetype.strengths.map(
@@ -81,7 +75,10 @@ class MoneyStyleResultScreen extends StatelessWidget {
                           children: [
                             Padding(
                               padding: const EdgeInsets.only(right: 12, top: 4),
-                              child: Text('•', style: Theme.of(context).textTheme.bodyLarge),
+                              child: Text(
+                                '•',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
                             ),
                             Expanded(
                               child: Text(
@@ -109,15 +106,15 @@ class MoneyStyleResultScreen extends StatelessWidget {
                     Text(
                       'What This Means',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       result.archetype.interpretation,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            height: 1.6,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(height: 1.6),
                     ),
                   ],
                 ),
@@ -148,8 +145,8 @@ class MoneyStyleResultScreen extends StatelessWidget {
                       Text(
                         '${result.totalAnswered} of 12 questions answered',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
@@ -166,7 +163,9 @@ class MoneyStyleResultScreen extends StatelessWidget {
                       onPressed: () {
                         // TODO: Navigate to ideas page
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Explore ideas - coming soon')),
+                          const SnackBar(
+                            content: Text('Explore ideas - coming soon'),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.lightbulb_outline),
@@ -177,7 +176,9 @@ class MoneyStyleResultScreen extends StatelessWidget {
                       onPressed: () {
                         // TODO: Navigate to plan builder
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Build a plan - coming soon')),
+                          const SnackBar(
+                            content: Text('Build a plan - coming soon'),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.edit_note),

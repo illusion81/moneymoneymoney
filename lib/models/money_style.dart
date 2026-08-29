@@ -54,12 +54,12 @@ class DimensionScores {
     int momentumCount = 0,
     int selfCount = 0,
     int collaborativeCount = 0,
-  })  : _steadyCount = steadyCount,
-        _responsiveCount = responsiveCount,
-        _pauseCount = pauseCount,
-        _momentumCount = momentumCount,
-        _selfCount = selfCount,
-        _collaborativeCount = collaborativeCount;
+  }) : _steadyCount = steadyCount,
+       _responsiveCount = responsiveCount,
+       _pauseCount = pauseCount,
+       _momentumCount = momentumCount,
+       _selfCount = selfCount,
+       _collaborativeCount = collaborativeCount;
 
   int _steadyCount;
   int _responsiveCount;
@@ -118,9 +118,9 @@ class AnswerSession {
     Map<int, int>? selectedAnswers,
     Set<int>? skippedQuestions,
     DateTime? timestamp,
-  })  : selectedAnswers = selectedAnswers ?? {},
-        skippedQuestions = skippedQuestions ?? {},
-        timestamp = timestamp ?? DateTime.now();
+  }) : selectedAnswers = selectedAnswers ?? {},
+       skippedQuestions = skippedQuestions ?? {},
+       timestamp = timestamp ?? DateTime.now();
 
   final String userId;
   final String sessionId;
@@ -146,7 +146,8 @@ class ArchetypeInfo {
   final String playfulDescriptor; // e.g., "The thoughtful steward"
   final List<String> strengths; // 3 bullet points
   final String interpretation; // Paragraph explaining the archetype
-  final String pattern; // "Steady Pause Self" / "Steady Pause Collaborative" / etc
+  final String
+  pattern; // "Steady Pause Self" / "Steady Pause Collaborative" / etc
 
   @override
   String toString() => name;

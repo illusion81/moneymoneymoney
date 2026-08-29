@@ -11,6 +11,7 @@ class ShopItem {
     required this.price,
     required this.requiredLevel,
     required this.isDefault,
+    this.plusOnly = false,
   });
 
   final String id;
@@ -20,19 +21,26 @@ class ShopItem {
   final int price;
   final int requiredLevel;
   final bool isDefault;
+
+  /// Premium item: buying it requires an active Plus membership on top of
+  /// the usual coin and level cost.
+  final bool plusOnly;
 }
 
 class ShopState {
-  const ShopState({
-    required this.ownedItemIds,
-    required this.equippedItemIds,
-  });
+  const ShopState({required this.ownedItemIds, required this.equippedItemIds});
 
   final Set<String> ownedItemIds;
   final Map<ShopItemCategory, String> equippedItemIds;
 }
 
-enum PurchaseFailure { alreadyOwned, insufficientCoins, levelTooLow, unknownItem }
+enum PurchaseFailure {
+  alreadyOwned,
+  insufficientCoins,
+  levelTooLow,
+  plusRequired,
+  unknownItem,
+}
 
 class PurchaseResult {
   const PurchaseResult({
@@ -97,6 +105,7 @@ const List<ShopItem> kShopCatalog = [
     price: 600,
     requiredLevel: 8,
     isDefault: false,
+    plusOnly: true,
   ),
   ShopItem(
     id: 'ground-meadow',
@@ -124,6 +133,7 @@ const List<ShopItem> kShopCatalog = [
     price: 260,
     requiredLevel: 4,
     isDefault: false,
+    plusOnly: true,
   ),
   ShopItem(
     id: 'sky-clear-day',
@@ -151,6 +161,7 @@ const List<ShopItem> kShopCatalog = [
     price: 400,
     requiredLevel: 6,
     isDefault: false,
+    plusOnly: true,
   ),
 
   // Decorations are placed in the homestead rather than equipped, so
@@ -208,5 +219,6 @@ const List<ShopItem> kShopCatalog = [
     price: 450,
     requiredLevel: 6,
     isDefault: false,
+    plusOnly: true,
   ),
 ];

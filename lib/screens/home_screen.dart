@@ -23,6 +23,9 @@ class HomeScreen extends StatefulWidget {
     required this.onShowReport,
     required this.onShowAchievements,
     required this.onShowShop,
+    required this.onShowSpending,
+    required this.onShowPlus,
+    required this.isPlusMember,
     required this.onShowCalendar,
     required this.onShowHomestead,
     required this.onFetchTodaySpending,
@@ -36,6 +39,7 @@ class HomeScreen extends StatefulWidget {
   final ProgressionState progression;
   final ShopState shopState;
   final String? lastEarnedSummary;
+
   /// When supplied, the screen can link a bank and pull real spending
   /// instead of asking the user to type it.
   final ApiClient? api;
@@ -44,6 +48,9 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
   final VoidCallback onShowShop;
+  final VoidCallback onShowSpending;
+  final VoidCallback onShowPlus;
+  final bool isPlusMember;
   final VoidCallback onShowCalendar;
   final VoidCallback onShowHomestead;
   final Future<double> Function() onFetchTodaySpending;
@@ -111,19 +118,34 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
+          IconButton(
+            key: const Key('get-plus-button'),
+            icon: Icon(
+              widget.isPlusMember
+                  ? Icons.workspace_premium
+                  : Icons.workspace_premium_outlined,
+              color: const Color(0xffc79a33),
+            ),
+            tooltip: widget.isPlusMember ? 'Plus member' : 'Get Plus',
+            onPressed: widget.onShowPlus,
+          ),
           if (widget.api != null)
             IconButton(
               icon: const Icon(Icons.receipt_long_outlined),
               tooltip: 'Where your money went',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => SpendingScreen(api: widget.api!),
-              )),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SpendingScreen(api: widget.api!),
+                ),
+              ),
             ),
           if (widget.api != null)
             IconButton(
-              icon: Icon(_bankConnected
-                  ? Icons.account_balance
-                  : Icons.account_balance_outlined),
+              icon: Icon(
+                _bankConnected
+                    ? Icons.account_balance
+                    : Icons.account_balance_outlined,
+              ),
               tooltip: _bankConnected ? 'Bank connected' : 'Connect your bank',
               onPressed: _openConnectBank,
             ),
@@ -154,6 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: AppNavBar(
         selectedIndex: 0,
         onShowForest: () {},
+        onShowSpending: widget.onShowSpending,
         onShowCalendar: widget.onShowCalendar,
         onShowHomestead: widget.onShowHomestead,
         onShowAchievements: widget.onShowAchievements,

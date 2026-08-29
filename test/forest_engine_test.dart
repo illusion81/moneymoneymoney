@@ -86,28 +86,31 @@ void main() {
       expect(unlocked, contains('Budget Guardian'));
     });
 
-    test('inserts withered missed days and resets streak across calendar gaps', () {
-      final engine = ForestEngine();
-      final first = engine.checkIn(
-        existingDays: const [],
-        report: report,
-        date: DateTime(2026, 8, 27),
-        spending: 30,
-      );
-      final third = engine.checkIn(
-        existingDays: first.summary.days,
-        report: report,
-        date: DateTime(2026, 8, 29),
-        spending: 30,
-      );
+    test(
+      'inserts withered missed days and resets streak across calendar gaps',
+      () {
+        final engine = ForestEngine();
+        final first = engine.checkIn(
+          existingDays: const [],
+          report: report,
+          date: DateTime(2026, 8, 27),
+          spending: 30,
+        );
+        final third = engine.checkIn(
+          existingDays: first.summary.days,
+          report: report,
+          date: DateTime(2026, 8, 29),
+          spending: 30,
+        );
 
-      expect(third.summary.days, hasLength(3));
-      expect(third.summary.days[1].date, DateTime(2026, 8, 28));
-      expect(third.summary.days[1].status, TreeStatus.withered);
-      expect(third.summary.currentStreak, 1);
-      expect(third.summary.healthyTreeCount, 2);
-      expect(third.summary.witheredTreeCount, 1);
-    });
+        expect(third.summary.days, hasLength(3));
+        expect(third.summary.days[1].date, DateTime(2026, 8, 28));
+        expect(third.summary.days[1].status, TreeStatus.withered);
+        expect(third.summary.currentStreak, 1);
+        expect(third.summary.healthyTreeCount, 2);
+        expect(third.summary.witheredTreeCount, 1);
+      },
+    );
 
     test('returns the checked-in day when updating an earlier date', () {
       final engine = ForestEngine();
@@ -148,20 +151,23 @@ void main() {
       ];
     }
 
-    test('a withered day within 7 days quotes a cost of 60 on the first restoration', () {
-      final engine = ForestEngine();
-      final witheredDate = DateTime(2026, 8, 25);
-      final now = DateTime(2026, 8, 29);
+    test(
+      'a withered day within 7 days quotes a cost of 60 on the first restoration',
+      () {
+        final engine = ForestEngine();
+        final witheredDate = DateTime(2026, 8, 25);
+        final now = DateTime(2026, 8, 29);
 
-      final quote = engine.quoteRestoration(
-        days: witheredDayList(witheredDate),
-        dayDate: witheredDate,
-        now: now,
-      );
+        final quote = engine.quoteRestoration(
+          days: witheredDayList(witheredDate),
+          dayDate: witheredDate,
+          now: now,
+        );
 
-      expect(quote.eligible, isTrue);
-      expect(quote.cost, 60);
-    });
+        expect(quote.eligible, isTrue);
+        expect(quote.cost, 60);
+      },
+    );
 
     test('the second restoration in the window quotes 150', () {
       final engine = ForestEngine();
@@ -297,119 +303,137 @@ void main() {
     });
 
     test(
-        'restoration sets status to restored, repairs the streak, decrements the withered count, and does not increment the healthy count',
-        () {
-      final engine = ForestEngine();
-      final witheredDate = DateTime(2026, 8, 29);
-      final days = witheredDayList(witheredDate);
+      'restoration sets status to restored, repairs the streak, decrements the withered count, and does not increment the healthy count',
+      () {
+        final engine = ForestEngine();
+        final witheredDate = DateTime(2026, 8, 29);
+        final days = witheredDayList(witheredDate);
 
-      final result = engine.restoreDay(
-        days: days,
-        dayDate: witheredDate,
-        now: witheredDate,
-        recoveryNote: 'Spent within budget the next day',
-        coinBalance: 200,
-      );
+        final result = engine.restoreDay(
+          days: days,
+          dayDate: witheredDate,
+          now: witheredDate,
+          recoveryNote: 'Spent within budget the next day',
+          coinBalance: 200,
+        );
 
-      expect(result.success, isTrue);
-      expect(result.summary.days.single.status, TreeStatus.restored);
-      expect(result.summary.days.single.treeLevel, 1);
-      expect(result.summary.currentStreak, 1);
-      expect(result.summary.witheredTreeCount, 0);
-      expect(result.summary.healthyTreeCount, 0);
-      expect(result.summary.restoredTreeCount, 1);
-      expect(result.spendEvent, isNotNull);
-      expect(result.spendEvent!.coins, -60);
-    });
+        expect(result.success, isTrue);
+        expect(result.summary.days.single.status, TreeStatus.restored);
+        expect(result.summary.days.single.treeLevel, 1);
+        expect(result.summary.currentStreak, 1);
+        expect(result.summary.witheredTreeCount, 0);
+        expect(result.summary.healthyTreeCount, 0);
+        expect(result.summary.restoredTreeCount, 1);
+        expect(result.spendEvent, isNotNull);
+        expect(result.spendEvent!.coins, -60);
+      },
+    );
 
-    test('restoration with an empty note is refused and leaves state unchanged', () {
-      final engine = ForestEngine();
-      final witheredDate = DateTime(2026, 8, 29);
-      final days = witheredDayList(witheredDate);
+    test(
+      'restoration with an empty note is refused and leaves state unchanged',
+      () {
+        final engine = ForestEngine();
+        final witheredDate = DateTime(2026, 8, 29);
+        final days = witheredDayList(witheredDate);
 
-      final result = engine.restoreDay(
-        days: days,
-        dayDate: witheredDate,
-        now: witheredDate,
-        recoveryNote: '   ',
-        coinBalance: 200,
-      );
+        final result = engine.restoreDay(
+          days: days,
+          dayDate: witheredDate,
+          now: witheredDate,
+          recoveryNote: '   ',
+          coinBalance: 200,
+        );
 
-      expect(result.success, isFalse);
-      expect(result.failureReason, isNotNull);
-      expect(result.spendEvent, isNull);
-      expect(result.summary.days.single.status, TreeStatus.withered);
-    });
+        expect(result.success, isFalse);
+        expect(result.failureReason, isNotNull);
+        expect(result.spendEvent, isNull);
+        expect(result.summary.days.single.status, TreeStatus.withered);
+      },
+    );
 
-    test('Recovery Day still unlocks for a healthy day following a restored day', () {
-      final engine = ForestEngine();
-      final witheredDate = DateTime(2026, 8, 28);
-      final days = witheredDayList(witheredDate);
+    test(
+      'Recovery Day still unlocks for a healthy day following a restored day',
+      () {
+        final engine = ForestEngine();
+        final witheredDate = DateTime(2026, 8, 28);
+        final days = witheredDayList(witheredDate);
 
-      final restoreResult = engine.restoreDay(
-        days: days,
-        dayDate: witheredDate,
-        now: witheredDate,
-        recoveryNote: 'Getting back on track',
-        coinBalance: 200,
-      );
+        final restoreResult = engine.restoreDay(
+          days: days,
+          dayDate: witheredDate,
+          now: witheredDate,
+          recoveryNote: 'Getting back on track',
+          coinBalance: 200,
+        );
 
-      final checkInResult = engine.checkIn(
-        existingDays: restoreResult.summary.days,
-        report: report,
-        date: DateTime(2026, 8, 29),
-        spending: 20,
-      );
+        final checkInResult = engine.checkIn(
+          existingDays: restoreResult.summary.days,
+          report: report,
+          date: DateTime(2026, 8, 29),
+          spending: 20,
+        );
 
-      final recoveryDay = checkInResult.summary.achievements
-          .firstWhere((achievement) => achievement.id == 'recovery-day');
+        final recoveryDay = checkInResult.summary.achievements.firstWhere(
+          (achievement) => achievement.id == 'recovery-day',
+        );
 
-      expect(recoveryDay.unlocked, isTrue);
-    });
+        expect(recoveryDay.unlocked, isTrue);
+      },
+    );
   });
 
   group('Progression/achievement convergence', () {
     test(
-        'achievement unlock → level up → Seedling Scholar unlock → more XP converges within 6 passes',
-        () {
-      final engine = ForestEngine();
-      final progressionEngine = ProgressionEngine();
+      'achievement unlock → level up → Seedling Scholar unlock → more XP converges within 6 passes',
+      () {
+        final engine = ForestEngine();
+        final progressionEngine = ProgressionEngine();
 
-      var days = <ForestDay>[];
-      var achievements = <Achievement>[];
-      var progression = progressionEngine.compute(
-        days: days,
-        achievements: achievements,
-        spendEvents: const [],
-      );
-
-      var stable = false;
-      var passCount = 0;
-      for (passCount = 0; passCount < 6; passCount++) {
-        final newProgression = progressionEngine.compute(
+        var days = <ForestDay>[];
+        var achievements = <Achievement>[];
+        var progression = progressionEngine.compute(
           days: days,
           achievements: achievements,
           spendEvents: const [],
         );
-        final newSummary = engine.summarize(
-          days,
-          progression: newProgression,
-          shopState: null,
-        );
-        stable = newProgression.totalXp == progression.totalXp &&
-            _sameUnlockState(newSummary.achievements, achievements);
 
-        progression = newProgression;
-        achievements = newSummary.achievements;
+        var stable = false;
+        var passCount = 0;
+        for (passCount = 0; passCount < 6; passCount++) {
+          final newProgression = progressionEngine.compute(
+            days: days,
+            achievements: achievements,
+            spendEvents: const [],
+          );
+          final newSummary = engine.summarize(
+            days,
+            progression: newProgression,
+            shopState: null,
+          );
+          stable =
+              newProgression.totalXp == progression.totalXp &&
+              _sameUnlockState(newSummary.achievements, achievements);
 
-        if (stable) {
-          break;
+          progression = newProgression;
+          achievements = newSummary.achievements;
+
+          if (stable) {
+            break;
+          }
         }
-      }
 
-      expect(stable, isTrue, reason: 'Should converge within 6 passes, took $passCount');
-      expect(passCount, lessThan(6), reason: 'Should converge before reaching pass budget');
-    });
+        expect(
+          stable,
+          isTrue,
+          reason: 'Should converge within 6 passes, took $passCount',
+        );
+        expect(
+          passCount,
+          lessThan(6),
+          reason: 'Should converge before reaching pass budget',
+        );
+      },
+    );
   });
 }
 

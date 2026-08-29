@@ -18,10 +18,7 @@ const _progression = ProgressionState(
   ledger: [],
 );
 
-Widget _shop({
-  VoidCallback? onDebugMaxCoins,
-  VoidCallback? onDebugUnlockAll,
-}) {
+Widget _shop({VoidCallback? onDebugMaxCoins, VoidCallback? onDebugUnlockAll}) {
   return MaterialApp(
     home: ShopScreen(
       progression: _progression,
@@ -29,6 +26,8 @@ Widget _shop({
       onPurchase: (_) {},
       onEquip: (_) {},
       onBack: () {},
+      isPlusMember: false,
+      onShowPlus: () {},
       onDebugMaxCoins: onDebugMaxCoins,
       onDebugUnlockAll: onDebugUnlockAll,
     ),
@@ -50,7 +49,9 @@ void main() {
   testWidgets('debug actions are hidden until debug mode is switched on', (
     tester,
   ) async {
-    await tester.pumpWidget(_shop(onDebugMaxCoins: () {}, onDebugUnlockAll: () {}));
+    await tester.pumpWidget(
+      _shop(onDebugMaxCoins: () {}, onDebugUnlockAll: () {}),
+    );
 
     expect(find.byKey(const Key('debug-mode-toggle')), findsOneWidget);
     expect(find.byKey(const Key('debug-max-coins-button')), findsNothing);
@@ -60,7 +61,9 @@ void main() {
   testWidgets('switching debug mode on reveals the debug actions', (
     tester,
   ) async {
-    await tester.pumpWidget(_shop(onDebugMaxCoins: () {}, onDebugUnlockAll: () {}));
+    await tester.pumpWidget(
+      _shop(onDebugMaxCoins: () {}, onDebugUnlockAll: () {}),
+    );
 
     await tester.tap(find.byKey(const Key('debug-mode-toggle')));
     await tester.pumpAndSettle();
@@ -72,7 +75,9 @@ void main() {
   testWidgets('switching debug mode back off hides the debug actions again', (
     tester,
   ) async {
-    await tester.pumpWidget(_shop(onDebugMaxCoins: () {}, onDebugUnlockAll: () {}));
+    await tester.pumpWidget(
+      _shop(onDebugMaxCoins: () {}, onDebugUnlockAll: () {}),
+    );
 
     await tester.tap(find.byKey(const Key('debug-mode-toggle')));
     await tester.pumpAndSettle();

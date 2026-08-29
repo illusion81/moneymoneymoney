@@ -14,6 +14,8 @@ class ShopScreen extends StatefulWidget {
     required this.onPurchase,
     required this.onEquip,
     required this.onBack,
+    required this.isPlusMember,
+    required this.onShowPlus,
     this.onDebugMaxCoins,
     this.onDebugUnlockAll,
   });
@@ -23,6 +25,11 @@ class ShopScreen extends StatefulWidget {
   final void Function(String itemId) onPurchase;
   final void Function(String itemId) onEquip;
   final VoidCallback onBack;
+
+  /// Plus-only items stay locked behind a membership prompt until this is
+  /// true; the lock opens the Plus screen rather than attempting a buy.
+  final bool isPlusMember;
+  final VoidCallback onShowPlus;
 
   /// Testing aids, only ever shown in debug builds (gated by [kDebugMode])
   /// and only while the user switches debug mode on — never real
@@ -63,7 +70,9 @@ class _ShopScreenState extends State<ShopScreen> {
           if (kDebugMode && hasDebugActions)
             IconButton(
               key: const Key('debug-mode-toggle'),
-              tooltip: _debugMode ? 'Turn debug mode off' : 'Turn debug mode on',
+              tooltip: _debugMode
+                  ? 'Turn debug mode off'
+                  : 'Turn debug mode on',
               onPressed: () => setState(() => _debugMode = !_debugMode),
               icon: Icon(
                 _debugMode
@@ -105,8 +114,9 @@ class _ShopScreenState extends State<ShopScreen> {
                     children: [
                       Text(
                         'Level ${progression.level.level}',
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const Spacer(),
                       const Icon(
@@ -126,9 +136,9 @@ class _ShopScreenState extends State<ShopScreen> {
                 for (final category in ShopItemCategory.values) ...[
                   Text(
                     _categoryLabel(category),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   for (final item in shopService.itemsFor(category))
@@ -138,6 +148,8 @@ class _ShopScreenState extends State<ShopScreen> {
                       equipped:
                           shopState.equippedItemIds[item.category] == item.id,
                       progression: progression,
+                      isPlusMember: widget.isPlusMember,
+                      onShowPlus: widget.onShowPlus,
                       onPurchase: () => widget.onPurchase(item.id),
                       onEquip: () => widget.onEquip(item.id),
                     ),
@@ -176,6 +188,8 @@ class _ShopItemCard extends StatelessWidget {
     required this.owned,
     required this.equipped,
     required this.progression,
+    required this.isPlusMember,
+    required this.onShowPlus,
     required this.onPurchase,
     required this.onEquip,
   });
@@ -184,6 +198,8 @@ class _ShopItemCard extends StatelessWidget {
   final bool owned;
   final bool equipped;
   final ProgressionState progression;
+  final bool isPlusMember;
+  final VoidCallback onShowPlus;
   final VoidCallback onPurchase;
   final VoidCallback onEquip;
 
@@ -216,9 +232,18 @@ class _ShopItemCard extends StatelessWidget {
       if (isDecoration) {
         return const Chip(label: Text('Owned'));
       }
-      return OutlinedButton(
-        onPressed: onEquip,
-        child: const Text('Equip'),
+      return OutlinedButton(onPressed: onEquip, child: const Text('Equip'));
+    }
+    if (item.plusOnly && !isPlusMember) {
+      return OutlinedButton.icon(
+        key: Key('plus-lock-${item.id}'),
+        onPressed: onShowPlus,
+        icon: const Icon(Icons.lock, size: 16),
+        label: const Text('Plus'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xffc79a33),
+          side: const BorderSide(color: Color(0xffc79a33)),
+        ),
       );
     }
     if (levelLocked) {

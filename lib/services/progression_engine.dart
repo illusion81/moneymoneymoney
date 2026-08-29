@@ -90,8 +90,9 @@ class ProgressionEngine {
       runningStreak = streakAfterToday;
     }
 
-    final unlockDate =
-        orderedDays.isNotEmpty ? orderedDays.last.date : DateTime(1970, 1, 1);
+    final unlockDate = orderedDays.isNotEmpty
+        ? orderedDays.last.date
+        : DateTime(1970, 1, 1);
     for (final achievement in achievements) {
       if (!achievement.unlocked) {
         continue;

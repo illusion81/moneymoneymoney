@@ -21,7 +21,9 @@ import 'screens/money_style_flow.dart';
 import 'screens/money_style_result_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
+import 'screens/plus_screen.dart';
 import 'screens/shop_screen.dart';
+import 'screens/spending_screen.dart';
 import 'services/bank_spending_service.dart';
 import 'services/forest_engine.dart';
 import 'services/home_layout_service.dart';
@@ -41,6 +43,8 @@ enum AppView {
   report,
   forest,
   calendar,
+  spending,
+  plus,
   homestead,
   achievements,
   shop,
@@ -82,6 +86,9 @@ class _MyAppState extends State<MyApp> {
   AppView _view = AppView.onboarding;
   String? _lastEarnedSummary;
   bool _planStarted = false;
+
+  /// Demo-only membership flag — see PlusScreen; no real payment exists.
+  bool _isPlusMember = false;
 
   _MyAppState() {
     _shopState = _shopService.initialState();
@@ -168,6 +175,9 @@ class _MyAppState extends State<MyApp> {
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
+          onShowSpending: () => setState(() => _view = AppView.spending),
+          onShowPlus: () => setState(() => _view = AppView.plus),
+          isPlusMember: _isPlusMember,
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
           onFetchTodaySpending: _fetchTodaySpending,
@@ -178,11 +188,28 @@ class _MyAppState extends State<MyApp> {
           summary: _summary,
           shopState: _shopState,
           onShowForest: () => setState(() => _view = AppView.forest),
+          onShowSpending: () => setState(() => _view = AppView.spending),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
           onShowReport: () => setState(() => _view = AppView.report),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
+        );
+      case AppView.spending:
+        return SpendingScreen(
+          api: _apiClient,
+          onShowForest: () => setState(() => _view = AppView.forest),
+          onShowCalendar: () => setState(() => _view = AppView.calendar),
+          onShowHomestead: () => setState(() => _view = AppView.homestead),
+          onShowAchievements: () =>
+              setState(() => _view = AppView.achievements),
+        );
+      case AppView.plus:
+        return PlusScreen(
+          isPlusMember: _isPlusMember,
+          onSubscribe: _handleSubscribePlus,
+          onCancelMembership: _handleCancelPlus,
+          onBack: () => setState(() => _view = AppView.forest),
         );
       case AppView.homestead:
         return HomesteadScreen(
@@ -192,6 +219,7 @@ class _MyAppState extends State<MyApp> {
           onPlace: _handlePlaceDecoration,
           onRemove: _handleRemoveDecoration,
           onShowForest: () => setState(() => _view = AppView.forest),
+          onShowSpending: () => setState(() => _view = AppView.spending),
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowReport: () => setState(() => _view = AppView.report),
           onShowAchievements: () =>
@@ -210,6 +238,7 @@ class _MyAppState extends State<MyApp> {
           summary: _summary,
           progression: _progression,
           onShowForest: () => setState(() => _view = AppView.forest),
+          onShowSpending: () => setState(() => _view = AppView.spending),
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
         );
@@ -225,6 +254,8 @@ class _MyAppState extends State<MyApp> {
           shopState: _shopState,
           onPurchase: _handlePurchase,
           onEquip: _handleEquip,
+          isPlusMember: _isPlusMember,
+          onShowPlus: () => setState(() => _view = AppView.plus),
           onBack: () => setState(() => _view = AppView.forest),
           onDebugMaxCoins: _handleDebugMaxCoins,
           onDebugUnlockAll: _handleDebugUnlockAll,
@@ -346,6 +377,7 @@ class _MyAppState extends State<MyApp> {
       itemId: itemId,
       state: _shopState,
       progression: _progression,
+      isPlusMember: _isPlusMember,
     );
 
     if (!result.success) {
@@ -422,6 +454,16 @@ class _MyAppState extends State<MyApp> {
       );
       _recomputeProgression();
     });
+  }
+
+  void _handleSubscribePlus() {
+    setState(() => _isPlusMember = true);
+    _showMessage('Plus activated (demo — no payment was taken).');
+  }
+
+  void _handleCancelPlus() {
+    setState(() => _isPlusMember = false);
+    _showMessage('Plus membership cancelled.');
   }
 
   void _handleDebugUnlockAll() {

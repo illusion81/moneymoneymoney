@@ -18,7 +18,12 @@ const _testReport = WealthReport(
 
 const _testProgression = ProgressionState(
   totalXp: 0,
-  level: LevelProgress(level: 1, xpIntoLevel: 0, xpForNextLevel: 100, fraction: 0),
+  level: LevelProgress(
+    level: 1,
+    xpIntoLevel: 0,
+    xpForNextLevel: 100,
+    fraction: 0,
+  ),
   coinBalance: 0,
   lifetimeCoinsEarned: 0,
   lifetimeCoinsSpent: 0,
@@ -37,6 +42,9 @@ Widget _harness({required Future<double> Function() onFetchTodaySpending}) {
       onShowReport: () {},
       onShowAchievements: () {},
       onShowShop: () {},
+      onShowSpending: () {},
+      onShowPlus: () {},
+      isPlusMember: false,
       onShowCalendar: () {},
       onShowHomestead: () {},
       onFetchTodaySpending: onFetchTodaySpending,
@@ -57,41 +65,44 @@ void main() {
   });
 
   testWidgets('spending field starts editable in manual mode', (tester) async {
-    await tester.pumpWidget(
-      _harness(onFetchTodaySpending: () async => 0),
-    );
+    await tester.pumpWidget(_harness(onFetchTodaySpending: () async => 0));
 
-    final field = tester.widget<TextField>(find.byKey(const Key('spending-field')));
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('spending-field')),
+    );
     expect(field.readOnly, isFalse);
   });
 
   testWidgets('switching to bank mode fetches and fills the spending field', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _harness(onFetchTodaySpending: () async => 19.75),
-    );
+    await tester.pumpWidget(_harness(onFetchTodaySpending: () async => 19.75));
 
     await tester.tap(find.byKey(const Key('spending-mode-bank')));
     await tester.pumpAndSettle();
 
-    final field = tester.widget<TextField>(find.byKey(const Key('spending-field')));
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('spending-field')),
+    );
     expect(field.readOnly, isTrue);
     expect(find.text('19.75'), findsOneWidget);
   });
 
-  testWidgets('a failed bank fetch reverts to manual mode with an error message', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _harness(onFetchTodaySpending: () async => throw Exception('offline')),
-    );
+  testWidgets(
+    'a failed bank fetch reverts to manual mode with an error message',
+    (tester) async {
+      await tester.pumpWidget(
+        _harness(onFetchTodaySpending: () async => throw Exception('offline')),
+      );
 
-    await tester.tap(find.byKey(const Key('spending-mode-bank')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('spending-mode-bank')));
+      await tester.pumpAndSettle();
 
-    final field = tester.widget<TextField>(find.byKey(const Key('spending-field')));
-    expect(field.readOnly, isFalse);
-    expect(find.textContaining('Could not load bank data'), findsOneWidget);
-  });
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('spending-field')),
+      );
+      expect(field.readOnly, isFalse);
+      expect(find.textContaining('Could not load bank data'), findsOneWidget);
+    },
+  );
 }

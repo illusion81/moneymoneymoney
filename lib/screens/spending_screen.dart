@@ -9,12 +9,31 @@ import 'package:flutter/material.dart';
 
 import '../data/api_client.dart';
 import '../data/models.dart';
+import '../services/category_breakdown.dart';
+import '../widgets/app_nav_bar.dart';
+import '../widgets/category_pie_chart.dart';
 import 'connect_bank_screen.dart';
 
 class SpendingScreen extends StatefulWidget {
-  const SpendingScreen({super.key, required this.api, this.days = 30});
+  const SpendingScreen({
+    super.key,
+    required this.api,
+    this.days = 30,
+    this.onShowForest,
+    this.onShowCalendar,
+    this.onShowHomestead,
+    this.onShowAchievements,
+  });
+
   final ApiClient api;
   final int days;
+
+  /// Supplied when the screen is a bottom-nav tab. When absent the screen
+  /// was pushed as a route and keeps a plain back button instead.
+  final VoidCallback? onShowForest;
+  final VoidCallback? onShowCalendar;
+  final VoidCallback? onShowHomestead;
+  final VoidCallback? onShowAchievements;
 
   @override
   State<SpendingScreen> createState() => _SpendingScreenState();
@@ -104,11 +123,22 @@ class _SpendingScreenState extends State<SpendingScreen> {
   };
 
   static const _categoryBucket = {
-    'groceries': 'living', 'housing': 'living', 'utilities': 'living',
-    'transport': 'living', 'health': 'living', 'education': 'living',
-    'fees': 'living', 'cash': 'living', 'debt': 'living', 'other': 'living',
-    'eating-out': 'reward', 'subscriptions': 'reward', 'lifestyle': 'reward',
-    'bnpl': 'reward', 'savings': 'stable', 'investment': 'invest',
+    'groceries': 'living',
+    'housing': 'living',
+    'utilities': 'living',
+    'transport': 'living',
+    'health': 'living',
+    'education': 'living',
+    'fees': 'living',
+    'cash': 'living',
+    'debt': 'living',
+    'other': 'living',
+    'eating-out': 'reward',
+    'subscriptions': 'reward',
+    'lifestyle': 'reward',
+    'bnpl': 'reward',
+    'savings': 'stable',
+    'investment': 'invest',
   };
 
   String _money(double v) => '\$${v.toStringAsFixed(v.abs() >= 1000 ? 0 : 2)}';
@@ -134,65 +164,94 @@ class _SpendingScreenState extends State<SpendingScreen> {
             ],
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(children: [
-                Text('${_days}d'),
-                const Icon(Icons.arrow_drop_down),
-              ]),
+              child: Row(
+                children: [
+                  Text('${_days}d'),
+                  const Icon(Icons.arrow_drop_down),
+                ],
+              ),
             ),
           ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
+      bottomNavigationBar: widget.onShowForest == null
+          ? null
+          : AppNavBar(
+              selectedIndex: 1,
+              onShowForest: widget.onShowForest!,
+              onShowSpending: () {},
+              onShowCalendar: widget.onShowCalendar!,
+              onShowHomestead: widget.onShowHomestead!,
+              onShowAchievements: widget.onShowAchievements!,
+            ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorView(message: _error!, onRetry: _load)
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-                    children: [
-                      _sourceBanner(context),
-                      const SizedBox(height: 16),
-                      if (_accounts.isNotEmpty) ...[
-                        Text('Accounts', style: t.titleMedium),
-                        const SizedBox(height: 8),
-                        for (final a in _accounts) _accountTile(a),
-                        const SizedBox(height: 24),
-                      ],
-                      _summaryRow(context),
-                      const SizedBox(height: 24),
-                      if (_plan != null) ...[
-                        Text('Against your plan', style: t.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(_plan!.headline, style: t.bodySmall),
-                        const SizedBox(height: 12),
-                        for (final b in _plan!.buckets) _bucketRow(context, b),
-                        const SizedBox(height: 24),
-                      ],
-                      Text('By category', style: t.titleMedium),
-                      const SizedBox(height: 4),
-                      Text('Transfers between your own accounts are excluded.',
-                          style: t.bodySmall),
-                      const SizedBox(height: 12),
-                      if (_byCategory.isEmpty)
-                        const Text('No spending in this period.')
-                      else
-                        for (final e in _byCategory.entries)
-                          _categoryRow(context, e.key, e.value.amount, e.value.count),
-                      const SizedBox(height: 24),
-                      Text('Transactions', style: t.titleMedium),
-                      const SizedBox(height: 8),
-                      for (final tx in _txns.take(40)) _txnTile(context, tx),
-                      if (_txns.length > 40)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text('+ ${_txns.length - 40} more',
-                              style: t.bodySmall),
-                        ),
-                    ],
+          ? _ErrorView(message: _error!, onRetry: _load)
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                children: [
+                  _sourceBanner(context),
+                  const SizedBox(height: 16),
+                  if (_accounts.isNotEmpty) ...[
+                    Text('Accounts', style: t.titleMedium),
+                    const SizedBox(height: 8),
+                    for (final a in _accounts) _accountTile(a),
+                    const SizedBox(height: 24),
+                  ],
+                  _summaryRow(context),
+                  const SizedBox(height: 24),
+                  if (_plan != null) ...[
+                    Text('Against your plan', style: t.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(_plan!.headline, style: t.bodySmall),
+                    const SizedBox(height: 12),
+                    for (final b in _plan!.buckets) _bucketRow(context, b),
+                    const SizedBox(height: 24),
+                  ],
+                  Text('By category', style: t.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Transfers between your own accounts are excluded.',
+                    style: t.bodySmall,
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  CategoryPieChart(
+                    slices: topCategorySlices({
+                      for (final e in _byCategory.entries)
+                        e.key: e.value.amount,
+                    }),
+                    total: _outflow,
+                  ),
+                  const SizedBox(height: 20),
+                  if (_byCategory.isEmpty)
+                    const Text('No spending in this period.')
+                  else
+                    for (final e in _byCategory.entries)
+                      _categoryRow(
+                        context,
+                        e.key,
+                        e.value.amount,
+                        e.value.count,
+                      ),
+                  const SizedBox(height: 24),
+                  Text('Transactions', style: t.titleMedium),
+                  const SizedBox(height: 8),
+                  for (final tx in _txns.take(40)) _txnTile(context, tx),
+                  if (_txns.length > 40)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        '+ ${_txns.length - 40} more',
+                        style: t.bodySmall,
+                      ),
+                    ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -209,61 +268,80 @@ class _SpendingScreenState extends State<SpendingScreen> {
         color: colour.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(children: [
-        Icon(_trusted ? Icons.verified_outlined : Icons.science_outlined,
-            color: colour, size: 20),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            _trusted
-                ? '$label — data comes straight from your bank.'
-                : '$label — you could have edited this, so nothing here is bank-verified.',
-            style: Theme.of(context).textTheme.bodySmall,
+      child: Row(
+        children: [
+          Icon(
+            _trusted ? Icons.verified_outlined : Icons.science_outlined,
+            color: colour,
+            size: 20,
           ),
-        ),
-        if (!_trusted)
-          TextButton(
-            onPressed: () async {
-              await Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => ConnectBankScreen(api: widget.api)));
-              _load();
-            },
-            child: const Text('Connect'),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _trusted
+                  ? '$label — data comes straight from your bank.'
+                  : '$label — you could have edited this, so nothing here is bank-verified.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
-      ]),
+          if (!_trusted)
+            TextButton(
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ConnectBankScreen(api: widget.api),
+                  ),
+                );
+                _load();
+              },
+              child: const Text('Connect'),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _accountTile(Account a) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(children: [
-          Expanded(child: Text(a.name)),
-          Text(a.kind, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(width: 12),
-          Text(_money(a.balance),
-              style: TextStyle(
-                  fontFeatures: const [],
-                  fontWeight: FontWeight.w600,
-                  color: a.balance < 0 ? Colors.red.shade700 : null)),
-        ]),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(child: Text(a.name)),
+        Text(a.kind, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(width: 12),
+        Text(
+          _money(a.balance),
+          style: TextStyle(
+            fontFeatures: const [],
+            fontWeight: FontWeight.w600,
+            color: a.balance < 0 ? Colors.red.shade700 : null,
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _summaryRow(BuildContext context) {
     Widget cell(String label, String value, {Color? c}) => Expanded(
-          child: Column(children: [
-            Text(value,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(color: c, fontWeight: FontWeight.w600)),
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
-          ]),
-        );
-    return Row(children: [
-      cell('In', _money(_income), c: const Color(0xff2f7d50)),
-      cell('Spent', _money(_outflow), c: const Color(0xffb4553f)),
-      cell('Moved', _money(_moved)),
-    ]);
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: c,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
+    return Row(
+      children: [
+        cell('In', _money(_income), c: const Color(0xff2f7d50)),
+        cell('Spent', _money(_outflow), c: const Color(0xffb4553f)),
+        cell('Moved', _money(_moved)),
+      ],
+    );
   }
 
   Widget _bucketRow(BuildContext context, BucketPlan b) {
@@ -271,27 +349,39 @@ class _SpendingScreenState extends State<SpendingScreen> {
     final colour = _bucketColor[b.bucket] ?? Colors.grey;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-              child: Text('${b.bucket}  ·  ${(b.targetPct * 100).round()}% target')),
-          Text('${_money(b.actualAmount)} / ${_money(b.targetAmount)}',
-              style: TextStyle(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${b.bucket}  ·  ${(b.targetPct * 100).round()}% target',
+                ),
+              ),
+              Text(
+                '${_money(b.actualAmount)} / ${_money(b.targetAmount)}',
+                style: TextStyle(
                   color: b.onTrack ? null : const Color(0xffb4553f),
-                  fontWeight: FontWeight.w600)),
-        ]),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: pct.clamp(0.0, 1.0),
-            minHeight: 7,
-            backgroundColor: colour.withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation(
-                pct > 1.05 ? const Color(0xffb4553f) : colour),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ),
-      ]),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: pct.clamp(0.0, 1.0),
+              minHeight: 7,
+              backgroundColor: colour.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation(
+                pct > 1.05 ? const Color(0xffb4553f) : colour,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -300,33 +390,44 @@ class _SpendingScreenState extends State<SpendingScreen> {
     final colour = _bucketColor[_categoryBucket[cat] ?? 'living']!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text(cat)),
-          Text('$n', style: Theme.of(c).textTheme.bodySmall),
-          const SizedBox(width: 12),
-          SizedBox(
-              width: 74,
-              child: Text(_money(amt),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(cat)),
+              Text('$n', style: Theme.of(c).textTheme.bodySmall),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 74,
+                child: Text(
+                  _money(amt),
                   textAlign: TextAlign.right,
-                  style: const TextStyle(fontWeight: FontWeight.w600))),
-          SizedBox(
-              width: 46,
-              child: Text('${(share * 100).round()}%',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              SizedBox(
+                width: 46,
+                child: Text(
+                  '${(share * 100).round()}%',
                   textAlign: TextAlign.right,
-                  style: Theme.of(c).textTheme.bodySmall)),
-        ]),
-        const SizedBox(height: 3),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: share,
-            minHeight: 5,
-            backgroundColor: colour.withValues(alpha: 0.12),
-            valueColor: AlwaysStoppedAnimation(colour),
+                  style: Theme.of(c).textTheme.bodySmall,
+                ),
+              ),
+            ],
           ),
-        ),
-      ]),
+          const SizedBox(height: 3),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: share,
+              minHeight: 5,
+              backgroundColor: colour.withValues(alpha: 0.12),
+              valueColor: AlwaysStoppedAnimation(colour),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -334,20 +435,35 @@ class _SpendingScreenState extends State<SpendingScreen> {
     final out = tx.amount < 0;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(tx.description, maxLines: 2, overflow: TextOverflow.ellipsis),
-            Text('${tx.postDate}  ·  ${tx.category}',
-                style: Theme.of(c).textTheme.bodySmall),
-          ]),
-        ),
-        const SizedBox(width: 12),
-        Text((out ? '-' : '+') + _money(tx.amount.abs()),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tx.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${tx.postDate}  ·  ${tx.category}',
+                  style: Theme.of(c).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            (out ? '-' : '+') + _money(tx.amount.abs()),
             style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: out ? null : const Color(0xff2f7d50))),
-      ]),
+              fontWeight: FontWeight.w600,
+              color: out ? null : const Color(0xff2f7d50),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -359,19 +475,24 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.cloud_off, size: 40),
-            const SizedBox(height: 12),
-            const Text('Could not reach the backend.'),
-            const SizedBox(height: 6),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
-          ]),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off, size: 40),
+          const SizedBox(height: 12),
+          const Text('Could not reach the backend.'),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    ),
+  );
 }
