@@ -227,7 +227,8 @@ class _MyAppState extends State<MyApp> {
   /// enough for this to reach a fixed point.
   void _recomputeProgression() {
     var achievements = _summary.achievements;
-    for (var pass = 0; pass < 4; pass++) {
+    var stable = false;
+    for (var pass = 0; pass < 6; pass++) {
       final newProgression = _progressionEngine.compute(
         days: _summary.days,
         achievements: achievements,
@@ -238,7 +239,7 @@ class _MyAppState extends State<MyApp> {
         progression: newProgression,
         shopState: _shopState,
       );
-      final stable =
+      stable =
           newProgression.totalXp == _progression.totalXp &&
           _sameUnlockState(newSummary.achievements, achievements);
 
@@ -250,6 +251,7 @@ class _MyAppState extends State<MyApp> {
         break;
       }
     }
+    assert(stable, 'Progression/achievement convergence did not reach fixed point within 6 passes');
   }
 
   bool _sameUnlockState(List<Achievement> a, List<Achievement> b) {
