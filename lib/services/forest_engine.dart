@@ -4,12 +4,14 @@ import '../models/shop_item.dart';
 import '../models/wealth_report.dart';
 
 class ForestEngine {
+  /// Records [spending] for [date]. A day is healthy purely when spending
+  /// stayed within the daily budget — the report's daily money action is
+  /// advisory guidance and deliberately does not gate the tree.
   CheckInResult checkIn({
     required List<ForestDay> existingDays,
     required WealthReport report,
     required DateTime date,
     required double spending,
-    required bool actionCompleted,
   }) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
     final previousDays = _withMissedDays(
@@ -20,7 +22,7 @@ class ForestEngine {
       report.dailyBudget,
     );
     final overBudget = spending > report.dailyBudget;
-    final healthy = actionCompleted && !overBudget;
+    final healthy = !overBudget;
     final provisionalDays = [
       ...previousDays,
       ForestDay(
@@ -29,11 +31,8 @@ class ForestEngine {
         treeLevel: 0,
         spending: spending,
         dailyBudget: report.dailyBudget,
-        actionCompleted: actionCompleted,
-        message: _message(
-          actionCompleted: actionCompleted,
-          overBudget: overBudget,
-        ),
+        actionCompleted: healthy,
+        message: _message(overBudget: overBudget),
       ),
     ]..sort((a, b) => a.date.compareTo(b.date));
 
@@ -262,17 +261,11 @@ class ForestEngine {
     );
   }
 
-  String _message({required bool actionCompleted, required bool overBudget}) {
-    if (!actionCompleted && overBudget) {
-      return 'Today withered because the action was incomplete and spending exceeded the budget.';
-    }
-    if (!actionCompleted) {
-      return 'Today withered because the money action was not completed.';
-    }
+  String _message({required bool overBudget}) {
     if (overBudget) {
       return 'Today withered because spending exceeded the daily budget.';
     }
-    return 'Healthy growth: action complete and spending stayed within budget.';
+    return 'Healthy growth: spending stayed within budget.';
   }
 
   int _treeLevel(int streak) {

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import 'data/api_client.dart';
@@ -27,6 +26,7 @@ import 'services/home_layout_service.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
+import 'widgets/celebration_dialog.dart';
 
 void main() {
   runApp(const MyApp());
@@ -59,6 +59,9 @@ class _MyAppState extends State<MyApp> {
   final ApiClient _apiClient = ApiClient();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
+  // The messenger's context sits above the Navigator, so dialogs need their
+  // own key to push a route from.
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   WealthReport? _report;
   MoneyStyleResult? _moneyStyleResult;
@@ -81,19 +84,8 @@ class _MyAppState extends State<MyApp> {
   _MyAppState() {
     _shopState = _shopService.initialState();
     _homeLayout = _homeLayoutService.initialState();
-    if (kDebugMode) {
-      // Debug builds start with an effectively unlimited coin balance so
-      // the shop/homestead can be tested without grinding for coins.
-      _spendEvents.add(
-        RewardEvent(
-          date: DateTime.now(),
-          type: RewardEventType.debugGrant,
-          xp: 0,
-          coins: 999999,
-          description: 'Debug: max coins',
-        ),
-      );
-    }
+    // Everyone starts at zero coins. Debug builds can grant more on demand
+    // via the shop's debug panel, but never automatically.
     _progression = _progressionEngine.compute(
       days: const [],
       achievements: const [],
@@ -107,6 +99,7 @@ class _MyAppState extends State<MyApp> {
       title: 'Money Money Money',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
+      navigatorKey: _navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff2f7d50)),
         scaffoldBackgroundColor: const Color(0xfff5f1e8),
@@ -270,10 +263,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _handleCheckIn({
-    required double spending,
-    required bool actionCompleted,
-  }) {
+  void _handleCheckIn({required double spending}) {
     final report = _report;
     if (report == null) {
       return;
@@ -284,19 +274,34 @@ class _MyAppState extends State<MyApp> {
       report: report,
       date: DateTime.now(),
       spending: spending,
-      actionCompleted: actionCompleted,
     );
 
     final beforeXp = _progression.totalXp;
     final beforeCoins = _progression.coinBalance;
+    var earnedXp = 0;
+    var earnedCoins = 0;
 
     setState(() {
       _summary = result.summary;
       _recomputeProgression();
-      final earnedXp = _progression.totalXp - beforeXp;
-      final earnedCoins = _progression.coinBalance - beforeCoins;
+      earnedXp = _progression.totalXp - beforeXp;
+      earnedCoins = _progression.coinBalance - beforeCoins;
       _lastEarnedSummary = '+$earnedXp XP, +$earnedCoins coins';
     });
+
+    // Celebrate only a day that actually stayed within budget — an
+    // over-budget day gets the restoration panel instead.
+    if (result.day.status == TreeStatus.healthy) {
+      final context = _navigatorKey.currentContext;
+      if (context != null) {
+        showCelebrationDialog(
+          context: context,
+          earnedXp: earnedXp,
+          earnedCoins: earnedCoins,
+          streak: _summary.currentStreak,
+        );
+      }
+    }
   }
 
   void _handleRestore(String recoveryNote) {

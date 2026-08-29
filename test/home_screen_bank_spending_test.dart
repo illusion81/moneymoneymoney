@@ -32,7 +32,7 @@ Widget _harness({required Future<double> Function() onFetchTodaySpending}) {
       summary: ForestEngine().summarize(const []),
       progression: _testProgression,
       shopState: ShopService().initialState(),
-      onCheckIn: ({required spending, required actionCompleted}) {},
+      onCheckIn: ({required spending}) {},
       onRestore: (_) {},
       onShowReport: () {},
       onShowAchievements: () {},

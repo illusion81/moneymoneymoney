@@ -16,13 +16,12 @@ void main() {
   );
 
   group('ForestEngine', () {
-    test('marks today healthy when action is complete and spending is within budget', () {
+    test('marks today healthy when spending is within budget', () {
       final result = ForestEngine().checkIn(
         existingDays: const [],
         report: report,
         date: DateTime(2026, 8, 29),
         spending: 40,
-        actionCompleted: true,
       );
 
       expect(result.day.status, TreeStatus.healthy);
@@ -31,19 +30,15 @@ void main() {
       expect(result.summary.healthyTreeCount, 1);
     });
 
-    test('marks today withered when action is incomplete', () {
+    test('spending exactly at the daily budget still counts as healthy', () {
       final result = ForestEngine().checkIn(
         existingDays: const [],
         report: report,
         date: DateTime(2026, 8, 29),
-        spending: 20,
-        actionCompleted: false,
+        spending: 50,
       );
 
-      expect(result.day.status, TreeStatus.withered);
-      expect(result.day.treeLevel, 0);
-      expect(result.day.message, contains('action'));
-      expect(result.summary.currentStreak, 0);
+      expect(result.day.status, TreeStatus.healthy);
     });
 
     test('marks today withered when spending exceeds daily budget', () {
@@ -52,7 +47,6 @@ void main() {
         report: report,
         date: DateTime(2026, 8, 29),
         spending: 75,
-        actionCompleted: true,
       );
 
       expect(result.day.status, TreeStatus.withered);
@@ -67,21 +61,18 @@ void main() {
         report: report,
         date: DateTime(2026, 8, 27),
         spending: 30,
-        actionCompleted: true,
       );
       final second = engine.checkIn(
         existingDays: first.summary.days,
         report: report,
         date: DateTime(2026, 8, 28),
         spending: 35,
-        actionCompleted: true,
       );
       final third = engine.checkIn(
         existingDays: second.summary.days,
         report: report,
         date: DateTime(2026, 8, 29),
         spending: 39,
-        actionCompleted: true,
       );
 
       final unlocked = third.summary.achievements
@@ -102,14 +93,12 @@ void main() {
         report: report,
         date: DateTime(2026, 8, 27),
         spending: 30,
-        actionCompleted: true,
       );
       final third = engine.checkIn(
         existingDays: first.summary.days,
         report: report,
         date: DateTime(2026, 8, 29),
         spending: 30,
-        actionCompleted: true,
       );
 
       expect(third.summary.days, hasLength(3));
@@ -127,14 +116,12 @@ void main() {
         report: report,
         date: DateTime(2026, 8, 29),
         spending: 30,
-        actionCompleted: true,
       );
       final earlier = engine.checkIn(
         existingDays: first.summary.days,
         report: report,
         date: DateTime(2026, 8, 28),
         spending: 10,
-        actionCompleted: true,
       );
 
       expect(earlier.day.date, DateTime(2026, 8, 28));
@@ -372,7 +359,6 @@ void main() {
         report: report,
         date: DateTime(2026, 8, 29),
         spending: 20,
-        actionCompleted: true,
       );
 
       final recoveryDay = checkInResult.summary.achievements

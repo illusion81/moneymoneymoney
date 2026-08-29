@@ -32,8 +32,7 @@ class HomeScreen extends StatefulWidget {
   final ProgressionState progression;
   final ShopState shopState;
   final String? lastEarnedSummary;
-  final void Function({required double spending, required bool actionCompleted})
-  onCheckIn;
+  final void Function({required double spending}) onCheckIn;
   final void Function(String recoveryNote) onRestore;
   final VoidCallback onShowReport;
   final VoidCallback onShowAchievements;
@@ -52,7 +51,6 @@ enum _SpendingMode { manual, bank }
 class _HomeScreenState extends State<HomeScreen> {
   final _spendingController = TextEditingController();
   final _recoveryNoteController = TextEditingController();
-  bool _actionCompleted = false;
   String? _errorText;
   _SpendingMode _spendingMode = _SpendingMode.manual;
   bool _bankLoading = false;
@@ -152,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 8),
                       Text(
                         latestDay?.message ??
-                            'Complete today\'s money action to grow your tree.',
+                            'Check in today and stay within budget to grow your tree.',
                         textAlign: TextAlign.center,
                       ),
                       if (latestDay?.status == TreeStatus.restored &&
@@ -252,16 +250,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     decimal: true,
                   ),
                 ),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  key: const Key('action-complete-checkbox'),
-                  value: _actionCompleted,
-                  onChanged: (value) =>
-                      setState(() => _actionCompleted = value ?? false),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Money action completed'),
-                ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
                   onPressed: _checkIn,
@@ -290,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() => _errorText = null);
-    widget.onCheckIn(spending: spending, actionCompleted: _actionCompleted);
+    widget.onCheckIn(spending: spending);
   }
 
   void _selectManualMode() {
