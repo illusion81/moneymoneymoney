@@ -116,3 +116,6 @@ _laneA_tmp/
 # Bank exports - never commit real transaction data
 *.csv
 CSVData*.csv
+
+# opencode agent scratch
+.opencode/
