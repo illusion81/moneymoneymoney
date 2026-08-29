@@ -436,9 +436,6 @@ class _MyAppState extends State<MyApp> {
             _diamondsReturnTo = AppView.shop;
             _view = AppView.diamonds;
           }),
-          onDebugMaxCoins: _handleDebugMaxCoins,
-          onDebugUnlockAll: _handleDebugUnlockAll,
-          onDebugGrantXp: _handleDebugSimulateStreak,
         );
     }
   }
@@ -1121,20 +1118,6 @@ class _MyAppState extends State<MyApp> {
     _showMessage('Demo farm ready — everything owned and placed.');
   }
 
-  void _handleDebugMaxCoins() {
-    setState(() {
-      _spendEvents.add(
-        RewardEvent(
-          date: DateTime.now(),
-          type: RewardEventType.debugGrant,
-          xp: 0,
-          coins: 999999,
-          description: 'Debug: max coins',
-        ),
-      );
-      _recomputeProgression();
-    });
-  }
 
   void _handleSubscribePlus() {
     setState(() {
@@ -1167,14 +1150,6 @@ class _MyAppState extends State<MyApp> {
     _showMessage('Plus membership cancelled.');
   }
 
-  void _handleDebugUnlockAll() {
-    setState(() {
-      _shopState = ShopState(
-        ownedItemIds: {for (final item in kShopCatalog) item.id},
-        equippedItemIds: _shopState.equippedItemIds,
-      );
-    });
-  }
 
   /// Recomputes progression and the achievement-derived parts of the summary
   /// together, since Curator and Seedling Scholar depend on progression and
