@@ -83,8 +83,20 @@ const List<ShopItem> _kAnimals = [
   ShopItem(id: 'animal-elephant', name: 'Elephant', description: 'Plus members only.', category: ShopItemCategory.animal, price: 0, requiredLevel: 3, isDefault: false, plusOnly: true, asset: 'elephant'),
 ];
 
+/// More things to put on the homestead. A yard with four items looks unfinished
+/// no matter how well each one is drawn.
+const List<ShopItem> _kMoreDecor = [
+  ShopItem(id: 'deco-pond', name: 'Pond', description: 'Still water, a lily pad, no maintenance.', category: ShopItemCategory.decoration, price: 180, requiredLevel: 2, isDefault: false),
+  ShopItem(id: 'deco-fence', name: 'Picket Fence', description: 'Marks the edge of what is yours.', category: ShopItemCategory.decoration, price: 140, requiredLevel: 2, isDefault: false),
+  ShopItem(id: 'deco-vegetable-patch', name: 'Vegetable Patch', description: 'Cheaper than the delivery app.', category: ShopItemCategory.decoration, price: 220, requiredLevel: 3, isDefault: false),
+  ShopItem(id: 'deco-signpost', name: 'Signpost', description: 'Points at where you are heading.', category: ShopItemCategory.decoration, price: 120, requiredLevel: 2, isDefault: false),
+  ShopItem(id: 'deco-lamp-post', name: 'Lamp Post', description: 'Keeps the yard warm after dark.', category: ShopItemCategory.decoration, price: 260, requiredLevel: 4, isDefault: false),
+  ShopItem(id: 'deco-windmill', name: 'Windmill', description: 'Plus members only. Turns whether or not anyone is watching.', category: ShopItemCategory.decoration, price: 0, requiredLevel: 3, isDefault: false, plusOnly: true),
+];
+
 const List<ShopItem> kShopCatalog = [
   ..._kAnimals,
+  ..._kMoreDecor,
   ShopItem(
     id: 'tree-classic-oak',
     name: 'Classic Oak',

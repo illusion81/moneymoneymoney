@@ -183,10 +183,11 @@ class ApiClient {
 
   /// Pass the app's own streak and level — the forest engine owns them, so
   /// the backend cannot know them otherwise and your rank would never move.
-  Future<Circle> leaderboard({int? streak, int? level}) async =>
+  Future<Circle> leaderboard({int? streak, int? level, double? adherence}) async =>
       Circle.fromJson(await _getObj('/api/social/leaderboard', {
         'streak': ?streak,
         'level': ?level,
+        'adherence': ?adherence,
       }));
 
   Future<void> cheer(String toName, {String message = 'Keep going'}) =>

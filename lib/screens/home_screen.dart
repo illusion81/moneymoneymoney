@@ -38,6 +38,7 @@ class HomeScreen extends StatefulWidget {
     this.api,
     this.onDebugSimulate,
     this.onShowDiamonds,
+    this.onDebugFillFarm,
     this.onRetakeQuestionnaire,
   });
 
@@ -57,6 +58,9 @@ class HomeScreen extends StatefulWidget {
 
   /// Opens the diamond store (paid currency).
   final VoidCallback? onShowDiamonds;
+
+  /// Debug: own and place everything, for the demo.
+  final VoidCallback? onDebugFillFarm;
   final void Function({required double spending}) onCheckIn;
   final void Function(String recoveryNote) onRestore;
   final VoidCallback onShowReport;
@@ -136,20 +140,44 @@ class _HomeScreenState extends State<HomeScreen> {
     final statusColor = _statusColor(latestDay);
 
     return Scaffold(
-      floatingActionButton: (kDebugMode && widget.onDebugSimulate != null)
-          ? FloatingActionButton.extended(
-              onPressed: () async {
-                // Gate it so nobody fast-forwards the farm mid-pitch.
-                if (await DevGate.ensureUnlocked(context)) {
-                  widget.onDebugSimulate!();
-                }
-              },
-              icon: Icon(DevGate.isUnlocked
-                  ? Icons.fast_forward
-                  : Icons.lock_outline),
-              label: const Text('Simulate a week'),
-            )
-          : null,
+      floatingActionButton: !kDebugMode
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (widget.onDebugFillFarm != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: FloatingActionButton.extended(
+                      heroTag: 'fill',
+                      onPressed: () async {
+                        if (await DevGate.ensureUnlocked(context)) {
+                          widget.onDebugFillFarm!();
+                        }
+                      },
+                      icon: Icon(DevGate.isUnlocked
+                          ? Icons.auto_awesome
+                          : Icons.lock_outline),
+                      label: const Text('Set up demo'),
+                    ),
+                  ),
+                if (widget.onDebugSimulate != null)
+                  FloatingActionButton.extended(
+                    heroTag: 'sim',
+                    onPressed: () async {
+                      // Gated so nobody fast-forwards the farm mid-pitch.
+                      if (await DevGate.ensureUnlocked(context)) {
+                        widget.onDebugSimulate!();
+                      }
+                    },
+                    icon: Icon(DevGate.isUnlocked
+                        ? Icons.fast_forward
+                        : Icons.lock_outline),
+                    label: const Text('Simulate a week'),
+                  ),
+              ],
+            ),
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [
@@ -173,6 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   api: widget.api!,
                   streak: widget.summary.currentStreak,
                   level: widget.progression.level.level,
+                  adherence: localAdherence,
                 ),
               )),
             ),
@@ -266,6 +295,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             .where((i) => i.category == ShopItemCategory.animal)
                             .map((i) => i.asset!)
                             .toList(),
+                        // One tree, then another every three levels — the
+                        // forest grows as you do.
+                        treeCount: 1 + (widget.progression.level.level ~/ 3),
                         seed: widget.summary.days.length + 7,
                         height: 280,
                       ),
@@ -478,6 +510,21 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 0..1. Half of it is the check-in streak, half is how closely they are
   /// holding their actual budget. Streak alone would mean the tree rewards
   /// opening the app, which is not the product's claim.
+  /// Share of recorded days that stayed within budget.
+  ///
+  /// The backend's adherence comes from bank transactions, which never change
+  /// while you play — so it sat at 45% no matter what you did, and your rank
+  /// could never move. This is the number the app actually knows.
+  double? get localAdherence {
+    final days = widget.summary.days;
+    if (days.isEmpty) return null;
+    final kept = days
+        .where((d) =>
+            d.status == TreeStatus.healthy || d.status == TreeStatus.restored)
+        .length;
+    return kept / days.length;
+  }
+
   double _farmGrowth(ForestDay? day) {
     // Three inputs so the farm keeps visibly growing well past the first week:
     //   streak    — caps at 7 days, gets you started

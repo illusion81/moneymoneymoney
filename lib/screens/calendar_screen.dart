@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/day_checklist.dart';
+
 import '../models/forest_day.dart';
 import '../models/shop_item.dart';
 import '../services/item_visuals.dart';
 import '../widgets/app_nav_bar.dart';
 
-class CalendarScreen extends StatelessWidget {
+class CalendarScreen extends StatefulWidget {
   const CalendarScreen({
     super.key,
     required this.summary,
@@ -28,35 +30,57 @@ class CalendarScreen extends StatelessWidget {
   final VoidCallback onShowShop;
 
   @override
+  State<CalendarScreen> createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends State<CalendarScreen> {
+  /// Defaults to today so the checklist is useful the moment you arrive.
+  DateTime _selectedDate = DateTime.now();
+
+  @override
   Widget build(BuildContext context) {
+    final today = DateTime(
+        DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final sel = DateTime(
+        _selectedDate.year, _selectedDate.month, _selectedDate.day);
+    ForestDay? selectedDay;
+    for (final d in widget.summary.days) {
+      if (d.date.year == sel.year &&
+          d.date.month == sel.month &&
+          d.date.day == sel.day) {
+        selectedDay = d;
+        break;
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendar'),
         actions: [
           IconButton(
             tooltip: 'Shop',
-            onPressed: onShowShop,
+            onPressed: widget.onShowShop,
             icon: const Icon(Icons.store_outlined),
           ),
           IconButton(
             tooltip: 'Report',
-            onPressed: onShowReport,
+            onPressed: widget.onShowReport,
             icon: const Icon(Icons.description_outlined),
           ),
           IconButton(
             tooltip: 'Achievements',
-            onPressed: onShowAchievements,
+            onPressed: widget.onShowAchievements,
             icon: const Icon(Icons.emoji_events_outlined),
           ),
         ],
       ),
       bottomNavigationBar: AppNavBar(
         selectedIndex: 2,
-        onShowForest: onShowForest,
-        onShowSpending: onShowSpending,
+        onShowForest: widget.onShowForest,
+        onShowSpending: widget.onShowSpending,
         onShowCalendar: () {},
-        onShowHomestead: onShowHomestead,
-        onShowAchievements: onShowAchievements,
+        onShowHomestead: widget.onShowHomestead,
+        onShowAchievements: widget.onShowAchievements,
       ),
       body: SafeArea(
         child: Center(
@@ -65,7 +89,19 @@ class CalendarScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                ForestCalendar(summary: summary, shopState: shopState),
+                ForestCalendar(
+                  summary: widget.summary,
+                  shopState: widget.shopState,
+                  selectedDate: sel,
+                  onSelectDate: (d) => setState(() => _selectedDate = d),
+                ),
+                DayChecklist(
+                  date: sel,
+                  day: selectedDay,
+                  isToday: sel == today,
+                  isFuture: sel.isAfter(today),
+                  onCheckIn: sel == today ? widget.onShowForest : null,
+                ),
               ],
             ),
           ),
@@ -77,6 +113,8 @@ class CalendarScreen extends StatelessWidget {
 
 class ForestCalendar extends StatelessWidget {
   const ForestCalendar({
+    this.selectedDate,
+    this.onSelectDate,
     super.key,
     required this.summary,
     required this.shopState,
@@ -84,6 +122,10 @@ class ForestCalendar extends StatelessWidget {
 
   final ForestSummary summary;
   final ShopState shopState;
+
+  /// Currently selected day, highlighted in the grid.
+  final DateTime? selectedDate;
+  final ValueChanged<DateTime>? onSelectDate;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +215,9 @@ class ForestCalendar extends StatelessWidget {
                 treeLevel: recordedDay?.treeLevel ?? 0,
                 shopState: shopState,
                 isToday: _isSameDate(date, today),
+                isSelected:
+                    selectedDate != null && _isSameDate(date, selectedDate!),
+                onTap: onSelectDate == null ? null : () => onSelectDate!(date),
               );
             },
           ),
@@ -227,6 +272,8 @@ class _ForestDayCell extends StatelessWidget {
     required this.treeLevel,
     required this.shopState,
     required this.isToday,
+    this.onTap,
+    this.isSelected = false,
   });
 
   final DateTime date;
@@ -234,6 +281,8 @@ class _ForestDayCell extends StatelessWidget {
   final int treeLevel;
   final ShopState shopState;
   final bool isToday;
+  final VoidCallback? onTap;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -242,14 +291,21 @@ class _ForestDayCell extends StatelessWidget {
 
     return Tooltip(
       message: '${_dateKey(date)} ${_statusLabel(status)}',
-      child: Container(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         decoration: BoxDecoration(
           color: _cellColor(status),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isToday ? const Color(0xff2f7d50) : const Color(0xffe5decf),
-            width: isToday ? 2 : 1,
+            color: isSelected
+                ? const Color(0xff173b2f)
+                : isToday
+                    ? const Color(0xff2f7d50)
+                    : const Color(0xffe5decf),
+            width: isSelected ? 2.5 : (isToday ? 2 : 1),
           ),
         ),
         child: Column(
@@ -274,6 +330,7 @@ class _ForestDayCell extends StatelessWidget {
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
           ],
+        ),
         ),
       ),
     );

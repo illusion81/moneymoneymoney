@@ -140,6 +140,41 @@ class _MyAppState extends State<MyApp> {
     unawaited(_loadMoneyStyle());
   }
 
+  /// Plus gets a warmer, richer look: deeper greens, a brass accent and a
+  /// darker ground. It is purely cosmetic — nothing about the plan, the
+  /// leaderboard or the tree changes — but it makes the membership feel like
+  /// something rather than a flag in a database.
+  ThemeData _buildTheme({required bool plus}) {
+    final seed = plus ? const Color(0xff1f5d3c) : const Color(0xff2f7d50);
+    final base = ColorScheme.fromSeed(seedColor: seed);
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: plus
+          ? base.copyWith(
+              secondary: const Color(0xffb08d3f),
+              tertiary: const Color(0xffd9b45f),
+              surfaceContainerHighest: const Color(0xffe9e2d2),
+            )
+          : base,
+      scaffoldBackgroundColor:
+          plus ? const Color(0xfff2ede0) : const Color(0xfff5f1e8),
+      cardTheme: CardThemeData(
+        elevation: plus ? 2 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(plus ? 16 : 12),
+          side: plus
+              ? const BorderSide(color: Color(0xffd9c79a))
+              : BorderSide.none,
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor:
+            plus ? const Color(0xffe8e0cd) : const Color(0xffe8f0ea),
+        foregroundColor: const Color(0xff173b2f),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -147,11 +182,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
       navigatorKey: _navigatorKey,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff2f7d50)),
-        scaffoldBackgroundColor: const Color(0xfff5f1e8),
-        useMaterial3: true,
-      ),
+      theme: _buildTheme(plus: _isPlusMember),
       home: _buildCurrentView(),
     );
   }
@@ -261,6 +292,7 @@ class _MyAppState extends State<MyApp> {
           onFetchTodaySpending: _fetchTodaySpending,
           api: _apiClient,
           onDebugSimulate: _handleDebugSimulateStreak,
+          onDebugFillFarm: _handleDebugFillFarm,
           onShowDiamonds: () => setState(() => _view = AppView.diamonds),
         );
       case AppView.calendar:
@@ -702,6 +734,66 @@ class _MyAppState extends State<MyApp> {
     _celebrateIfLevelled(beforeLevel,
         xp: _progression.totalXp - beforeXp,
         coins: _progression.coinBalance - beforeCoins);
+  }
+
+  /// Demo only: own everything and lay it out.
+  ///
+  /// Buying eleven animals and placing ten decorations by hand is two minutes
+  /// of clicking that nobody wants to watch in a three-minute pitch. This grants
+  /// the lot and arranges the homestead in one press. It writes state directly
+  /// rather than going through ShopService, so it deliberately bypasses coin
+  /// and level checks — which is exactly why it sits behind the dev PIN.
+  void _handleDebugFillFarm() {
+    final owned = <String>{
+      ..._shopState.ownedItemIds,
+      for (final item in kShopCatalog) item.id,
+    };
+
+    // Equip one of each category so skins and ground actually change.
+    final equipped = <ShopItemCategory, String>{..._shopState.equippedItemIds};
+    for (final category in ShopItemCategory.values) {
+      if (category == ShopItemCategory.animal) continue;
+      final pick = kShopCatalog.where((i) => i.category == category).toList();
+      if (pick.isNotEmpty) {
+        equipped[category] = pick.last.id; // the fanciest one
+      }
+    }
+
+    // Spread the decorations over the grid rather than stacking them.
+    var layout = _homeLayoutService.initialState();
+    final decor = kShopCatalog
+        .where((i) => i.category == ShopItemCategory.decoration)
+        .toList();
+    var slot = 0;
+    for (final item in decor) {
+      final row = (slot ~/ kHomeGridSize) % kHomeGridSize;
+      final col = slot % kHomeGridSize;
+      layout = _homeLayoutService.place(
+        state: layout,
+        itemId: item.id,
+        row: row,
+        col: col,
+      );
+      slot += 2; // leave a gap so it does not look like a wall
+    }
+
+    setState(() {
+      _shopState = ShopState(ownedItemIds: owned, equippedItemIds: equipped);
+      _homeLayout = layout;
+      _isPlusMember = true;
+      _diamonds = _diamonds < 500 ? 500 : _diamonds;
+      _spendEvents.add(
+        RewardEvent(
+          date: DateTime.now(),
+          type: RewardEventType.debugGrant,
+          xp: 0,
+          coins: 5000,
+          description: 'Debug: demo setup',
+        ),
+      );
+      _recomputeProgression();
+    });
+    _showMessage('Demo farm ready — everything owned and placed.');
   }
 
   void _handleDebugMaxCoins() {
