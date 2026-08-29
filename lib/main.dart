@@ -27,6 +27,7 @@ import 'screens/spending_screen.dart';
 import 'services/bank_spending_service.dart';
 import 'services/forest_engine.dart';
 import 'services/home_layout_service.dart';
+import 'services/profile_suggestions.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
 import 'services/shop_service.dart';
@@ -132,6 +133,7 @@ class _MyAppState extends State<MyApp> {
         return OnboardingScreen(
           onProfileSubmitted: _handleProfileSubmitted,
           onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          onFetchSuggestion: _fetchProfileSuggestion,
         );
       case AppView.moneyStyleFlow:
         return MoneyStyleFlow(
@@ -139,12 +141,18 @@ class _MyAppState extends State<MyApp> {
           onComplete: _handleMoneyStyleComplete,
         );
       case AppView.moneyStyleResult:
-        return MoneyStyleResultScreen(result: _moneyStyleResult!);
+        return MoneyStyleResultScreen(
+          result: _moneyStyleResult!,
+          onContinue: () => setState(
+            () => _view = _report == null ? AppView.onboarding : AppView.forest,
+          ),
+        );
       case AppView.report:
         if (report == null) {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return ReportScreen(
@@ -159,6 +167,7 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return HomeScreen(
@@ -232,6 +241,7 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return AchievementsScreen(
@@ -247,6 +257,7 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return ShopScreen(
@@ -275,16 +286,24 @@ class _MyAppState extends State<MyApp> {
 
   void _handleProfileSubmitted(FinanceProfile profile) {
     _pushProfileToBackend(profile);
-    final alreadyStarted = _planStarted;
     setState(() {
-      _report = ReportGenerator().generate(profile);
+      // The Money Style quiz, when taken, adds a daily action tailored to
+      // how this person actually decides — so it changes something they
+      // see every day, not just a one-off result screen.
+      _report = ReportGenerator().generate(
+        profile,
+        style: styleActionForResult(_moneyStyleResult),
+      );
       _summary = _forestEngine.summarize(
         _summary.days,
         progression: _progression,
         shopState: _shopState,
       );
-      _view = AppView.report;
-      _planStarted = alreadyStarted;
+      // Submitting the questionnaire drops the user straight into the app.
+      // The report is still one tap away from the Forest app bar, so nothing
+      // is lost by skipping it as a mandatory step.
+      _view = AppView.forest;
+      _planStarted = true;
     });
   }
 
@@ -434,6 +453,14 @@ class _MyAppState extends State<MyApp> {
     );
     await file.writeAsBytes(pngBytes);
     _showMessage('Saved to ${file.path}');
+  }
+
+  /// Suggests income and fixed expenses from the last 90 days of bank
+  /// activity, so onboarding asks the user to confirm rather than recall.
+  Future<ProfileSuggestion?> _fetchProfileSuggestion() async {
+    const days = 90;
+    final transactions = await _apiClient.transactions(days: days);
+    return suggestProfileFromTransactions(transactions, days: days);
   }
 
   Future<double> _fetchTodaySpending() async {

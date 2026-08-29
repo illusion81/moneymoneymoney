@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../data/money_style_questions.dart';
 import '../models/money_style.dart';
 import '../services/money_style_engine.dart';
-import 'money_style_result_screen.dart';
 
 class MoneyStyleQuizScreen extends StatefulWidget {
   const MoneyStyleQuizScreen({
@@ -199,12 +198,10 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
     } else {
       // Quiz complete
       final result = _engine.generateResult(_session, moneyStyleQuestions);
+      // Navigation is owned by the app shell: onComplete switches the view.
+      // Pushing a route here as well stacked a second result screen on top,
+      // so its "continue" button changed the view invisibly underneath.
       widget.onComplete(result);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => MoneyStyleResultScreen(result: result),
-        ),
-      );
     }
   }
 

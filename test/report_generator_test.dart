@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneymoneymoney/models/finance_profile.dart';
+import 'package:moneymoneymoney/services/risk_assessment.dart';
 import 'package:moneymoneymoney/services/report_generator.dart';
 
 void main() {
@@ -10,7 +11,7 @@ void main() {
           monthlyIncome: 6000,
           fixedMonthlyExpenses: 2500,
           monthlySavingsGoal: 900,
-          riskPreference: RiskPreference.balanced,
+          riskLevel: RiskLevel.balanced,
           financialGoal: FinancialGoal.emergencyFund,
           spendingPressure: SpendingPressure.medium,
         ),
@@ -31,7 +32,7 @@ void main() {
             monthlyIncome: 3000,
             fixedMonthlyExpenses: 2600,
             monthlySavingsGoal: 800,
-            riskPreference: RiskPreference.conservative,
+            riskLevel: RiskLevel.cautious,
             financialGoal: FinancialGoal.reduceSpending,
             spendingPressure: SpendingPressure.high,
           ),
@@ -51,7 +52,7 @@ void main() {
           monthlyIncome: 8000,
           fixedMonthlyExpenses: 3000,
           monthlySavingsGoal: 1200,
-          riskPreference: RiskPreference.growth,
+          riskLevel: RiskLevel.growth,
           financialGoal: FinancialGoal.invest,
           spendingPressure: SpendingPressure.low,
         ),
