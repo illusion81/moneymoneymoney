@@ -414,6 +414,41 @@ class BasiqProvider:
             time.sleep(poll_s)
         return []
 
+    # CDR consent is capped at 12 months. Basiq exposes consent objects on
+    # newer API versions, but the field names have moved around, so we read
+    # what we can and fall back to "granted + 12 months" rather than guessing
+    # a schema. The fallback is conservative: it can only prompt too early.
+    CONSENT_MAX_DAYS = 365
+
+    def consent(self) -> dict:
+        """-> {granted_at, expires_at, revoked} — best effort, never raises past BasiqError."""
+        uid = self.ensure_user()
+        granted = expires = None
+        revoked = False
+
+        try:
+            body = self._get(f"{BASIQ_BASE}/users/{uid}/consents")
+            for c in body.get("data", []):
+                st = (c.get("status") or "").lower()
+                if st in ("revoked", "withdrawn"):
+                    revoked = True
+                granted = granted or c.get("created") or c.get("createdDate")
+                expires = expires or c.get("expiryDate") or c.get("expiresAt")
+        except BasiqError:
+            # endpoint absent on this API version — fall through to connections
+            pass
+
+        if granted is None or expires is None:
+            for c in self.connections():
+                st = (c.get("status") or "").lower()
+                if st in ("invalid", "expired"):
+                    revoked = True
+                granted = granted or c.get("createdDate") or c.get("lastUsed")
+
+        return {"granted_at": (granted or "")[:10] or None,
+                "expires_at": (expires or "")[:10] or None,
+                "revoked": revoked}
+
     def refresh(self) -> list[dict]:
         """Force Basiq to re-pull. Useful the morning of the pitch."""
         uid = self.ensure_user()
