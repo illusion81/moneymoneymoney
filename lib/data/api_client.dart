@@ -148,6 +148,19 @@ class ApiClient {
   Future<Progression> buy(String itemId) async => Progression.fromJson(
       (await _send('POST', '/api/shop/buy', body: {'item_id': itemId})) as Map<String, dynamic>);
 
+  // ---------------------------------------------------------------- social
+
+  Future<Circle> joinCircle({required String displayName, String code = 'UQ2026'}) async =>
+      Circle.fromJson((await _send('POST', '/api/social/join',
+          body: {'display_name': displayName, 'code': code})) as Map<String, dynamic>);
+
+  Future<Circle> leaderboard() async =>
+      Circle.fromJson(await _getObj('/api/social/leaderboard'));
+
+  Future<void> cheer(String toName, {String message = 'Keep going'}) =>
+      _send('POST', '/api/social/cheer',
+          query: {'to_name': toName, 'message': message});
+
   // ---------------------------------------------------------------- goals
 
   Future<List<Goal>> goals() async =>

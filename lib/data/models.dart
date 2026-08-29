@@ -424,3 +424,67 @@ class Goal {
         warning: j['warning'] as String?,
       );
 }
+
+
+/// One row of a circle leaderboard.
+/// Deliberately carries no dollar figures — see the note on [Circle].
+class LeaderboardEntry {
+  final int rank, level, towerStage, streakDays;
+  final String displayName, trend;
+  final bool isYou;
+  final double adherence;
+  final String? badge;
+
+  const LeaderboardEntry({
+    required this.rank,
+    required this.displayName,
+    required this.isYou,
+    required this.adherence,
+    required this.level,
+    required this.towerStage,
+    required this.streakDays,
+    required this.trend,
+    this.badge,
+  });
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> j) => LeaderboardEntry(
+        rank: j['rank'] as int,
+        displayName: j['display_name'] as String,
+        isYou: j['is_you'] as bool,
+        adherence: (j['adherence'] as num).toDouble(),
+        level: j['level'] as int,
+        towerStage: j['tower_stage'] as int,
+        streakDays: j['streak_days'] as int,
+        trend: j['trend'] as String,
+        badge: j['badge'] as String?,
+      );
+}
+
+/// A study circle. Ranking is by adherence to each person's OWN plan, never by
+/// dollars saved — otherwise the table just ranks whose parents earn more.
+class Circle {
+  final String code, name, headline;
+  final int memberCount;
+  final int? yourRank;
+  final List<LeaderboardEntry> entries;
+
+  const Circle({
+    required this.code,
+    required this.name,
+    required this.memberCount,
+    required this.headline,
+    required this.entries,
+    this.yourRank,
+  });
+
+  factory Circle.fromJson(Map<String, dynamic> j) => Circle(
+        code: j['code'] as String,
+        name: j['name'] as String,
+        memberCount: j['member_count'] as int,
+        yourRank: j['your_rank'] as int?,
+        headline: j['headline'] as String,
+        entries: (j['entries'] as List)
+            .map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}

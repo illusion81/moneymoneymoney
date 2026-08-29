@@ -125,6 +125,47 @@ class Plan(BaseModel):
     headline: str
 
 
+# ---------- Social ----------
+
+class JoinCircle(BaseModel):
+    display_name: str
+    code: str = "UQ2026"        # circles are joined by a short code, no accounts
+
+
+class LeaderboardEntry(BaseModel):
+    """Deliberately contains no dollar figures.
+
+    Ranking students by how much they save rewards whoever has the wealthiest
+    parents. We rank by adherence to your OWN plan — a percentage of a target
+    the app set for you — so someone on $400 a month can beat someone on $4,000.
+    """
+    rank: int
+    display_name: str
+    is_you: bool
+    adherence: float            # 0..1 against their own plan
+    level: int
+    tower_stage: int
+    streak_days: int
+    trend: Literal["up", "flat", "down"]
+    badge: Optional[str] = None
+
+
+class Circle(BaseModel):
+    code: str
+    name: str
+    member_count: int
+    your_rank: Optional[int] = None
+    headline: str
+    entries: list[LeaderboardEntry]
+
+
+class Cheer(BaseModel):
+    from_name: str
+    to_name: str
+    message: str
+    sent_at: str
+
+
 # ---------- Goals ----------
 
 class GoalCreate(BaseModel):

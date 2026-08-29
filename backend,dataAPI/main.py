@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 import store
 from models import (SurveyAnswers, Profile, ConnectionStatus, Account, Transaction,
-                    Goal, GoalCreate,
+                    Goal, GoalCreate, JoinCircle, Circle, Cheer,
                     Plan, Mission, ClaimResult, Progression, TowerState, ShopItem,
                     ConsentStatus)
 from bank import MockProvider, BasiqProvider, BasiqError, CsvProvider
@@ -29,6 +29,7 @@ from engine.plan import build_plan
 from engine.missions import generate as generate_missions
 from engine.progression import progression as build_progression, tower as build_tower, SHOP
 from engine.goals import build_goal, monthly_commitment
+from engine.social import build_circle
 
 app = FastAPI(title="Wealth Tower API", version="0.1.0")
 app.add_middleware(
@@ -311,6 +312,65 @@ def _goals() -> list[Goal]:
         return []
     raw = store.user(UID).setdefault("goals", {})
     return [build_goal(g, profile, gid) for gid, g in raw.items()]
+
+
+# ---------------------------------------------------------------- social
+
+CIRCLE_NAMES = {"UQ2026": "UQ Weekend of Startups"}
+
+
+def _your_adherence(days: int = 30) -> float:
+    """Your own plan adherence — the only number the circle ever sees."""
+    profile = store.user(UID)["profile"]
+    if profile is None:
+        return 0.0
+    txns = _safe(provider().transactions, days)
+    plan = build_plan(txns, profile.allocation, profile.monthly_income, days,
+                      goal_reserve=monthly_commitment(_goals()))
+    return plan.adherence
+
+
+@app.post("/api/social/join", response_model=Circle)
+def join_circle(body: JoinCircle) -> Circle:
+    _require_profile()
+    u = store.user(UID)
+    u["display_name"] = body.display_name.strip()[:24] or "You"
+    u["circle"] = body.code.strip().upper() or "UQ2026"
+    return leaderboard()
+
+
+@app.get("/api/social/leaderboard", response_model=Circle)
+def leaderboard() -> Circle:
+    _require_profile()
+    u = store.user(UID)
+    code = u.get("circle") or "UQ2026"
+    prog = get_progression()
+    return build_circle(
+        code=code,
+        name=CIRCLE_NAMES.get(code, f"Circle {code}"),
+        you_display=u.get("display_name") or "You",
+        you_adherence=_your_adherence(),
+        you_level=prog.level,
+        you_streak=prog.streak_days,
+    )
+
+
+@app.post("/api/social/cheer", response_model=Cheer)
+def cheer(to_name: str, message: str = "Keep going") -> Cheer:
+    """Encouragement only. There is deliberately no way to send a taunt, and no
+    figures are attached — the whole point is that you cannot see what anyone
+    actually earns or spends."""
+    u = store.user(UID)
+    c = Cheer(from_name=u.get("display_name") or "You", to_name=to_name,
+              message=message[:80],
+              sent_at=dt.datetime.now().isoformat(timespec="seconds"))
+    u.setdefault("cheers", []).append(c)
+    return c
+
+
+@app.get("/api/social/cheers", response_model=list[Cheer])
+def cheers() -> list[Cheer]:
+    return store.user(UID).setdefault("cheers", [])
 
 
 @app.get("/api/goals", response_model=list[Goal])
