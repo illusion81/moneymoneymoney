@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'data/api_client.dart';
 import 'data/models.dart';
+import 'data/money_style_questions.dart';
 import 'data/survey_adapter.dart';
 import 'models/finance_profile.dart';
 import 'models/forest_day.dart';
@@ -19,17 +21,24 @@ import 'screens/home_screen.dart';
 import 'screens/homestead_screen.dart';
 import 'screens/money_style_flow.dart';
 import 'screens/money_style_result_screen.dart';
+import 'screens/money_style_ideas_screen.dart';
+import 'screens/plan_range_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/plus_screen.dart';
+import 'screens/diamond_store_screen.dart';
 import 'screens/shop_screen.dart';
 import 'screens/spending_screen.dart';
 import 'services/bank_spending_service.dart';
 import 'services/forest_engine.dart';
 import 'services/home_layout_service.dart';
+import 'services/profile_suggestions.dart';
 import 'services/progression_engine.dart';
 import 'services/report_generator.dart';
+import 'services/ad_service.dart';
+import 'services/payment_service.dart';
 import 'services/shop_service.dart';
+import 'services/money_style_repository.dart';
 import 'widgets/level_up_overlay.dart';
 import 'widgets/celebration_dialog.dart';
 
@@ -41,6 +50,8 @@ enum AppView {
   onboarding,
   moneyStyleFlow,
   moneyStyleResult,
+  moneyStyleIdeas,
+  rangePlan,
   report,
   forest,
   calendar,
@@ -49,10 +60,19 @@ enum AppView {
   homestead,
   achievements,
   shop,
+  diamonds,
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({
+    super.key,
+    this.apiClient,
+    this.moneyStyleStore,
+    this.showOnboardingInitially = false,
+  });
+  final ApiClient? apiClient;
+  final MoneyStyleStore? moneyStyleStore;
+  final bool showOnboardingInitially;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -63,7 +83,9 @@ class _MyAppState extends State<MyApp> {
   final ProgressionEngine _progressionEngine = ProgressionEngine();
   final ShopService _shopService = ShopService();
   final HomeLayoutService _homeLayoutService = HomeLayoutService();
-  final ApiClient _apiClient = ApiClient();
+  late final ApiClient _apiClient;
+  late final MoneyStyleStore _moneyStyleStore;
+  Future<void> _moneyStyleWrites = Future<void>.value();
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
   // The messenger's context sits above the Navigator, so dialogs need their
@@ -71,8 +93,7 @@ class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   WealthReport? _report;
-  FinanceProfile? _profile;
-  MoneyStyleResult? _moneyStyleResult;
+  MoneyStyleCompletion? _moneyStyleCompletion;
   ForestSummary _summary = const ForestSummary(
     days: [],
     currentStreak: 0,
@@ -85,12 +106,15 @@ class _MyAppState extends State<MyApp> {
   late ShopState _shopState;
   late HomeLayoutState _homeLayout;
   final List<RewardEvent> _spendEvents = [];
-  AppView _view = AppView.onboarding;
+  late AppView _view;
   String? _lastEarnedSummary;
   bool _planStarted = false;
 
   /// Demo-only membership flag — see PlusScreen; no real payment exists.
   bool _isPlusMember = false;
+  int _diamonds = 0;
+  final PaymentGateway _payments = MockPaymentGateway();
+  final AdGateway _ads = MockAdGateway();
 
   _MyAppState() {
     _shopState = _shopService.initialState();
@@ -105,17 +129,60 @@ class _MyAppState extends State<MyApp> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _apiClient = widget.apiClient ?? ApiClient();
+    _moneyStyleStore =
+        widget.moneyStyleStore ?? SharedPreferencesMoneyStyleRepository();
+    _view = widget.showOnboardingInitially
+        ? AppView.onboarding
+        : AppView.moneyStyleFlow;
+    unawaited(_loadMoneyStyle());
+  }
+
+  /// Plus gets a warmer, richer look: deeper greens, a brass accent and a
+  /// darker ground. It is purely cosmetic — nothing about the plan, the
+  /// leaderboard or the tree changes — but it makes the membership feel like
+  /// something rather than a flag in a database.
+  ThemeData _buildTheme({required bool plus}) {
+    final seed = plus ? const Color(0xff1f5d3c) : const Color(0xff2f7d50);
+    final base = ColorScheme.fromSeed(seedColor: seed);
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: plus
+          ? base.copyWith(
+              secondary: const Color(0xffb08d3f),
+              tertiary: const Color(0xffd9b45f),
+              surfaceContainerHighest: const Color(0xffe9e2d2),
+            )
+          : base,
+      scaffoldBackgroundColor:
+          plus ? const Color(0xfff2ede0) : const Color(0xfff5f1e8),
+      cardTheme: CardThemeData(
+        elevation: plus ? 2 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(plus ? 16 : 12),
+          side: plus
+              ? const BorderSide(color: Color(0xffd9c79a))
+              : BorderSide.none,
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor:
+            plus ? const Color(0xffe8e0cd) : const Color(0xffe8f0ea),
+        foregroundColor: const Color(0xff173b2f),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Money Money Money',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: _messengerKey,
       navigatorKey: _navigatorKey,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff2f7d50)),
-        scaffoldBackgroundColor: const Color(0xfff5f1e8),
-        useMaterial3: true,
-      ),
+      theme: _buildTheme(plus: _isPlusMember),
       home: _buildCurrentView(),
     );
   }
@@ -134,27 +201,55 @@ class _MyAppState extends State<MyApp> {
         return OnboardingScreen(
           onProfileSubmitted: _handleProfileSubmitted,
           onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+          onCancel: () => setState(
+            () => _view = _moneyStyleCompletion == null
+                ? AppView.moneyStyleFlow
+                : AppView.moneyStyleResult,
+          ),
+          onFetchSuggestion: _fetchProfileSuggestion,
         );
       case AppView.moneyStyleFlow:
         return MoneyStyleFlow(
           userId: 'user-1', // TODO: Replace with actual user ID
           onComplete: _handleMoneyStyleComplete,
+          existingCompletion: _moneyStyleCompletion,
+          onProgress: _handleMoneyStyleProgress,
+          onStartOver: _clearMoneyStyle,
         );
       case AppView.moneyStyleResult:
         return MoneyStyleResultScreen(
-          result: _moneyStyleResult!,
-          // The quiz tells them who they are; these are the two ways out of it.
-          // "Explore ideas" goes to the forest if they already have a plan,
-          // otherwise there is nothing to explore yet and they need the numbers.
-          onExplore: () => setState(() =>
-              _view = _report == null ? AppView.onboarding : AppView.forest),
-          onBuildPlan: () => setState(() => _view = AppView.onboarding),
+          completion: _moneyStyleCompletion!,
+          onExploreIdeas: () => setState(() => _view = AppView.moneyStyleIdeas),
+          onBuildRangePlan: () => setState(() => _view = AppView.rangePlan),
+          onAnswerMore: () => setState(() => _view = AppView.moneyStyleFlow),
+          onStartOver: () async {
+            await _clearMoneyStyle();
+            if (mounted) {
+              setState(() {
+                _view = AppView.moneyStyleFlow;
+              });
+            }
+          },
+        );
+      case AppView.moneyStyleIdeas:
+        final result = _moneyStyleCompletion!.result;
+        return result == null
+            ? _buildCurrentView()
+            : MoneyStyleIdeasScreen(
+                result: result,
+                onBack: () => setState(() => _view = AppView.moneyStyleResult),
+              );
+      case AppView.rangePlan:
+        return PlanRangeScreen(
+          onKeep: () => setState(() => _view = AppView.moneyStyleResult),
+          onExact: () => setState(() => _view = AppView.onboarding),
         );
       case AppView.report:
         if (report == null) {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return ReportScreen(
@@ -169,20 +264,23 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return HomeScreen(
           report: report,
           summary: _summary,
-          financeProfile: _profile,
           progression: _progression,
           shopState: _shopState,
           lastEarnedSummary: _lastEarnedSummary,
           onCheckIn: _handleCheckIn,
           onRestore: _handleRestore,
           onShowReport: () => setState(() => _view = AppView.report),
-          onRetakeQuestionnaire: () =>
-              setState(() => _view = AppView.onboarding),
+          onRetakeQuestionnaire: () => setState(
+            () => _view = widget.showOnboardingInitially
+                ? AppView.onboarding
+                : AppView.moneyStyleFlow,
+          ),
           onShowAchievements: () =>
               setState(() => _view = AppView.achievements),
           onShowShop: () => setState(() => _view = AppView.shop),
@@ -193,6 +291,9 @@ class _MyAppState extends State<MyApp> {
           onShowHomestead: () => setState(() => _view = AppView.homestead),
           onFetchTodaySpending: _fetchTodaySpending,
           api: _apiClient,
+          onDebugSimulate: _handleDebugSimulateStreak,
+          onDebugFillFarm: _handleDebugFillFarm,
+          onShowDiamonds: () => setState(() => _view = AppView.diamonds),
         );
       case AppView.calendar:
         return CalendarScreen(
@@ -243,6 +344,7 @@ class _MyAppState extends State<MyApp> {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return AchievementsScreen(
@@ -253,11 +355,25 @@ class _MyAppState extends State<MyApp> {
           onShowCalendar: () => setState(() => _view = AppView.calendar),
           onShowHomestead: () => setState(() => _view = AppView.homestead),
         );
+      case AppView.diamonds:
+        return DiamondStoreScreen(
+          gateway: _payments,
+          diamonds: _diamonds,
+          isPlusMember: _isPlusMember,
+          onPurchased: (delta) => setState(() => _diamonds += delta),
+          onSubscribe: _handleSubscribePlus,
+          onBack: () => setState(() => _view = AppView.forest),
+          onWatchAd: () async {
+            final result = await _ads.showRewarded();
+            return result.rewarded ? result.amount : 0;
+          },
+        );
       case AppView.shop:
         if (report == null) {
           return OnboardingScreen(
             onProfileSubmitted: _handleProfileSubmitted,
             onStartMoneyStyleQuiz: _startMoneyStyleQuiz,
+            onFetchSuggestion: _fetchProfileSuggestion,
           );
         }
         return ShopScreen(
@@ -270,7 +386,7 @@ class _MyAppState extends State<MyApp> {
           onBack: () => setState(() => _view = AppView.forest),
           onDebugMaxCoins: _handleDebugMaxCoins,
           onDebugUnlockAll: _handleDebugUnlockAll,
-          onDebugGrantXp: _handleDebugGrantXp,
+          onDebugGrantXp: _handleDebugSimulateStreak,
         );
     }
   }
@@ -287,17 +403,24 @@ class _MyAppState extends State<MyApp> {
 
   void _handleProfileSubmitted(FinanceProfile profile) {
     _pushProfileToBackend(profile);
-    final alreadyStarted = _planStarted;
     setState(() {
-      _profile = profile;
-      _report = ReportGenerator().generate(profile);
+      // The Money Style quiz, when taken, adds a daily action tailored to
+      // how this person actually decides — so it changes something they
+      // see every day, not just a one-off result screen.
+      _report = ReportGenerator().generate(
+        profile,
+        style: styleActionForResult(_moneyStyleCompletion?.result),
+      );
       _summary = _forestEngine.summarize(
         _summary.days,
         progression: _progression,
         shopState: _shopState,
       );
-      _view = AppView.report;
-      _planStarted = alreadyStarted;
+      // Submitting the questionnaire drops the user straight into the app.
+      // The report is still one tap away from the Forest app bar, so nothing
+      // is lost by skipping it as a mandatory step.
+      _view = AppView.forest;
+      _planStarted = true;
     });
   }
 
@@ -307,11 +430,86 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _handleMoneyStyleComplete(MoneyStyleResult result) {
+  Future<void> _loadMoneyStyle() async {
+    MoneyStyleCompletion? completion;
+    try {
+      completion = await _moneyStyleStore.load();
+    } catch (error) {
+      debugPrint('Money Style progress could not be loaded: $error');
+    }
+    if (!mounted || completion == null) {
+      return;
+    }
+    final showResult =
+        completion.result != null ||
+        completion.session.isCompleteFor(moneyStyleQuestions);
     setState(() {
-      _moneyStyleResult = result;
+      _moneyStyleCompletion = completion;
+      _view = showResult ? AppView.moneyStyleResult : AppView.moneyStyleFlow;
+    });
+  }
+
+  void _handleMoneyStyleProgress(AnswerSession session) {
+    unawaited(
+      _saveMoneyStyle(
+        MoneyStyleCompletion(session: session.snapshot(), result: null),
+      ),
+    );
+  }
+
+  Future<void> _saveMoneyStyle(MoneyStyleCompletion completion) {
+    final snapshot = MoneyStyleCompletion(
+      session: completion.session.snapshot(),
+      result: completion.result,
+    );
+    _moneyStyleWrites = _moneyStyleWrites.then((_) async {
+      try {
+        await _moneyStyleStore.save(snapshot);
+      } catch (error) {
+        debugPrint('Money Style progress could not be saved: $error');
+      }
+    });
+    return _moneyStyleWrites;
+  }
+
+  Future<void> _clearMoneyStyle() async {
+    await _moneyStyleWrites;
+    try {
+      await _moneyStyleStore.clear();
+    } catch (error) {
+      debugPrint('Money Style progress could not be cleared: $error');
+    }
+    if (mounted) {
+      setState(() => _moneyStyleCompletion = null);
+    }
+  }
+
+  Future<void> _handleMoneyStyleComplete(
+    MoneyStyleCompletion completion,
+  ) async {
+    final snapshot = MoneyStyleCompletion(
+      session: completion.session.snapshot(),
+      result: completion.result,
+    );
+    await _saveMoneyStyle(snapshot);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _moneyStyleCompletion = snapshot;
       _view = AppView.moneyStyleResult;
     });
+    unawaited(_syncMoneyStyle(snapshot));
+  }
+
+  Future<void> _syncMoneyStyle(MoneyStyleCompletion completion) async {
+    try {
+      await _apiClient.submitMoneyStyle(
+        MoneyStyleSubmission.fromCompletion(completion),
+      );
+    } catch (error) {
+      debugPrint('Money Style not sent to backend: $error');
+    }
   }
 
   void _startPlan() {
@@ -348,9 +546,13 @@ class _MyAppState extends State<MyApp> {
       _lastEarnedSummary = '+$earnedXp XP, +$earnedCoins coins';
     });
 
-    // Celebrate only a day that actually stayed within budget — an
-    // over-budget day gets the restoration panel instead.
-    if (result.day.status == TreeStatus.healthy) {
+    // Two celebrations exist and they must not stack. Levelling up is the
+    // bigger moment, so it wins; otherwise a within-budget day gets the
+    // ordinary check-in celebration. An over-budget day gets neither — it
+    // gets the restoration panel instead.
+    if (_progression.level.level > beforeLevel) {
+      _celebrateIfLevelled(beforeLevel, xp: earnedXp, coins: earnedCoins);
+    } else if (result.day.status == TreeStatus.healthy) {
       final context = _navigatorKey.currentContext;
       if (context != null) {
         showCelebrationDialog(
@@ -450,6 +652,14 @@ class _MyAppState extends State<MyApp> {
     _showMessage('Saved to ${file.path}');
   }
 
+  /// Suggests income and fixed expenses from the last 90 days of bank
+  /// activity, so onboarding asks the user to confirm rather than recall.
+  Future<ProfileSuggestion?> _fetchProfileSuggestion() async {
+    const days = 90;
+    final transactions = await _apiClient.transactions(days: days);
+    return suggestProfileFromTransactions(transactions, days: days);
+  }
+
   Future<double> _fetchTodaySpending() async {
     final transactions = await _apiClient.transactions(days: 7);
     return sumTodaySpending(transactions);
@@ -457,7 +667,11 @@ class _MyAppState extends State<MyApp> {
 
   /// Fires the level-up overlay when the level number actually increased.
   /// Called after any action that can award XP.
-  void _celebrateIfLevelled(int beforeLevel, {required int xp, required int coins}) {
+  void _celebrateIfLevelled(
+    int beforeLevel, {
+    required int xp,
+    required int coins,
+  }) {
     final after = _progression.level.level;
     if (after <= beforeLevel) return;
     final ctx = _messengerKey.currentContext;
@@ -471,28 +685,115 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  /// Debug only: grant enough XP to cross the next level boundary, so the
-  /// level-up moment can be tested and rehearsed without waiting for real
-  /// check-ins. Hidden outside debug builds.
-  void _handleDebugGrantXp() {
+  /// Debug only: build a run of consecutive within-budget days.
+  ///
+  /// This replaces an earlier "grant XP" button that did not work. Two reasons
+  /// it could not:
+  ///   1. ProgressionEngine derives XP from the DAYS list; spendEvents only
+  ///      ever contribute coins. A synthetic XP event was silently ignored.
+  ///   2. The tree's size comes from ForestEngine's streak (1/2/3), not from
+  ///      the player level at all — so XP could never grow the tree.
+  ///
+  /// Feeding real days through the real engine fixes both: the streak grows the
+  /// tree, and the XP those days earn levels the player up for real.
+  void _handleDebugSimulateStreak() {
+    final report = _report;
+    if (report == null) return;
+
     final beforeLevel = _progression.level.level;
     final beforeXp = _progression.totalXp;
     final beforeCoins = _progression.coinBalance;
+
+    var days = _summary.days;
+    // Walk BACKWARDS from the earliest day we already have. Re-running over the
+    // same dates just overwrites them, which is why pressing this repeatedly
+    // used to do nothing after the first time.
+    final earliest = days.isEmpty
+        ? DateTime.now()
+        : days.map((d) => d.date).reduce((a, b) => a.isBefore(b) ? a : b);
+
+    for (var i = 1; i <= 7; i++) {
+      final result = _forestEngine.checkIn(
+        existingDays: days,
+        report: report,
+        date: earliest.subtract(Duration(days: i)),
+        spending: report.dailyBudget * 0.6, // comfortably under budget
+      );
+      days = result.summary.days;
+    }
+
     setState(() {
+      _summary = _forestEngine.summarize(
+        days,
+        progression: _progression,
+        shopState: _shopState,
+      );
+      _recomputeProgression();
+    });
+
+    _celebrateIfLevelled(beforeLevel,
+        xp: _progression.totalXp - beforeXp,
+        coins: _progression.coinBalance - beforeCoins);
+  }
+
+  /// Demo only: own everything and lay it out.
+  ///
+  /// Buying eleven animals and placing ten decorations by hand is two minutes
+  /// of clicking that nobody wants to watch in a three-minute pitch. This grants
+  /// the lot and arranges the homestead in one press. It writes state directly
+  /// rather than going through ShopService, so it deliberately bypasses coin
+  /// and level checks — which is exactly why it sits behind the dev PIN.
+  void _handleDebugFillFarm() {
+    final owned = <String>{
+      ..._shopState.ownedItemIds,
+      for (final item in kShopCatalog) item.id,
+    };
+
+    // Equip one of each category so skins and ground actually change.
+    final equipped = <ShopItemCategory, String>{..._shopState.equippedItemIds};
+    for (final category in ShopItemCategory.values) {
+      if (category == ShopItemCategory.animal) continue;
+      final pick = kShopCatalog.where((i) => i.category == category).toList();
+      if (pick.isNotEmpty) {
+        equipped[category] = pick.last.id; // the fanciest one
+      }
+    }
+
+    // Spread the decorations over the grid rather than stacking them.
+    var layout = _homeLayoutService.initialState();
+    final decor = kShopCatalog
+        .where((i) => i.category == ShopItemCategory.decoration)
+        .toList();
+    var slot = 0;
+    for (final item in decor) {
+      final row = (slot ~/ kHomeGridSize) % kHomeGridSize;
+      final col = slot % kHomeGridSize;
+      layout = _homeLayoutService.place(
+        state: layout,
+        itemId: item.id,
+        row: row,
+        col: col,
+      );
+      slot += 2; // leave a gap so it does not look like a wall
+    }
+
+    setState(() {
+      _shopState = ShopState(ownedItemIds: owned, equippedItemIds: equipped);
+      _homeLayout = layout;
+      _isPlusMember = true;
+      _diamonds = _diamonds < 500 ? 500 : _diamonds;
       _spendEvents.add(
         RewardEvent(
           date: DateTime.now(),
           type: RewardEventType.debugGrant,
-          xp: _progression.level.xpForNextLevel - _progression.level.xpIntoLevel + 5,
-          coins: 40,
-          description: 'Debug: grant XP to next level',
+          xp: 0,
+          coins: 5000,
+          description: 'Debug: demo setup',
         ),
       );
       _recomputeProgression();
     });
-    _celebrateIfLevelled(beforeLevel,
-        xp: _progression.totalXp - beforeXp,
-        coins: _progression.coinBalance - beforeCoins);
+    _showMessage('Demo farm ready — everything owned and placed.');
   }
 
   void _handleDebugMaxCoins() {

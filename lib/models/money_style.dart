@@ -12,12 +12,15 @@ enum ConfidenceTier { earlySnapshot, standard, fullClarity }
 // MoneyStyleAnswer represents one of the 3 answer options for a question
 class MoneyStyleAnswer {
   const MoneyStyleAnswer({
+    required this.id,
     required this.text,
     required this.dimension,
     required this.pole,
     this.isBreaker = false,
   });
 
+  /// Stable storage identity, independent of randomized display order.
+  final String id;
   final String text;
   final Dimension dimension;
   final dynamic pole; // MoneyRhythmPole | DecisionStylePole | SupportStylePole
@@ -31,12 +34,14 @@ class MoneyStyleAnswer {
 class MoneyStyleQuestion {
   const MoneyStyleQuestion({
     required this.id,
+    required this.dimension,
     required this.scenario,
     required this.prompt,
     required this.answers,
   });
 
   final int id;
+  final Dimension dimension;
   final String scenario;
   final String prompt;
   final List<MoneyStyleAnswer> answers; // Always exactly 3
@@ -130,6 +135,44 @@ class AnswerSession {
 
   int get totalAnswered => selectedAnswers.length;
   int get totalSkipped => skippedQuestions.length;
+
+  AnswerSession snapshot() => AnswerSession(
+    userId: userId,
+    sessionId: sessionId,
+    selectedAnswers: Map<int, int>.from(selectedAnswers),
+    skippedQuestions: Set<int>.from(skippedQuestions),
+    timestamp: timestamp,
+  );
+
+  bool isCompleteFor(List<MoneyStyleQuestion> questions) {
+    if (selectedAnswers.keys.any(skippedQuestions.contains)) {
+      return false;
+    }
+    return questions.every(
+      (question) =>
+          selectedAnswers.containsKey(question.id) ||
+          skippedQuestions.contains(question.id),
+    );
+  }
+
+  Map<String, String> answerIdsFor(List<MoneyStyleQuestion> questions) {
+    final values = <String, String>{};
+    for (final entry in selectedAnswers.entries) {
+      MoneyStyleQuestion? question;
+      for (final candidate in questions) {
+        if (candidate.id == entry.key) {
+          question = candidate;
+          break;
+        }
+      }
+      if (question != null &&
+          entry.value >= 0 &&
+          entry.value < question.answers.length) {
+        values['${entry.key}'] = question.answers[entry.value].id;
+      }
+    }
+    return values;
+  }
 }
 
 // ArchetypeInfo contains all metadata for an archetype
@@ -183,4 +226,14 @@ class MoneyStyleResult {
         return 'Full Clarity';
     }
   }
+}
+
+/// Keeps the raw session even when it cannot honestly support an archetype.
+class MoneyStyleCompletion {
+  const MoneyStyleCompletion({required this.session, required this.result});
+
+  final AnswerSession session;
+  final MoneyStyleResult? result;
+
+  bool get hasEnoughEvidence => result != null;
 }

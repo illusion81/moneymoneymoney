@@ -5,13 +5,16 @@
 // compute different things from the same person and /api/plan returns 409.
 
 import '../models/finance_profile.dart';
+import '../services/risk_assessment.dart';
 import 'models.dart';
 
 /// Risk appetite is 1..5 on the backend; the questionnaire offers three steps.
-int _risk(RiskPreference p) => switch (p) {
-  RiskPreference.conservative => 2,
-  RiskPreference.balanced => 3,
-  RiskPreference.growth => 5,
+int _risk(RiskLevel p) => switch (p) {
+  RiskLevel.cautious => 1,
+  RiskLevel.steady => 2,
+  RiskLevel.balanced => 3,
+  RiskLevel.growth => 4,
+  RiskLevel.aggressive => 5,
 };
 
 /// How far ahead they're planning, inferred from the goal they picked.
@@ -45,7 +48,7 @@ extension FinanceProfileSurvey on FinanceProfile {
   SurveyAnswers toSurveyAnswers() => SurveyAnswers(
     monthlyIncome: monthlyIncome,
     fixedCosts: fixedMonthlyExpenses,
-    riskAppetite: _risk(riskPreference),
+    riskAppetite: _risk(riskLevel),
     horizonMonths: _horizonMonths(financialGoal),
     hasEmergencyFund: _hasBuffer(financialGoal),
     topWorry: _worry(financialGoal, spendingPressure),

@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../models/finance_profile.dart';
+import '../services/profile_suggestions.dart';
+import '../services/risk_assessment.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
     super.key,
     required this.onProfileSubmitted,
     this.onStartMoneyStyleQuiz,
+    this.onCancel,
+    this.onFetchSuggestion,
   });
 
   final ValueChanged<FinanceProfile> onProfileSubmitted;
   final VoidCallback? onStartMoneyStyleQuiz;
+  final VoidCallback? onCancel;
+
+  /// Pulls suggested figures from the bank feed so the user confirms numbers
+  /// rather than recalling them. Null when no backend is available; a
+  /// failure here must leave a perfectly usable blank form.
+  final Future<ProfileSuggestion?> Function()? onFetchSuggestion;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -21,7 +31,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _incomeController = TextEditingController();
   final _expensesController = TextEditingController();
   final _savingsController = TextEditingController();
-  RiskPreference _riskPreference = RiskPreference.balanced;
+
+  bool _prefilledFromBank = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tryPrefill();
+  }
+
+  Future<void> _tryPrefill() async {
+    final fetch = widget.onFetchSuggestion;
+    if (fetch == null) {
+      return;
+    }
+    try {
+      final suggestion = await fetch();
+      if (!mounted || suggestion == null) {
+        return;
+      }
+      setState(() {
+        _incomeController.text = suggestion.monthlyIncome.toStringAsFixed(0);
+        _expensesController.text = suggestion.fixedMonthlyExpenses
+            .toStringAsFixed(0);
+        _prefilledFromBank = true;
+      });
+    } catch (_) {
+      // Offline or no linked bank — the blank form still works.
+    }
+  }
+
   FinancialGoal _financialGoal = FinancialGoal.emergencyFund;
   SpendingPressure _spendingPressure = SpendingPressure.medium;
 
@@ -49,7 +88,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: [
                     const SizedBox(height: 16),
                     Text(
-                      'Money Profile',
+                      'Build an exact-number plan',
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -58,10 +97,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Answer a short money questionnaire to generate your personal wealth report.',
+                      'Optional: these amounts are used to calculate a daily budget. You can go back and keep using your Money Style result without sharing them.',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 24),
+                    if (_prefilledFromBank) ...[
+                      Container(
+                        key: const Key('prefill-banner'),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xffedf8ed),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.account_balance,
+                              size: 20,
+                              color: Color(0xff2f7d50),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Filled in from your bank activity — check the '
+                                'numbers and edit anything that looks wrong.',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     _MoneyNumberField(
                       fieldKey: const Key('income-field'),
                       controller: _incomeController,
@@ -81,15 +148,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       label: 'Monthly savings goal',
                     ),
                     const SizedBox(height: 18),
-                    _EnumDropdown<RiskPreference>(
-                      label: 'Risk preference',
-                      value: _riskPreference,
-                      values: RiskPreference.values,
-                      labelFor: _riskLabel,
-                      onChanged: (value) =>
-                          setState(() => _riskPreference = value),
-                    ),
-                    const SizedBox(height: 14),
                     _EnumDropdown<FinancialGoal>(
                       label: 'Main financial goal',
                       value: _financialGoal,
@@ -144,38 +202,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         monthlyIncome: double.parse(_incomeController.text),
         fixedMonthlyExpenses: double.parse(_expensesController.text),
         monthlySavingsGoal: double.parse(_savingsController.text),
-        riskPreference: _riskPreference,
+        riskLevel: RiskLevel.balanced,
         financialGoal: _financialGoal,
         spendingPressure: _spendingPressure,
       ),
     );
   }
 
-  /// Skips the questionnaire with a reasonable default profile. The user can
-  /// fill in real numbers later via "retake questionnaire" on the Forest
-  /// screen.
   void _skip() {
-    widget.onProfileSubmitted(
-      const FinanceProfile(
-        monthlyIncome: 3000,
-        fixedMonthlyExpenses: 1500,
-        monthlySavingsGoal: 300,
-        riskPreference: RiskPreference.balanced,
-        financialGoal: FinancialGoal.emergencyFund,
-        spendingPressure: SpendingPressure.medium,
-      ),
-    );
-  }
-
-  String _riskLabel(RiskPreference value) {
-    switch (value) {
-      case RiskPreference.conservative:
-        return 'Conservative';
-      case RiskPreference.balanced:
-        return 'Balanced';
-      case RiskPreference.growth:
-        return 'Growth';
-    }
+    widget.onCancel?.call();
   }
 
   String _goalLabel(FinancialGoal value) {

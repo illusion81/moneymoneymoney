@@ -128,6 +128,8 @@ class ApiClient {
   Future<Profile> profile() async =>
       Profile.fromJson(await _getObj('/api/profile'));
 
+  Future<MoneyStyleSubmission> submitMoneyStyle(MoneyStyleSubmission value) async => MoneyStyleSubmission.fromJson((await _send('POST', '/api/money-style', body: value.toJson())) as Map<String, dynamic>);
+
   // ---------------------------------------------------------------- bank
 
   Future<ConnectionStatus> connectBank({String persona = 'Whistler'}) async =>
@@ -179,8 +181,14 @@ class ApiClient {
       Circle.fromJson((await _send('POST', '/api/social/join',
           body: {'display_name': displayName, 'code': code})) as Map<String, dynamic>);
 
-  Future<Circle> leaderboard() async =>
-      Circle.fromJson(await _getObj('/api/social/leaderboard'));
+  /// Pass the app's own streak and level — the forest engine owns them, so
+  /// the backend cannot know them otherwise and your rank would never move.
+  Future<Circle> leaderboard({int? streak, int? level, double? adherence}) async =>
+      Circle.fromJson(await _getObj('/api/social/leaderboard', {
+        'streak': ?streak,
+        'level': ?level,
+        'adherence': ?adherence,
+      }));
 
   Future<void> cheer(String toName, {String message = 'Keep going'}) =>
       _send('POST', '/api/social/cheer',
