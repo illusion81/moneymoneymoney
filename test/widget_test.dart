@@ -1,13 +1,54 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:moneymoneymoney/data/api_client.dart';
+import 'package:moneymoneymoney/data/money_style_archetypes.dart';
 import 'package:moneymoneymoney/main.dart';
 import 'package:moneymoneymoney/models/forest_day.dart';
+import 'package:moneymoneymoney/models/money_style.dart';
 import 'package:moneymoneymoney/models/progression.dart';
 import 'package:moneymoneymoney/models/wealth_report.dart';
 import 'package:moneymoneymoney/screens/home_screen.dart';
 import 'package:moneymoneymoney/screens/shop_screen.dart';
 import 'package:moneymoneymoney/services/forest_engine.dart';
+import 'package:moneymoneymoney/services/money_style_repository.dart';
 import 'package:moneymoneymoney/services/shop_service.dart';
+
+class _Store implements MoneyStyleStore {
+  _Store(this.value);
+
+  MoneyStyleCompletion? value;
+
+  @override
+  Future<void> clear() async {
+    value = null;
+  }
+
+  @override
+  Future<MoneyStyleCompletion?> load() async => value;
+
+  @override
+  Future<void> save(MoneyStyleCompletion completion) async {
+    value = completion;
+  }
+}
+
+class _DelayedClearStore extends _Store {
+  _DelayedClearStore(super.value);
+
+  final clearStarted = Completer<void>();
+  final allowClear = Completer<void>();
+
+  @override
+  Future<void> clear() async {
+    clearStarted.complete();
+    await allowClear.future;
+    value = null;
+  }
+}
 
 const _testReport = WealthReport(
   profileSummary: 'summary',
@@ -128,7 +169,7 @@ void main() {
   });
 
   Future<void> startPlan(WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboardingInitially: true));
 
     await tester.enterText(find.byKey(const Key('income-field')), '6000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
@@ -137,18 +178,170 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('first app screen shows the questionnaire', (tester) async {
+  testWidgets('first app screen earns trust before asking for numbers', (
+    tester,
+  ) async {
     await tester.pumpWidget(const MyApp());
 
-    expect(find.text('Money Profile'), findsOneWidget);
-    expect(find.text('Monthly income'), findsOneWidget);
-    expect(find.text('Generate Report'), findsOneWidget);
+    expect(find.text('Discover Your Money Style'), findsOneWidget);
+    expect(find.textContaining('2–3 minutes'), findsOneWidget);
+    expect(find.text('Monthly income'), findsNothing);
+  });
+
+  testWidgets(
+    'restored result can cancel exact planning without submitting a survey',
+    (tester) async {
+      final session = AnswerSession(
+        userId: 'user-1',
+        sessionId: 'saved-session',
+        selectedAnswers: {1: 0, 2: 0, 4: 0},
+        skippedQuestions: {3, 5, 6, 7, 8, 9, 10, 11, 12},
+      );
+      final completion = MoneyStyleCompletion(
+        session: session,
+        result: MoneyStyleResult(
+          archetype: archetypeMap['steady_pause_collaborative']!,
+          confidenceTier: ConfidenceTier.earlySnapshot,
+          dimensionScores: DimensionScores(
+            steadyCount: 1,
+            pauseCount: 1,
+            collaborativeCount: 1,
+          ),
+          moneyRhythmWinner: MoneyRhythmPole.steady,
+          decisionStyleWinner: DecisionStylePole.pause,
+          supportStyleWinner: SupportStylePole.collaborative,
+          totalAnswered: 3,
+        ),
+      );
+      final requests = <http.Request>[];
+      final apiClient = ApiClient(
+        baseUrl: 'http://example.test',
+        client: MockClient((request) async {
+          requests.add(request);
+          return http.Response(request.body, 200);
+        }),
+      );
+
+      await tester.pumpWidget(
+        MyApp(apiClient: apiClient, moneyStyleStore: _Store(completion)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('The Intentional Protector'), findsOneWidget);
+
+      await tester.tap(find.text('Build a practical plan with ranges'));
+      await tester.pumpAndSettle();
+      expect(find.text('Plan with ranges'), findsOneWidget);
+
+      await tester.tap(find.text('Use exact numbers for a daily calculation'));
+      await tester.pumpAndSettle();
+      expect(find.text('Build an exact-number plan'), findsOneWidget);
+
+      await tester.tap(find.text('Skip for now'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('The Intentional Protector'), findsOneWidget);
+      expect(
+        requests.where((request) => request.url.path == '/api/survey'),
+        isEmpty,
+      );
+    },
+  );
+
+  testWidgets(
+    'restored in-progress session resumes instead of showing a result',
+    (tester) async {
+      final completion = MoneyStyleCompletion(
+        session: AnswerSession(
+          userId: 'user-1',
+          sessionId: 'in-progress-session',
+          selectedAnswers: {1: 0, 2: 0, 4: 0},
+          skippedQuestions: {3},
+        ),
+        result: null,
+      );
+
+      await tester.pumpWidget(MyApp(moneyStyleStore: _Store(completion)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Resume'), findsOneWidget);
+      expect(find.text('Start over'), findsOneWidget);
+      expect(find.text('Not enough to name a style yet'), findsNothing);
+    },
+  );
+
+  testWidgets('money style ideas can return to the restored result', (
+    tester,
+  ) async {
+    final session = AnswerSession(
+      userId: 'user-1',
+      sessionId: 'saved-session',
+      selectedAnswers: {1: 0, 2: 0, 4: 0},
+      skippedQuestions: {3, 5, 6, 7, 8, 9, 10, 11, 12},
+    );
+    final completion = MoneyStyleCompletion(
+      session: session,
+      result: MoneyStyleResult(
+        archetype: archetypeMap['steady_pause_collaborative']!,
+        confidenceTier: ConfidenceTier.earlySnapshot,
+        dimensionScores: DimensionScores(
+          steadyCount: 1,
+          pauseCount: 1,
+          collaborativeCount: 1,
+        ),
+        moneyRhythmWinner: MoneyRhythmPole.steady,
+        decisionStyleWinner: DecisionStylePole.pause,
+        supportStyleWinner: SupportStylePole.collaborative,
+        totalAnswered: 3,
+      ),
+    );
+
+    await tester.pumpWidget(MyApp(moneyStyleStore: _Store(completion)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore ideas that fit my style'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ideas for your style'), findsOneWidget);
+    expect(find.text('Back to Money Style'), findsOneWidget);
+
+    await tester.tap(find.text('Back to Money Style'));
+    await tester.pumpAndSettle();
+    expect(find.text('The Intentional Protector'), findsOneWidget);
+  });
+
+  testWidgets('start over awaits persisted-state clearing before a new quiz', (
+    tester,
+  ) async {
+    final completion = MoneyStyleCompletion(
+      session: AnswerSession(
+        userId: 'user-1',
+        sessionId: 'in-progress-session',
+        selectedAnswers: {1: 0},
+      ),
+      result: null,
+    );
+    final store = _DelayedClearStore(completion);
+
+    await tester.pumpWidget(MyApp(moneyStyleStore: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start over'));
+    await tester.pump();
+    await store.clearStarted.future;
+
+    expect(find.text('Resume'), findsOneWidget);
+    expect(find.text('1 of 12'), findsNothing);
+
+    store.allowClear.complete();
+    await tester.pumpAndSettle();
+
+    expect(store.value, isNull);
+    expect(find.text('1 of 12'), findsOneWidget);
   });
 
   testWidgets('Generate Report goes straight to the main screen', (
     tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboardingInitially: true));
 
     await tester.enterText(find.byKey(const Key('income-field')), '6000');
     await tester.enterText(find.byKey(const Key('expenses-field')), '2500');
@@ -298,7 +491,7 @@ void main() {
     await tester.tap(find.byKey(const Key('retake-questionnaire-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Money Profile'), findsOneWidget);
+    expect(find.text('Build an exact-number plan'), findsOneWidget);
     expect(find.text('Generate Report'), findsOneWidget);
   });
 
@@ -466,9 +659,13 @@ void main() {
       expect(find.text('Forest Shop'), findsOneWidget);
       expect(find.text('Golden Ginkgo'), findsOneWidget);
 
-      final buyButtonFinder = find.ancestor(
-        of: find.text('Buy for 120'),
-        matching: find.byType(FilledButton),
+      final goldenGinkgoTile = find.ancestor(
+        of: find.text('Golden Ginkgo'),
+        matching: find.byType(ListTile),
+      );
+      final buyButtonFinder = find.descendant(
+        of: goldenGinkgoTile,
+        matching: find.widgetWithText(FilledButton, 'Buy for 120'),
       );
       expect(buyButtonFinder, findsOneWidget);
       final buyButton = tester.widget<FilledButton>(buyButtonFinder);

@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import store
-from models import (SurveyAnswers, Profile, ConnectionStatus, Account, Transaction,
+from models import (SurveyAnswers, Profile, MoneyStyleSubmission, ConnectionStatus, Account, Transaction,
                     Goal, GoalCreate, JoinCircle, Circle, Cheer,
                     Plan, Mission, ClaimResult, Progression, TowerState, ShopItem,
                     ConsentStatus)
@@ -227,6 +227,21 @@ def get_profile() -> Profile:
     return _require_profile()
 
 
+@app.post("/api/money-style", response_model=MoneyStyleSubmission)
+def submit_money_style(submission: MoneyStyleSubmission) -> MoneyStyleSubmission:
+    """Save behavioural answers without creating a financial profile."""
+    store.user(UID)["money_style"] = submission
+    return submission
+
+
+@app.get("/api/money-style", response_model=MoneyStyleSubmission)
+def get_money_style() -> MoneyStyleSubmission:
+    submission = store.user(UID)["money_style"]
+    if submission is None:
+        raise HTTPException(404, "No Money Style submission yet.")
+    return submission
+
+
 # ------------------------------------------------------------------ bank
 
 class ConnectBody(BaseModel):
@@ -340,7 +355,10 @@ def join_circle(body: JoinCircle) -> Circle:
 
 
 @app.get("/api/social/leaderboard", response_model=Circle)
-def leaderboard() -> Circle:
+def leaderboard(streak: int | None = None, level: int | None = None) -> Circle:
+    """The app keeps its own streak and level (the forest engine owns them), so
+    it passes them in. Without this the leaderboard would rank you on the
+    backend's copy and your rank would never move as you play."""
     _require_profile()
     u = store.user(UID)
     code = u.get("circle") or "UQ2026"
@@ -350,8 +368,8 @@ def leaderboard() -> Circle:
         name=CIRCLE_NAMES.get(code, f"Circle {code}"),
         you_display=u.get("display_name") or "You",
         you_adherence=_your_adherence(),
-        you_level=prog.level,
-        you_streak=prog.streak_days,
+        you_level=level if level is not None else prog.level,
+        you_streak=streak if streak is not None else prog.streak_days,
     )
 
 

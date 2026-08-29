@@ -9,11 +9,13 @@ class OnboardingScreen extends StatefulWidget {
     super.key,
     required this.onProfileSubmitted,
     this.onStartMoneyStyleQuiz,
+    this.onCancel,
     this.onFetchSuggestion,
   });
 
   final ValueChanged<FinanceProfile> onProfileSubmitted;
   final VoidCallback? onStartMoneyStyleQuiz;
+  final VoidCallback? onCancel;
 
   /// Pulls suggested figures from the bank feed so the user confirms numbers
   /// rather than recalling them. Null when no backend is available; a
@@ -86,7 +88,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: [
                     const SizedBox(height: 16),
                     Text(
-                      'Money Profile',
+                      'Build an exact-number plan',
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -95,7 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Answer a short money questionnaire to generate your personal wealth report.',
+                      'Optional: these amounts are used to calculate a daily budget. You can go back and keep using your Money Style result without sharing them.',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 24),
@@ -207,20 +209,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  /// Skips the questionnaire with a reasonable default profile. The user can
-  /// fill in real numbers later via "retake questionnaire" on the Forest
-  /// screen.
   void _skip() {
-    widget.onProfileSubmitted(
-      const FinanceProfile(
-        monthlyIncome: 3000,
-        fixedMonthlyExpenses: 1500,
-        monthlySavingsGoal: 300,
-        riskLevel: RiskLevel.balanced,
-        financialGoal: FinancialGoal.emergencyFund,
-        spendingPressure: SpendingPressure.medium,
-      ),
-    );
+    widget.onCancel?.call();
   }
 
   String _goalLabel(FinancialGoal value) {

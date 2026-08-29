@@ -13,8 +13,12 @@ import '../data/api_client.dart';
 import '../data/models.dart';
 
 class CircleScreen extends StatefulWidget {
-  const CircleScreen({super.key, required this.api});
+  const CircleScreen({super.key, required this.api, this.streak, this.level});
   final ApiClient api;
+
+  /// The app's own streak and level, forwarded so your rank reflects play.
+  final int? streak;
+  final int? level;
 
   @override
   State<CircleScreen> createState() => _CircleScreenState();
@@ -34,7 +38,10 @@ class _CircleScreenState extends State<CircleScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      _circle = await widget.api.leaderboard();
+      _circle = await widget.api.leaderboard(
+        streak: widget.streak,
+        level: widget.level,
+      );
       _error = null;
     } on ApiException catch (e) {
       _error = e.needsSurvey

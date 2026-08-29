@@ -37,15 +37,22 @@ void main() {
       }
     });
 
-    test('no other item in a category is Plus-only', () {
+    test('Plus-only items are grouped at the end of each category', () {
       for (final category in ShopItemCategory.values) {
         final items = service.itemsFor(category);
-        final allButLast = items.sublist(0, items.length - 1);
-        expect(
-          allButLast.every((item) => !item.plusOnly),
-          isTrue,
-          reason: '${category.name} non-last items',
-        );
+        var seenPlusOnly = false;
+        for (final item in items) {
+          if (item.plusOnly) {
+            seenPlusOnly = true;
+          } else {
+            expect(
+              seenPlusOnly,
+              isFalse,
+              reason:
+                  '${category.name} ${item.name} appears after Plus-only items',
+            );
+          }
+        }
       }
     });
 

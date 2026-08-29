@@ -15,24 +15,25 @@ void main() {
     addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
   });
 
-  testWidgets(
-    'tapping Skip for now submits a default profile without validation',
-    (tester) async {
-      FinanceProfile? submitted;
+  testWidgets('tapping Skip for now never submits fabricated financial facts', (
+    tester,
+  ) async {
+    FinanceProfile? submitted;
+    var cancelled = false;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OnboardingScreen(
-            onProfileSubmitted: (profile) => submitted = profile,
-          ),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OnboardingScreen(
+          onProfileSubmitted: (profile) => submitted = profile,
+          onCancel: () => cancelled = true,
         ),
-      );
+      ),
+    );
 
-      await tester.tap(find.text('Skip for now'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Skip for now'));
+    await tester.pumpAndSettle();
 
-      expect(submitted, isNotNull);
-      expect(submitted!.monthlyIncome, greaterThan(0));
-    },
-  );
+    expect(submitted, isNull);
+    expect(cancelled, isTrue);
+  });
 }

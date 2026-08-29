@@ -6,7 +6,7 @@ import 'package:moneymoneymoney/screens/circle_screen.dart';
 
 class _FakeApiClient extends ApiClient {
   @override
-  Future<Circle> leaderboard() async => const Circle(
+  Future<Circle> leaderboard({int? streak, int? level}) async => const Circle(
     code: 'SAVE',
     name: 'Money mates',
     memberCount: 2,
