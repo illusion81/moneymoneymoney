@@ -6,7 +6,7 @@ import 'package:moneymoneymoney/screens/money_style_quiz_screen.dart';
 
 void main() {
   group('MoneyStyleQuizScreen', () {
-    late MoneyStyleResult? completedResult;
+    late MoneyStyleCompletion? completedResult;
 
     setUp(() {
       completedResult = null;
@@ -244,7 +244,7 @@ void main() {
       }
 
       expect(completedResult, isNotNull);
-      expect(completedResult!.archetype, isNotNull);
+      expect(completedResult!.result!.archetype, isNotNull);
     });
   });
 }

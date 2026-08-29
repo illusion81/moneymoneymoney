@@ -11,7 +11,7 @@ class MoneyStyleFlow extends StatefulWidget {
   });
 
   final String userId;
-  final ValueChanged<MoneyStyleResult> onComplete;
+  final ValueChanged<MoneyStyleCompletion> onComplete;
 
   @override
   State<MoneyStyleFlow> createState() => _MoneyStyleFlowState();
@@ -50,15 +50,19 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '12 everyday choices. No dollar amounts. No judgment.',
+                    'Twelve everyday choices. No dollar amounts. No judgement.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[600],
                         ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 16),
+                  const Text('About 2–3 minutes', textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  const Text('A light reflection on your current habits — not financial, mental-health, or clinical advice.', textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
                   Text(
-                    'Your answers will reveal how you approach money in your own unique way.\n\nThere are no "right" answers—just insights about what works for you.',
+                    'Notice the patterns that feel closest today. Your result can change as life changes.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           height: 1.6,
                         ),

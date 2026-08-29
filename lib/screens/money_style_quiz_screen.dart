@@ -15,7 +15,7 @@ class MoneyStyleQuizScreen extends StatefulWidget {
   });
 
   final String userId;
-  final ValueChanged<MoneyStyleResult> onComplete;
+  final ValueChanged<MoneyStyleCompletion> onComplete;
   final int? answerOrderSeed;
 
   @override
@@ -205,13 +205,7 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
     } else {
       // Quiz complete
       final result = _engine.generateResult(_session, moneyStyleQuestions);
-      if (result == null) return;
-      widget.onComplete(result);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => MoneyStyleResultScreen(result: result),
-        ),
-      );
+      widget.onComplete(MoneyStyleCompletion(session: _session, result: result));
     }
   }
 

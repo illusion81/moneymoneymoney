@@ -62,7 +62,7 @@ class _MyAppState extends State<MyApp> {
       GlobalKey<ScaffoldMessengerState>();
 
   WealthReport? _report;
-  MoneyStyleResult? _moneyStyleResult;
+  MoneyStyleCompletion? _moneyStyleCompletion;
   ForestSummary _summary = const ForestSummary(
     days: [],
     currentStreak: 0,
@@ -75,7 +75,7 @@ class _MyAppState extends State<MyApp> {
   late ShopState _shopState;
   late HomeLayoutState _homeLayout;
   final List<RewardEvent> _spendEvents = [];
-  AppView _view = AppView.onboarding;
+  AppView _view = AppView.moneyStyleFlow;
   String? _lastEarnedSummary;
   bool _planStarted = false;
 
@@ -138,7 +138,7 @@ class _MyAppState extends State<MyApp> {
           onComplete: _handleMoneyStyleComplete,
         );
       case AppView.moneyStyleResult:
-        return MoneyStyleResultScreen(result: _moneyStyleResult!);
+        return MoneyStyleResultScreen(result: _moneyStyleCompletion!.result);
       case AppView.report:
         if (report == null) {
           return OnboardingScreen(
@@ -269,9 +269,9 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _handleMoneyStyleComplete(MoneyStyleResult result) {
+  void _handleMoneyStyleComplete(MoneyStyleCompletion completion) {
     setState(() {
-      _moneyStyleResult = result;
+      _moneyStyleCompletion = completion;
       _view = AppView.moneyStyleResult;
     });
   }

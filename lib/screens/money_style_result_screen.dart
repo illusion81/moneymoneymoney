@@ -8,10 +8,14 @@ class MoneyStyleResultScreen extends StatelessWidget {
     required this.result,
   });
 
-  final MoneyStyleResult result;
+  final MoneyStyleResult? result;
 
   @override
   Widget build(BuildContext context) {
+    if (this.result == null) {
+      return Scaffold(body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: const [Text('Not enough to name a style yet'), SizedBox(height: 12), Text('Answer a few more')])));
+    }
+    final result = this.result!;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Money Style'),
