@@ -135,11 +135,18 @@ class _CircleScreenState extends State<CircleScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                               const Icon(Icons.balance, size: 18),
                               const SizedBox(width: 8),
-                              Text('Why there are no dollar amounts here',
-                                  style: t.titleSmall),
+                              // Needs to wrap: the heading is wider than a
+                              // phone once the icon takes its 26pt.
+                              Expanded(
+                                child: Text(
+                                    'Why there are no dollar amounts here',
+                                    style: t.titleSmall),
+                              ),
                             ]),
                             const SizedBox(height: 8),
                             Text(

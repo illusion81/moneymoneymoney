@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
+import '../demo_flags.dart';
 import '../models/finance_profile.dart';
 import '../services/profile_suggestions.dart';
 import '../services/risk_assessment.dart';
@@ -93,7 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // Demo aid: the questionnaire is six fields and three dropdowns, which is
       // thirty seconds you do not have on stage. PIN-gated like the other dev
       // shortcuts so a judge poking at the app can't skip their own answers.
-      floatingActionButton: !kDebugMode
+      floatingActionButton: !kDemoTools
           ? null
           : FloatingActionButton.extended(
               heroTag: 'demo-profile',

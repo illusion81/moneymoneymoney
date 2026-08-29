@@ -310,7 +310,12 @@ class _ForestDayCell extends StatelessWidget {
             width: isSelected ? 2.5 : (isToday ? 2 : 1),
           ),
         ),
-        child: Column(
+        // The day number, tree and dot are fixed sizes but the cell scales
+        // with screen width, so on a narrow phone the stack no longer fit.
+        // Scaling down is better than clipping a tree in half.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
@@ -332,6 +337,7 @@ class _ForestDayCell extends StatelessWidget {
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
           ],
+        ),
         ),
         ),
       ),

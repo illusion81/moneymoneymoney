@@ -2,8 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../data/money_style_questions.dart';
+import '../demo_flags.dart';
 import '../models/money_style.dart';
 import '../services/money_style_engine.dart';
+import '../widgets/dev_gate.dart';
 
 class MoneyStyleQuizScreen extends StatefulWidget {
   const MoneyStyleQuizScreen({
@@ -65,8 +67,22 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: _buildBackButton(),
-        title: Text('Discover your Money Style'),
+        // "Discover your Money Style" does not fit a 390pt app bar next to a
+        // back button — it truncated to "Discover your Money S…". The full
+        // phrase already appears on the screen that launches the quiz.
+        title: const Text('Money Style'),
         elevation: 0,
+        actions: [
+          if (kDemoTools)
+            IconButton(
+              key: const Key('demo-skip-quiz'),
+              tooltip: 'Demo: answer all 12',
+              icon: Icon(DevGate.isUnlocked ? Icons.bolt : Icons.lock_outline),
+              onPressed: () async {
+                if (await DevGate.ensureUnlocked(context)) _demoCompleteQuiz();
+              },
+            ),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -197,6 +213,24 @@ class _MoneyStyleQuizScreenState extends State<MoneyStyleQuizScreen> {
       _session.skippedQuestions.remove(questionId);
       widget.onProgress?.call(_session.snapshot());
     });
+  }
+
+  /// Demo shortcut: answer every remaining question with the first option and
+  /// finish. Twelve taps is thirty seconds you do not have on stage. It picks
+  /// real answers rather than skipping, so the result screen shows a genuine
+  /// archetype instead of an "early snapshot" with no confidence.
+  void _demoCompleteQuiz() {
+    setState(() {
+      for (final q in moneyStyleQuestions) {
+        _session.selectedAnswers[q.id] = 0;
+        _session.skippedQuestions.remove(q.id);
+      }
+      _currentQuestionIndex = moneyStyleQuestions.length - 1;
+      widget.onProgress?.call(_session.snapshot());
+    });
+    final session = _session.snapshot();
+    final result = _engine.generateResult(session, moneyStyleQuestions);
+    widget.onComplete(MoneyStyleCompletion(session: session, result: result));
   }
 
   void _skipQuestion() {

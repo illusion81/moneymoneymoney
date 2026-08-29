@@ -1,5 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+
+import '../demo_flags.dart';
 
 import '../models/forest_day.dart';
 import '../models/progression.dart';
@@ -131,6 +132,56 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  bool get _hasDemoActions =>
+      widget.onDebugFillFarm != null || widget.onDebugSimulate != null;
+
+  /// The demo actions, off the main canvas. PIN is asked once per session.
+  Future<void> _openDemoSheet() async {
+    if (!await DevGate.ensureUnlocked(context)) return;
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Demo tools',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
+            if (widget.onDebugFillFarm != null)
+              ListTile(
+                key: const Key('demo-fill-farm'),
+                leading: const Icon(Icons.auto_awesome),
+                title: const Text('Set up the farm'),
+                subtitle: const Text('Own and place everything'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  widget.onDebugFillFarm!();
+                },
+              ),
+            if (widget.onDebugSimulate != null)
+              ListTile(
+                key: const Key('demo-simulate-week'),
+                leading: const Icon(Icons.fast_forward),
+                title: const Text('Simulate a week'),
+                subtitle: const Text('Seven on-budget days, then level up'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  widget.onDebugSimulate!();
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// A labelled block of menu entries. Returns nothing at all when every
   /// entry in the group is unavailable, so an empty heading never appears.
   List<PopupMenuEntry<VoidCallback>> _menuGroup(
@@ -174,44 +225,23 @@ class _HomeScreenState extends State<HomeScreen> {
     final statusColor = _statusColor(latestDay);
 
     return Scaffold(
-      floatingActionButton: !kDebugMode
+      // One small tab pinned to the edge, not two labelled buttons sitting on
+      // the tree. Tapping it opens a sheet with the demo actions, so the
+      // shortcuts stay one tap away without covering the thing being demoed.
+      floatingActionButton: !kDemoTools || !_hasDemoActions
           ? null
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (widget.onDebugFillFarm != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: FloatingActionButton.extended(
-                      heroTag: 'fill',
-                      onPressed: () async {
-                        if (await DevGate.ensureUnlocked(context)) {
-                          widget.onDebugFillFarm!();
-                        }
-                      },
-                      icon: Icon(DevGate.isUnlocked
-                          ? Icons.auto_awesome
-                          : Icons.lock_outline),
-                      label: const Text('Demo'),
-                    ),
-                  ),
-                if (widget.onDebugSimulate != null)
-                  FloatingActionButton.extended(
-                    heroTag: 'sim',
-                    onPressed: () async {
-                      // Gated so nobody fast-forwards the farm mid-pitch.
-                      if (await DevGate.ensureUnlocked(context)) {
-                        widget.onDebugSimulate!();
-                      }
-                    },
-                    icon: Icon(DevGate.isUnlocked
-                        ? Icons.fast_forward
-                        : Icons.lock_outline),
-                    label: const Text('+1 week'),
-                  ),
-              ],
+          : FloatingActionButton.small(
+              heroTag: 'demo-tools',
+              tooltip: 'Demo tools',
+              backgroundColor: const Color(0xff173b2f),
+              foregroundColor: Colors.white,
+              onPressed: _openDemoSheet,
+              child: Icon(
+                DevGate.isUnlocked ? Icons.bolt : Icons.lock_outline,
+                size: 20,
+              ),
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniStartFloat,
       appBar: AppBar(
         title: const Text('Wealth Forest'),
         actions: [

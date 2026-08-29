@@ -147,7 +147,9 @@ class _SpendingScreenState extends State<SpendingScreen> {
     final t = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Where your money went'),
+        // Long enough to truncate next to the range picker and refresh
+        // button on a phone.
+        title: const Text('Your spending'),
         actions: [
           PopupMenuButton<int>(
             initialValue: _days,

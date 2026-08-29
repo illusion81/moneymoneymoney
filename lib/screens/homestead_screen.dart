@@ -178,7 +178,12 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
   }
 
   Widget _buildGrid(Set<String> placedIds) {
-    return SizedBox(
+    // The board is 588pt wide and a phone is 390, so it ran off the right
+    // edge. FittedBox scales it to fit; unlike a CSS transform, Flutter maps
+    // pointer events through the scale, so taps still land on the right cell.
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: SizedBox(
       width: _gridCanvasWidth,
       height: _gridCanvasHeight,
       child: GestureDetector(
@@ -209,6 +214,7 @@ class _HomesteadScreenState extends State<HomesteadScreen> {
               ),
           ],
         ),
+      ),
       ),
     );
   }

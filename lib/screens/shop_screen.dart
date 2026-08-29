@@ -1,5 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+
+import '../demo_flags.dart';
 
 import '../widgets/dev_gate.dart';
 
@@ -42,7 +43,7 @@ class ShopScreen extends StatefulWidget {
   final int diamonds;
   final VoidCallback? onShowDiamonds;
 
-  /// Testing aids, only ever shown in debug builds (gated by [kDebugMode])
+  /// Testing aids, only ever shown in debug builds (gated by [kDemoTools])
   /// and only while the user switches debug mode on — never real
   /// user-facing features.
   final VoidCallback? onDebugMaxCoins;
@@ -83,7 +84,7 @@ class _ShopScreenState extends State<ShopScreen> {
           icon: const Icon(Icons.arrow_back),
         ),
         actions: [
-          if (kDebugMode && hasDebugActions)
+          if (kDemoTools && hasDebugActions)
             IconButton(
               key: const Key('debug-mode-toggle'),
               tooltip: _debugMode
@@ -97,14 +98,14 @@ class _ShopScreenState extends State<ShopScreen> {
                 color: _debugMode ? const Color(0xffc79a33) : null,
               ),
             ),
-          if (kDebugMode && _debugMode && debugUnlockAll != null)
+          if (kDemoTools && _debugMode && debugUnlockAll != null)
             IconButton(
               key: const Key('debug-unlock-all-button'),
               tooltip: 'Debug: unlock all items',
               onPressed: debugUnlockAll,
               icon: const Icon(Icons.lock_open_outlined),
             ),
-          if (kDebugMode && _debugMode && debugGrantXp != null)
+          if (kDemoTools && _debugMode && debugGrantXp != null)
             OutlinedButton.icon(
               key: const Key('debug-grant-xp'),
               icon: const Icon(Icons.bolt),
@@ -113,7 +114,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 if (await DevGate.ensureUnlocked(context)) debugGrantXp();
               },
             ),
-          if (kDebugMode && _debugMode && debugMaxCoins != null)
+          if (kDemoTools && _debugMode && debugMaxCoins != null)
             IconButton(
               key: const Key('debug-max-coins-button'),
               tooltip: 'Debug: max coins',
@@ -135,44 +136,43 @@ class _ShopScreenState extends State<ShopScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
+                      // Wrap, not Row: level + coins + diamonds + "Get more"
+                      // is 70pt wider than a phone. Each balance is its own
+                      // group so a wrap breaks between them, never inside one.
                       Text(
                         'Level ${progression.level.level}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const Spacer(),
-                      const Icon(
-                        Icons.monetization_on,
-                        color: Color(0xffc79a33),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${progression.coinBalance}',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      if (widget.onShowDiamonds != null) ...[
-                        const SizedBox(width: 16),
-                        const Icon(
-                          Icons.diamond,
-                          color: Color(0xff4aa3df),
-                          size: 20,
-                        ),
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.monetization_on,
+                            color: Color(0xffc79a33), size: 20),
                         const SizedBox(width: 4),
-                        Text(
-                          '${widget.diamonds}',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          key: const Key('shop-get-diamonds'),
-                          onPressed: widget.onShowDiamonds,
-                          child: const Text('Get more'),
-                        ),
-                      ],
+                        Text('${progression.coinBalance}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
+                      ]),
+                      if (widget.onShowDiamonds != null)
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.diamond,
+                              color: Color(0xff4aa3df), size: 20),
+                          const SizedBox(width: 4),
+                          Text('${widget.diamonds}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700)),
+                          const SizedBox(width: 4),
+                          TextButton(
+                            key: const Key('shop-get-diamonds'),
+                            onPressed: widget.onShowDiamonds,
+                            child: const Text('Get more'),
+                          ),
+                        ]),
                     ],
                   ),
                 ),
@@ -259,11 +259,36 @@ class _ShopItemCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: ListTile(
-        leading: _ItemIconChip(item: item),
-        title: Text(item.name),
-        subtitle: Text(item.description),
-        trailing: _trailingControl(levelLocked, canAfford),
+      // Not a ListTile: it hands the trailing control its full intrinsic
+      // width first and gives the title whatever is left, which on a phone
+      // was about 60pt — "Classic Oak" wrapped mid-word.
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            _ItemIconChip(item: item),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(item.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            _trailingControl(levelLocked, canAfford),
+          ],
+        ),
       ),
     );
   }
