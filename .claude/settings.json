@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(kill 21835)",
+      "Bash(flutter run *)",
+      "Read(//tmp/**)",
+      "Bash(sleep 10 && tail -50 /tmp/flutter_server.log)",
+      "Read(//private/tmp/**)",
+      "Bash(pkill -f \"flutter run\")",
+      "Bash(sleep 15 && tail -50 /tmp/flutter_server.log)",
+      "Bash(python -m pip install -q -r requirements.txt)",
+      "Bash(python3 -m pip install -q -r requirements.txt)",
+      "Bash(python3 -m uvicorn main:app --reload --port 8000)",
+      "Bash(curl -s http://localhost:8000/docs)",
+      "Bash(curl -v http://localhost:8000/docs)",
+      "Bash(flutter devices *)",
+      "Bash(tee /private/tmp/claude-501/-Users-angusholamma-Documents-moneymoneymoney/1c02775f-197c-407f-8f0f-07c74ced7ff1/scratchpad/flutter-web.log)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  %{size_download} bytes\\\\n\" http://127.0.0.1:8080/)",
+      "Bash(curl -s http://127.0.0.1:8080/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/api/tower)",
+      "Bash(curl -s http://127.0.0.1:8000/api/tower)",
+      "Bash(curl -s -o /dev/null -w \"root: HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "Bash(grep -n '^#\\\\{1,3\\\\} ' docs/superpowers/reports/2026-08-29-money-style-onboarding-audit.md)",
+      "Bash(git stash *)"
+    ]
+  }
+}
