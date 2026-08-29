@@ -28,6 +28,7 @@ import argparse
 from collections import Counter, defaultdict
 
 from bank import BasiqProvider, MockProvider, BasiqError, classify  # noqa: F401
+from engine.plan import EXCLUDED_CATEGORIES
 
 ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 
@@ -70,6 +71,18 @@ def audit(txns, accounts, days: int) -> None:
     inflow = sum(t.amount for t in txns if t.amount > 0)
     outflow = -sum(t.amount for t in txns if t.amount < 0)
     print(f"    {len(txns)} transactions   in ${inflow:,.0f}   out ${outflow:,.0f}")
+
+    # Transfers are neither spending nor saving. Report them separately rather
+    # than letting one big PayID transfer dominate every percentage below.
+    moved = -sum(t.amount for t in txns if t.amount < 0 and t.category in EXCLUDED_CATEGORIES)
+    spend_txns = [t for t in txns if t.category not in EXCLUDED_CATEGORIES]
+    outflow = -sum(t.amount for t in spend_txns if t.amount < 0)
+    if moved:
+        print(f"    {Y}${moved:,.0f} of that was transfers between accounts/people "
+              f"— excluded from everything below{RESET}")
+    print(f"    real spend: ${outflow:,.0f}")
+
+    txns = spend_txns
 
     by_bucket: dict[str, float] = defaultdict(float)
     for t in txns:
