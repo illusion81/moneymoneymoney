@@ -157,6 +157,7 @@ class _MyAppState extends State<MyApp> {
           onComplete: _handleMoneyStyleComplete,
           existingCompletion: _moneyStyleCompletion,
           onProgress: (session) => _moneyStyleStore.save(MoneyStyleCompletion(session: session, result: null)),
+          onStartOver: () { _moneyStyleStore.clear(); setState(() => _moneyStyleCompletion = null); },
         );
       case AppView.moneyStyleResult:
         return MoneyStyleResultScreen(result: _moneyStyleCompletion!.result, onExploreIdeas: () => setState(() => _view = AppView.moneyStyleIdeas), onBuildRangePlan: () => setState(() => _view = AppView.rangePlan), onAnswerMore: () => setState(() => _view = AppView.moneyStyleFlow), onStartOver: () async { await _moneyStyleStore.clear(); if (mounted) setState(() { _moneyStyleCompletion = null; _view = AppView.moneyStyleFlow; }); });

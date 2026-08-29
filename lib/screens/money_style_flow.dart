@@ -10,12 +10,14 @@ class MoneyStyleFlow extends StatefulWidget {
     required this.onComplete,
     this.existingCompletion,
     this.onProgress,
+    this.onStartOver,
   });
 
   final String userId;
   final ValueChanged<MoneyStyleCompletion> onComplete;
   final MoneyStyleCompletion? existingCompletion;
   final ValueChanged<AnswerSession>? onProgress;
+  final VoidCallback? onStartOver;
 
   @override
   State<MoneyStyleFlow> createState() => _MoneyStyleFlowState();
@@ -82,7 +84,7 @@ class _MoneyStyleFlowState extends State<MoneyStyleFlow> {
                     label: Text(widget.existingCompletion == null ? 'Find My Style' : 'Resume'),
                   ),
                   if (widget.existingCompletion != null)
-                    OutlinedButton(onPressed: () => setState(() { _startOver = true; _quizStarted = true; }), child: const Text('Start over')),
+                    OutlinedButton(onPressed: () { widget.onStartOver?.call(); setState(() { _startOver = true; _quizStarted = true; }); }, child: const Text('Start over')),
                   const SizedBox(height: 40),
                 ],
               ),
