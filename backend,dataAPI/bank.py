@@ -14,6 +14,8 @@ Lane A: run `python bootstrap.py` rather than poking at this file by hand.
 from __future__ import annotations
 
 import os
+import re
+import csv
 import time
 import random
 import datetime as dt
@@ -67,8 +69,10 @@ CATEGORY_RULES: list[tuple[tuple[str, ...], str, Bucket]] = [
      "groceries", "living"),
     (("medicare", "chemist", "pharmacy", "doctor", "dental", "optical",
       "physio", "bupa", "medibank", "hcf"), "health", "living"),
-    (("unihub", "uq ", "tuition", "textbook", "student services", "university"),
-     "education", "living"),
+    # NB: bare "uq " was too greedy — it swallowed "MERLO COFFEE UQ ST LUCIA".
+    # Campus merchants must stay eating-out; only fees/services are education.
+    (("unihub", "tuition", "textbook", "student services", "uq union",
+      "student centre", "enrolment", "sa fee"), "education", "living"),
     (("netflix", "spotify", "disney", "youtube premium", "apple.com/bill",
       "google storage", "adobe", "chatgpt", "openai", "microsoft 365",
       "amazon prime", "binge", "stan ", "kayo", "subscription", "audible",
@@ -479,3 +483,132 @@ class BasiqProvider:
             url = (body.get("links") or {}).get("next")
             pages += 1
         return out
+
+# ---------------------------------------------------------------- csv
+
+class CsvProvider:
+    """Real bank data from a CSV export — no credentials, no third party.
+
+    Built for CommBank/NetBank exports but column-sniffs, so ANZ/NAB/Westpac
+    exports work too. CommBank's default export is headerless:
+        Date, Amount, Description, Balance      (dates as DD/MM/YYYY)
+
+    Privacy: account numbers, BSBs and long digit runs are scrubbed out of
+    descriptions on load. The file never leaves the machine and nothing is
+    sent to Basiq.
+    """
+
+    DATE_KEYS = ("date", "transaction date", "posting date", "processed date")
+    DESC_KEYS = ("description", "narrative", "details", "transaction", "merchant")
+    AMT_KEYS = ("amount", "value")
+    DEBIT_KEYS = ("debit", "withdrawal", "debit amount")
+    CREDIT_KEYS = ("credit", "deposit", "credit amount")
+
+    # BSB (123-456), long digit runs, card numbers
+    _SCRUB = re.compile(r"\b(\d{3}-\d{3}|\d{6,})\b")
+
+    def __init__(self, path: str | None = None):
+        self.path = path or os.getenv("WEALTH_CSV", "")
+        if not self.path or not os.path.exists(self.path):
+            raise FileNotFoundError(
+                f"CSV not found: {self.path!r}. Set WEALTH_CSV to your export."
+            )
+        self._rows = self._load()
+
+    # -- parsing ---------------------------------------------------
+    @staticmethod
+    def _parse_date(v: str) -> str:
+        v = (v or "").strip().strip('"')
+        for fmt in ("%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d", "%d-%m-%Y", "%d %b %Y", "%d %B %Y"):
+            try:
+                return dt.datetime.strptime(v, fmt).date().isoformat()
+            except ValueError:
+                continue
+        return dt.date.today().isoformat()
+
+    @staticmethod
+    def _parse_amount(v: str) -> float:
+        v = (v or "").strip().replace("$", "").replace(",", "").replace('"', "")
+        if not v:
+            return 0.0
+        neg = v.startswith("(") and v.endswith(")")
+        v = v.strip("()")
+        try:
+            n = float(v)
+        except ValueError:
+            return 0.0
+        return -n if neg else n
+
+    def _scrub(self, desc: str) -> str:
+        return self._SCRUB.sub("****", desc).strip()
+
+    def _pick(self, header: list[str], keys) -> int | None:
+        for i, h in enumerate(header):
+            if h.strip().lower() in keys:
+                return i
+        return None
+
+    def _load(self) -> list[Transaction]:
+        with open(self.path, newline="", encoding="utf-8-sig") as f:
+            rows = [r for r in csv.reader(f) if any(c.strip() for c in r)]
+        if not rows:
+            return []
+
+        first = rows[0]
+        has_header = any(c.strip().lower() in
+                         self.DATE_KEYS + self.DESC_KEYS + self.AMT_KEYS for c in first)
+
+        if has_header:
+            header = [c.strip().lower() for c in first]
+            body = rows[1:]
+            i_date = self._pick(header, self.DATE_KEYS)
+            i_desc = self._pick(header, self.DESC_KEYS)
+            i_amt = self._pick(header, self.AMT_KEYS)
+            i_deb = self._pick(header, self.DEBIT_KEYS)
+            i_cred = self._pick(header, self.CREDIT_KEYS)
+        else:
+            # CommBank headerless: Date, Amount, Description, Balance
+            body = rows
+            i_date, i_amt, i_desc, i_deb, i_cred = 0, 1, 2, None, None
+
+        out: list[Transaction] = []
+        for n, r in enumerate(body, 1):
+            def cell(i):
+                return r[i] if i is not None and i < len(r) else ""
+
+            if i_amt is not None:
+                amt = self._parse_amount(cell(i_amt))
+            else:
+                debit = self._parse_amount(cell(i_deb))
+                credit = self._parse_amount(cell(i_cred))
+                amt = credit - abs(debit)
+            if amt == 0:
+                continue
+
+            desc = self._scrub(cell(i_desc) or "Transaction")
+            cat, bucket = classify(desc, amt)
+            out.append(Transaction(
+                id=f"csv-{n}", account_id="csv", post_date=self._parse_date(cell(i_date)),
+                description=desc, amount=amt, category=cat, bucket=bucket,
+            ))
+
+        out.sort(key=lambda t: t.post_date, reverse=True)
+        return out
+
+    # -- provider interface ---------------------------------------
+    def connect(self, persona: str = "csv") -> ConnectionStatus:
+        return ConnectionStatus(
+            provider="mock", connected=True,
+            institution=f"CSV export ({os.path.basename(self.path)})",
+            persona=persona,
+            message=f"{len(self._rows)} transactions loaded locally. Nothing sent anywhere.",
+        )
+
+    def accounts(self) -> list[Account]:
+        bal = sum(t.amount for t in self._rows)
+        return [Account(id="csv", name="Imported account", kind="transaction",
+                        balance=round(bal, 2))]
+
+    def transactions(self, days: int = 30) -> list[Transaction]:
+        cutoff = (dt.date.today() - dt.timedelta(days=days)).isoformat()
+        return [t for t in self._rows if t.post_date >= cutoff]

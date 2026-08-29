@@ -17,7 +17,7 @@ from pydantic import BaseModel
 import store
 from models import (SurveyAnswers, Profile, ConnectionStatus, Account, Transaction,
                     Plan, Mission, ClaimResult, Progression, TowerState, ShopItem)
-from bank import MockProvider, BasiqProvider, BasiqError
+from bank import MockProvider, BasiqProvider, BasiqError, CsvProvider
 from engine.allocation import build_profile
 from engine.plan import build_plan
 from engine.missions import generate as generate_missions
@@ -32,10 +32,36 @@ UID = store.DEFAULT_USER
 _mock = MockProvider()
 _basiq: BasiqProvider | None = None
 
+# Demo control. The real Basiq sandbox persona has one merchant (Afterpay) and
+# nothing else, which makes for a dead demo. This lets us prove the live bank
+# connection to judges, then flip to the rich seeded data for the walkthrough —
+# without a code change or a restart on stage.
+_forced_provider: str | None = None
+
+
+_csv = None
+
+
+def _csv_provider():
+    """Local CSV export. Cached; returns None if unset or unreadable."""
+    global _csv
+    if _csv is None and os.getenv("WEALTH_CSV"):
+        try:
+            _csv = CsvProvider()
+        except Exception:
+            return None
+    return _csv
+
 
 def provider():
-    """Basiq if it's configured AND healthy, mock otherwise. Never raises."""
+    """CSV > Basiq > mock, unless overridden. Never raises."""
     global _basiq
+    if _forced_provider == "mock":
+        return _mock
+    if _forced_provider == "csv" or (_forced_provider is None and os.getenv("WEALTH_CSV")):
+        c = _csv_provider()
+        if c is not None:
+            return c
     if os.getenv("BASIQ_API_KEY"):
         try:
             if _basiq is None:
@@ -116,9 +142,14 @@ def get_missions(days: int = 30) -> list[Mission]:
     txns = _safe(provider().transactions, days)
     plan = build_plan(txns, profile.allocation, profile.monthly_income, days)
     missions = generate_missions(profile, plan, txns)
-    claimed = store.user(UID)["claimed"]
+    u = store.user(UID)
+    claimed = u["claimed"]
+    self_done = u.setdefault("self_done", set())
     for m in missions:
         m.claimed = m.id in claimed
+        # Unverifiable missions only complete when the user says so.
+        if not m.verified and m.id in self_done:
+            m.complete = True
     store.user(UID)["missions"] = missions
     return missions
 
@@ -132,6 +163,13 @@ def claim_mission(mission_id: str) -> ClaimResult:
         raise HTTPException(404, "Unknown mission")
     if m.id in u["claimed"]:
         raise HTTPException(409, "Already claimed")
+    if not m.complete:
+        # The whole point: XP comes from the bank feed, not from tapping a button.
+        if m.verified:
+            raise HTTPException(
+                409, f"Not done yet — {m.progress:.0f} of {m.target:.0f}. "
+                     f"This one is checked against your transactions.")
+        raise HTTPException(409, "Mark this one done first (POST /mark_done).")
 
     before = build_progression(u["xp"], u["coins"], u["streak"], u["skins"], u["active_skin"])
     u["xp"] += m.xp
@@ -144,6 +182,28 @@ def claim_mission(mission_id: str) -> ClaimResult:
 
 
 # ------------------------------------------------------------------ progression + tower
+
+@app.post("/api/missions/{mission_id}/mark_done", response_model=Mission)
+def mark_done(mission_id: str) -> Mission:
+    """For missions the bank feed cannot verify — cancelling a subscription,
+    a daily streak. The user asserts it; we label it as self-reported rather
+    than pretending we checked.
+
+    Roadmap: verification by absence — no charge from that merchant within one
+    billing cycle proves the cancellation. Needs the nightly sync job.
+    """
+    u = store.user(UID)
+    missions = u["missions"] or get_missions()
+    m = next((x for x in missions if x.id == mission_id), None)
+    if m is None:
+        raise HTTPException(404, "Unknown mission")
+    if m.verified:
+        raise HTTPException(409, "This mission is verified from your transactions — "
+                                 "it completes on its own.")
+    u.setdefault("self_done", set()).add(m.id)
+    m.complete = True
+    return m
+
 
 @app.get("/api/progression", response_model=Progression)
 def get_progression() -> Progression:
@@ -196,7 +256,29 @@ def demo_reset() -> dict:
     return {"ok": True}
 
 
+class ProviderBody(BaseModel):
+    provider: str  # "basiq" | "mock" | "auto"
+
+
+@app.post("/api/demo/provider")
+def set_provider(body: ProviderBody) -> dict:
+    """Flip the data source at runtime. 'auto' restores normal behaviour."""
+    global _forced_provider
+    if body.provider not in ("basiq", "mock", "csv", "auto"):
+        raise HTTPException(400, "provider must be basiq, mock, csv or auto")
+    _forced_provider = None if body.provider in ("auto", "basiq") else body.provider
+    return health()
+
+
 @app.get("/api/health")
 def health() -> dict:
     p = provider()
-    return {"ok": True, "provider": "basiq" if isinstance(p, BasiqProvider) else "mock"}
+    name = ("basiq" if isinstance(p, BasiqProvider)
+            else "csv" if isinstance(p, CsvProvider) else "mock")
+    return {
+        "ok": True,
+        "provider": name,
+        "csv_configured": bool(os.getenv("WEALTH_CSV")),
+        "basiq_configured": bool(os.getenv("BASIQ_API_KEY")),
+        "forced": _forced_provider,
+    }

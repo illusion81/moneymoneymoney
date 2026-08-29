@@ -27,7 +27,7 @@ import sys
 import argparse
 from collections import Counter, defaultdict
 
-from bank import BasiqProvider, MockProvider, BasiqError, classify  # noqa: F401
+from bank import BasiqProvider, MockProvider, CsvProvider, BasiqError, classify  # noqa: F401
 from engine.plan import EXCLUDED_CATEGORIES
 
 ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -142,9 +142,21 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--audit-only", action="store_true")
     ap.add_argument("--mock", action="store_true")
+    ap.add_argument("--csv", metavar="PATH", help="audit a bank CSV export instead")
     ap.add_argument("--refresh", action="store_true")
     ap.add_argument("--days", type=int, default=30)
     args = ap.parse_args()
+
+    if args.csv or os.getenv("WEALTH_CSV"):
+        path = args.csv or os.getenv("WEALTH_CSV")
+        print(f"{B}Wealth Tower — CSV audit{RESET}  ({path})")
+        try:
+            c = CsvProvider(path)
+        except Exception as e:
+            die(str(e))
+        ok(c.connect().message)
+        audit(c.transactions(args.days), c.accounts(), args.days)
+        return
 
     if args.mock:
         print(f"{B}Wealth Tower — mock provider audit{RESET}")

@@ -108,6 +108,8 @@ class Mission(BaseModel):
     progress: float
     complete: bool
     claimed: bool
+    verified: bool = True   # True = completion derived from bank data.
+                            # False = user asserts it; we cannot see it in the feed.
     xp: int
     coins: int
     expires_in_days: int
