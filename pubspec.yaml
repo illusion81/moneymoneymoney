@@ -48,6 +48,12 @@ dependencies:
   # FRPS report storage (lib/frps/storage)
   sqflite: ^2.3.0
 
+  # Hivewise UI: state management, navigation, typography, motion.
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.0
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -6,16 +6,16 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <meta name="description" content="Wealth Forest — a forest that grows from what you actually spend.">
+  <meta name="description" content="HiveWise — a hive that fills with what you actually keep.">
 
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Wealth Forest">
+  <meta name="apple-mobile-web-app-title" content="HiveWise">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Wealth Forest</title>
+  <title>HiveWise</title>
   <link rel="manifest" href="manifest.json">
 
   <style>
@@ -38,7 +38,7 @@
       padding: 0;
       height: 100%;
       overflow: hidden;
-      background: #f6f4ee;
+      background: #fbf7ef;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
@@ -64,7 +64,7 @@
       flex: 1 1 auto;
       min-height: 0;
       width: 100%;
-      background: #f6f4ee;
+      background: #fbf7ef;
     }
 
     #pitch { display: none; }
@@ -72,7 +72,7 @@
     /* ------------------------------------------------------ desktop frame */
     @media (min-width: 900px) and (min-height: 640px) {
       body {
-        background: radial-gradient(1100px 640px at 22% -10%, #ffffff 0%, #eceadf 55%, #e3e0d3 100%);
+        background: radial-gradient(1100px 640px at 22% -10%, #ffffff 0%, #f6efe0 55%, #f1eadb 100%);
       }
 
       #stage {
@@ -154,7 +154,7 @@
       #pitch {
         display: block;
         max-width: 330px;
-        color: #2c3a33;
+        color: #33251a;
       }
       #pitch h1 {
         margin: 0 0 12px;
@@ -167,14 +167,14 @@
         margin: 0 0 14px;
         font-size: 15px;
         line-height: 1.55;
-        color: #55635c;
+        color: #6e4826;
       }
       #pitch .tag {
         display: inline-block;
         padding: 5px 11px;
         border-radius: 999px;
-        background: #e4efe6;
-        color: #2f7d50;
+        background: #fff3d6;
+        color: #b8801a;
         font-size: 12px;
         font-weight: 700;
         letter-spacing: .03em;
@@ -189,13 +189,13 @@
         margin-top: 22px;
         padding: 14px;
         background: #fff;
-        border: 1px solid #e0ddd0;
+        border: 1px solid rgba(51, 37, 26, 0.16);
         border-radius: 14px;
         max-width: 300px;
       }
       #qr canvas, #qr img { display: block; width: 96px; height: 96px; }
-      #qr .label { font-size: 13px; line-height: 1.45; color: #55635c; }
-      #qr .label b { display: block; color: #2c3a33; margin-bottom: 3px; font-size: 14px; }
+      #qr .label { font-size: 13px; line-height: 1.45; color: #6e4826; }
+      #qr .label b { display: block; color: #33251a; margin-bottom: 3px; font-size: 14px; }
       #qr.hidden { display: none; }
     }
 
@@ -215,8 +215,8 @@
       align-items: center;
       justify-content: center;
       gap: 14px;
-      background: #f6f4ee;
-      color: #55635c;
+      background: #fbf7ef;
+      color: #6e4826;
       font-size: 13px;
       z-index: 20;
       transition: opacity .35s ease;
@@ -224,8 +224,8 @@
     #loading.gone { opacity: 0; pointer-events: none; }
     #loading .spinner {
       width: 26px; height: 26px;
-      border: 3px solid #dcd8c9;
-      border-top-color: #2f7d50;
+      border: 3px solid #f1eadb;
+      border-top-color: #f5b322;
       border-radius: 50%;
       animation: spin 900ms linear infinite;
     }
@@ -236,10 +236,10 @@
   <div id="stage">
     <div id="pitch">
       <span class="tag">Weekend of Startups 2026</span>
-      <h1>A forest that grows from what you actually spend.</h1>
+      <h1>A hive that fills with what you actually keep.</h1>
       <p>Connect a bank or drop in a statement. Every day you hold your budget,
-         your tree grows — checked against real transactions, not against what
-         you typed in.</p>
+         another cell of the comb fills with honey — checked against real
+         transactions, not against what you typed in.</p>
       <p>Other habit apps trust whatever you tell them. This one checks.</p>
 
       <div id="qr" class="hidden">
@@ -261,7 +261,7 @@
         <div id="app">
           <div id="loading">
             <div class="spinner"></div>
-            <div>Planting…</div>
+            <div>Warming the hive…</div>
           </div>
         </div>
         <div class="strip bottom"></div>
@@ -273,20 +273,30 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     (function () {
+      // Where a scanning phone should land.
+      //
+      // Served from a real host — the Render deploy, or this laptop's own
+      // Wi-Fi address — the page already knows it, so location.origin is
+      // right. Opened at localhost it does not: a localhost QR would send
+      // the scanner to its own phone. Fall back to the LAN address below,
+      // and keep it in step with `ipconfig` when the network changes.
+      var DEMO_LAN_URL = 'http://10.91.92.194:8081';
+
       var host = location.hostname;
-      // A localhost QR would send a judge's phone to their own machine.
-      if (host === 'localhost' || host === '127.0.0.1') return;
+      var local = host === 'localhost' || host === '127.0.0.1';
+      var target = local ? DEMO_LAN_URL : location.origin;
+      if (!target) return;
       if (typeof QRCode === 'undefined') return;
       try {
         new QRCode(document.getElementById('qr-code'), {
-          text: location.origin,
+          text: target,
           width: 96,
           height: 96,
-          colorDark: '#173b2f',
+          colorDark: '#553519',
           colorLight: '#ffffff',
         });
         document.getElementById('qr-url').textContent =
-          location.origin.replace(/^https?:\/\//, '');
+          target.replace(/^https?:\/\//, '');
         document.getElementById('qr').classList.remove('hidden');
       } catch (e) { /* no QR, no harm */ }
     })();

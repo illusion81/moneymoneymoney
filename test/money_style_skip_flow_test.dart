@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moneymoneymoney/main.dart';
+import 'package:moneymoneymoney/legacy_app.dart';
 import 'package:moneymoneymoney/models/money_style.dart';
 import 'package:moneymoneymoney/services/money_style_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
