@@ -131,14 +131,19 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// A labelled group: uppercase heading + children, 9 px apart.
+  /// A labelled group: uppercase heading 9 px above its cards, which sit 8 px
+  /// apart. That is tighter than the 16 px between groups, so a group still
+  /// reads as one unit while its cards stay legibly separate.
   Widget _group(String heading, {required List<Widget> children}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         _heading(heading),
         const SizedBox(height: 9),
-        ...children,
+        for (int i = 0; i < children.length; i++) ...<Widget>[
+          if (i > 0) const SizedBox(height: 8),
+          children[i],
+        ],
       ],
     );
   }
