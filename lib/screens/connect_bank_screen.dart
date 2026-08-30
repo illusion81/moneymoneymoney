@@ -11,6 +11,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -106,8 +107,45 @@ class _ConnectBankScreenState extends State<ConnectBankScreen> {
       }
 
       final uri = Uri.parse(s.consentUrl!);
+
+      // On the web, window.open is only permitted during a real user gesture.
+      // We just awaited a network call to fetch the consent URL, which breaks
+      // that chain — Chrome blocks the popup silently, so the button looks
+      // dead. Hand the user a second, direct tap instead: pressing the button
+      // in this sheet IS a gesture, so the tab opens.
+      if (kIsWeb) {
+        if (!mounted) return;
+        final go = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Open your bank'),
+            content: const Text(
+              'You will finish signing in on your bank\'s own site, then come '
+              'back to this tab. We never see your login.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                key: const Key('open-consent-page'),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
+        );
+        if (go != true) {
+          setState(() => _busy = false);
+          return;
+        }
+      }
+
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        setState(() => _error = 'Could not open the consent page.');
+        setState(() => _error =
+            'Could not open the consent page. Your browser may have blocked '
+            'the popup — allow popups for this site and try again.');
         return;
       }
 
