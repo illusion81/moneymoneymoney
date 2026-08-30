@@ -19,7 +19,7 @@ class HivewiseApp extends ConsumerWidget {
       theme: buildHiveTheme(),
       routerConfig: ref.watch(routerProvider),
       debugShowCheckedModeBanner: false,
-      title: 'Hivewise',
+      title: 'Tallycomb',
     );
   }
 }

@@ -427,7 +427,7 @@ const List<MarketItem> kMarketCatalog = [
   ),
   MarketItem(
     id: 'hivewise-pro',
-    title: 'Hivewise Pro',
+    title: 'Tallycomb Pro',
     description:
         'Weekly reports, unlimited looks, 2× earning. \$4.99/mo, billed monthly.',
     tab: MarketTab.honey,

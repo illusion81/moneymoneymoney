@@ -258,7 +258,7 @@ class MarketScreen extends ConsumerWidget {
 
     if (item.moneyCost != null) {
       final String dollars = item.moneyCost!.toStringAsFixed(2);
-      final bool isPro = item.title == 'Hivewise Pro';
+      final bool isPro = item.title == 'Tallycomb Pro';
       return _pillButton(
         label: owned
             ? (isPro ? 'Active' : 'Owned')
