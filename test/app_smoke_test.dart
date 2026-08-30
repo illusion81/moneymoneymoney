@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:moneymoneymoney/main.dart';
+import 'package:moneymoneymoney/hivewise_app.dart';
 
 /// Renders the whole app and navigates every tab, so any build/layout
 /// exception (e.g. the bee swarm's ticker setup) surfaces here.

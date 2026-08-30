@@ -13,11 +13,9 @@
 // (see hivewise-web in render.yaml) so the design work is still shown and can
 // keep moving independently.
 //
-// To boot Hivewise here instead, swap the import and runApp for:
-//   import 'package:flutter_riverpod/flutter_riverpod.dart';
-//   import 'router.dart';
-//   import 'theme/hive_theme.dart';
-//   void main() => runApp(const ProviderScope(child: HivewiseApp()));
+// To ship Hivewise instead, replace the two lines below with:
+//   import 'hivewise_app.dart' as hivewise;
+//   void main() => hivewise.runHivewiseApp();
 import 'legacy_app.dart' as forest;
 
 void main() => forest.runLegacyApp();
