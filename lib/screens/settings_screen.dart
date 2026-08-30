@@ -278,13 +278,39 @@ class SettingsScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(15),
           boxShadow: HiveShadows.card,
         ),
-        child: Text(
-          'Open the full app',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: HiveColors.light.honeyText,
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            // A labelled beta reads as a deliberate preview rather than a
+            // second app bolted on the side — which is what "Open the full
+            // app" sounded like from inside the app.
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+              decoration: BoxDecoration(
+                color: HiveColors.light.honeyTint,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'BETA',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                  color: HiveColors.light.honeyText,
+                ),
+              ),
+            ),
+            const SizedBox(width: 9),
+            Text(
+              'Tree, streaks and goals',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: HiveColors.light.honeyText,
+              ),
+            ),
+          ],
         ),
       ),
     );
