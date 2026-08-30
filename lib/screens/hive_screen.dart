@@ -404,37 +404,12 @@ class HiveScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 6),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 252),
-          child: ShaderMask(
-            shaderCallback: (Rect bounds) => const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[
-                Colors.white,
-                Colors.white,
-                Colors.transparent,
-              ],
-              stops: <double>[0.0, 0.88, 1.0],
-            ).createShader(bounds),
-            blendMode: BlendMode.dstIn,
-            child: ListView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 4),
-              physics: const ClampingScrollPhysics(),
-              itemCount: state.tasks.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Task task = state.tasks[index];
-                return _TaskRow(
-                  task: task,
-                  onTap: () => ref
-                      .read(hiveStateProvider.notifier)
-                      .toggleTask(task.id),
-                );
-              },
-            ),
+        for (final Task task in state.tasks)
+          _TaskRow(
+            task: task,
+            onTap: () =>
+                ref.read(hiveStateProvider.notifier).toggleTask(task.id),
           ),
-        ),
       ],
     );
   }
