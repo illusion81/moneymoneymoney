@@ -99,7 +99,9 @@ class SettingsScreen extends ConsumerWidget {
                       linked: state.banks[bank.key] ?? false,
                       onToggle: () => notifier.toggleBank(bank.key),
                     ),
-                  _connectBankCard(),
+                  _connectBankCard(context),
+                  const SizedBox(height: 8),
+                  _viewSpendingCard(context),
                 ],
               ),
               const SizedBox(height: 16),
@@ -233,21 +235,53 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   /// The "Connect another bank" action card.
-  Widget _connectBankCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: HiveColors.light.surface,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: HiveShadows.card,
+  /// The real bank hook-up. The rows above this card are a static mock of
+  /// already-linked accounts; this is the one that opens the live consent /
+  /// statement-upload flow, so it is deliberately the only tappable one.
+  Widget _connectBankCard(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/connect-bank'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: HiveColors.light.surface,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: HiveShadows.card,
+        ),
+        child: Text(
+          'Connect a bank or upload a statement',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: HiveColors.light.honeyText,
+          ),
+        ),
       ),
-      child: Text(
-        'Connect another bank',
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          color: HiveColors.light.inkMuted,
+    );
+  }
+
+  /// Opens the live spending screen — real transactions, real categories.
+  Widget _viewSpendingCard(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/spending'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: HiveColors.light.surface,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: HiveShadows.card,
+        ),
+        child: Text(
+          'See your real spending',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: HiveColors.light.honeyText,
+          ),
         ),
       ),
     );
