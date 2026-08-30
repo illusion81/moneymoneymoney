@@ -193,7 +193,7 @@ class _ForestHost extends StatelessWidget {
                   icon: const Icon(Icons.arrow_back,
                       size: 18, color: Color(0xFFF6EFE0)),
                   label: const Text(
-                    'Back to Hivewise',
+                    'Back to Tallycomb',
                     style: TextStyle(
                       color: Color(0xFFF6EFE0),
                       fontWeight: FontWeight.w700,

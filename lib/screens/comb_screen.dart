@@ -175,12 +175,13 @@ class CombScreen extends ConsumerWidget {
   }
 
   /// The interlocked 3-2-3-2 honeycomb of badges (design.md §5: cells
-  /// 104×116, 5 px gaps, rows centred, 29 px row overlap).
+  /// 104×116, 5 px gaps, rows centred, interlocked at cellHeight × 0.75 + gap).
   Widget _badgeHoneycomb() {
     const double cellHeight = 116;
     const double gap = 5;
-    const double rowOverlap = 29;
-    const double rowStep = cellHeight - rowOverlap; // 87
+    // Geometrically exact interlock: rows offset by cellHeight × 0.75 + gap so the
+    // vertical gap matches the horizontal gap (same convention as honeycomb.dart).
+    const double rowStep = cellHeight * 0.75 + gap; // 92
     const List<int> rowLengths = <int>[3, 2, 3, 2];
 
     final List<Widget> rows = <Widget>[];

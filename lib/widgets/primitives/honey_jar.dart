@@ -128,7 +128,6 @@ class _HoneyJarState extends State<HoneyJar> with TickerProviderStateMixin {
     const double bodyHeight = 156;
     const double stroke = 3;
     // Inner (fill) area after the stroke, in body-local coordinates.
-    final double innerBottom = bodyHeight - stroke; // 153
     final double innerHeight = bodyHeight - 2 * stroke; // 150
 
     return SizedBox(
@@ -141,7 +140,7 @@ class _HoneyJarState extends State<HoneyJar> with TickerProviderStateMixin {
           // --- Rim (88×9, radius 4) ---
           Positioned(
             left: (w - 88) / 2,
-            top: 0,
+            top: 12,
             width: 88,
             height: 9,
             child: DecoratedBox(
@@ -168,28 +167,35 @@ class _HoneyJarState extends State<HoneyJar> with TickerProviderStateMixin {
                 ),
                 border: Border.all(color: _rimStroke, width: stroke),
               ),
-              clipBehavior: Clip.hardEdge,
-              child: Stack(
-                children: <Widget>[
-                  // Layers, bottom-anchored.
-                  for (final PotLayer layer in widget.layers)
-                    _buildLayer(layer, innerHeight, innerBottom, bodyHeight),
-                  // Glass shine: 9×54 r6 white @ 55% at jar (12, 26).
-                  Positioned(
-                    left: 8,
-                    top: 6,
-                    width: 9,
-                    height: 54,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: const Color(0x8CFFFFFF),
-                        borderRadius: BorderRadius.circular(6),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(13),
+                  topRight: Radius.circular(13),
+                  bottomRight: Radius.circular(41),
+                  bottomLeft: Radius.circular(41),
+                ),
+                child: Stack(
+                  children: <Widget>[
+                    // Layers, bottom-anchored.
+                    for (final PotLayer layer in widget.layers)
+                      _buildLayer(layer, innerHeight),
+                    // Glass shine: 9×54 r6 white @ 55% at jar (12, 26).
+                    Positioned(
+                      left: 5,
+                      top: 3,
+                      width: 9,
+                      height: 54,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: const Color(0x8CFFFFFF),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                     ),
-                  ),
-                  // Decorative honey drops + impact swell (fall/swell).
-                  if (animating) _buildImpactAndDrops(),
-                ],
+                    // Decorative honey drops + impact swell (fall/swell).
+                    if (animating) _buildImpactAndDrops(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -201,16 +207,11 @@ class _HoneyJarState extends State<HoneyJar> with TickerProviderStateMixin {
   }
 
   /// One bottom-anchored, tappable pot layer inside the body's inner area.
-  Widget _buildLayer(
-    PotLayer layer,
-    double innerHeight,
-    double innerBottom,
-    double bodyHeight,
-  ) {
+  Widget _buildLayer(PotLayer layer, double innerHeight) {
     final bool selected = layer.id == widget.selectedId;
-    // Layer edges in body-local coordinates (y grows downward).
-    final double top = innerBottom - layer.toFrac * innerHeight;
-    final double bottomEdgeY = innerBottom - layer.fromFrac * innerHeight;
+    // Inner-area coordinates: 0 = top of the fill, innerHeight = bottom.
+    final double top = innerHeight * (1 - layer.toFrac);
+    final double bottom = innerHeight * layer.fromFrac;
 
     final Widget? content = layer.stripe == null
         ? null
@@ -219,10 +220,10 @@ class _HoneyJarState extends State<HoneyJar> with TickerProviderStateMixin {
           );
 
     return Positioned(
-      left: 3,
-      right: 3,
+      left: 0,
+      right: 0,
       top: top,
-      bottom: bodyHeight - bottomEdgeY,
+      bottom: bottom,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onSelectLayer == null
@@ -399,6 +400,7 @@ class _HatchPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.clipRect(Offset.zero & size);
     const double stripeWidth = 7;
     final double angle = 115 * math.pi / 180;
     canvas.save();
