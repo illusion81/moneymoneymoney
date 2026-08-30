@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'data/api_client.dart';
 import 'screens/comb_screen.dart';
+import 'screens/connect_bank_screen.dart';
 import 'screens/detail_sheet.dart';
 import 'screens/hive_screen.dart';
 import 'screens/market_screen.dart';
 import 'screens/mates_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/spending_screen.dart';
 import 'state/hive_state.dart';
 import 'widgets/hive_tab_bar.dart';
 
@@ -76,9 +79,27 @@ GoRouter buildRouter() {
         builder: (BuildContext context, GoRouterState state) =>
             const SettingsScreen(),
       ),
+
+      // The two screens that actually talk to the backend. The five tabs above
+      // render from static data; these read real transactions, so without them
+      // the app cannot do the thing it claims. Reached from Settings.
+      GoRoute(
+        path: '/connect-bank',
+        builder: (BuildContext context, GoRouterState state) =>
+            ConnectBankScreen(api: _api),
+      ),
+      GoRoute(
+        path: '/spending',
+        builder: (BuildContext context, GoRouterState state) =>
+            SpendingScreen(api: _api),
+      ),
     ],
   );
 }
+
+/// One client for the whole app. Cheap to construct, but a single instance
+/// keeps the base-URL override in one place.
+final ApiClient _api = ApiClient();
 
 /// The router, available to `MaterialApp.router` via `ref.watch`.
 final routerProvider = Provider<GoRouter>((ref) => buildRouter());
