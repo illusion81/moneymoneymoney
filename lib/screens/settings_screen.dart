@@ -102,6 +102,8 @@ class SettingsScreen extends ConsumerWidget {
                   _connectBankCard(context),
                   const SizedBox(height: 8),
                   _viewSpendingCard(context),
+                  const SizedBox(height: 8),
+                  _openForestCard(context),
                 ],
               ),
               const SizedBox(height: 16),
@@ -252,6 +254,32 @@ class SettingsScreen extends ConsumerWidget {
         ),
         child: Text(
           'Connect a bank or upload a statement',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: HiveColors.light.honeyText,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The full Forest experience: questionnaire, plan, tree, streaks, shop,
+  /// circle. Everything the hive tabs do not cover yet.
+  Widget _openForestCard(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/forest'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: HiveColors.light.surface,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: HiveShadows.card,
+        ),
+        child: Text(
+          'Open the full app',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 12.5,
             fontWeight: FontWeight.w700,

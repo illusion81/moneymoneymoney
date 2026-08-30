@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'data/api_client.dart';
+import 'legacy_app.dart' show MyApp;
 import 'screens/comb_screen.dart';
 import 'screens/connect_bank_screen.dart';
 import 'screens/detail_sheet.dart';
@@ -92,6 +93,18 @@ GoRouter buildRouter() {
         path: '/spending',
         builder: (BuildContext context, GoRouterState state) =>
             SpendingScreen(api: _api),
+      ),
+
+      // The whole Forest app, one tap from Settings.
+      //
+      // Merging two UIs properly is days of work; this is the honest shortcut.
+      // MyApp brings its own MaterialApp and Navigator, which nests fine here
+      // and keeps every Forest feature reachable — questionnaire, the
+      // plan-rebuild dialog, tree, streaks, calendar, shop, circle — while
+      // Hivewise stays the shell we open on.
+      GoRoute(
+        path: '/forest',
+        builder: (BuildContext context, GoRouterState state) => const MyApp(),
       ),
     ],
   );
