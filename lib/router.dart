@@ -104,7 +104,8 @@ GoRouter buildRouter() {
       // Hivewise stays the shell we open on.
       GoRoute(
         path: '/forest',
-        builder: (BuildContext context, GoRouterState state) => const MyApp(),
+        builder: (BuildContext context, GoRouterState state) =>
+            const _ForestHost(),
       ),
     ],
   );
@@ -161,6 +162,51 @@ class _Shell extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+
+/// Hosts the Forest app with a way back.
+///
+/// MyApp brings its own MaterialApp and Navigator, so nothing inside it can
+/// pop this route — an inner Navigator only knows its own stack. The bar sits
+/// OUTSIDE that subtree, so its context is the shell's and `pop()` returns to
+/// Hivewise. Cheaper and safer than threading a callback through a whole app.
+class _ForestHost extends StatelessWidget {
+  const _ForestHost();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF33251A), // ink
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: <Widget>[
+            SizedBox(
+              height: 44,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.pop(),
+                  icon: const Icon(Icons.arrow_back,
+                      size: 18, color: Color(0xFFF6EFE0)),
+                  label: const Text(
+                    'Back to Hivewise',
+                    style: TextStyle(
+                      color: Color(0xFFF6EFE0),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const Expanded(child: MyApp()),
+          ],
+        ),
+      ),
     );
   }
 }
